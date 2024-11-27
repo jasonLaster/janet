@@ -1,0 +1,3 @@
+
+use gpt-4o for all openai calls
+we're using vitest
