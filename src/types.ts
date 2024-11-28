@@ -1,9 +1,10 @@
 export interface RenameMapping {
+  success: boolean;
   oldName: string;
   newName: string;
-  success: boolean;
+  content: string;
   timestamp: string;
-  content?: string;
+  needsRename?: boolean;
 }
 
 export interface FileMapping {
@@ -13,8 +14,5 @@ export interface FileMapping {
 }
 
 export interface RemappingCache {
-  version: string;
-  mappings: {
-    [key: string]: FileMapping;
-  };
+  [key: string]: RenameMapping;
 } 

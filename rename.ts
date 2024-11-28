@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { getDocument } from 'pdfjs-dist';
 import * as tesseract from 'tesseract.js';
+import PDFDocument from 'pdfkit';
 
 interface Cache {
   version: string;
@@ -61,6 +62,30 @@ interface RenameResult {
   oldName: string;
   newName: string;
   content: string;
+  tempPath?: string;
+}
+
+async function createSearchablePDF(imageBuffer: Buffer, text: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+    const chunks: Buffer[] = [];
+
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Add the image
+    doc.image(imageBuffer, 0, 0, {
+      fit: [doc.page.width, doc.page.height]
+    });
+
+    // Add invisible searchable text
+    doc.fillColor('white')
+      .fontSize(0)
+      .text(text, 0, 0);
+
+    doc.end();
+  });
 }
 
 async function processFile(filename: string): Promise<RenameResult> {
@@ -82,7 +107,7 @@ async function processFile(filename: string): Promise<RenameResult> {
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.name !== 'NoTextContentError') {
-        throw error;  // Re-throw if it's not a "no text" error
+        throw error;
       }
       debug('No text content found, falling back to OCR');
     }
@@ -93,13 +118,13 @@ async function processFile(filename: string): Promise<RenameResult> {
     const worker = await createWorker();
 
     try {
-      // Get page count
       const dataBuffer = await fs.promises.readFile(filepath);
       const pdf = await getDocument(new Uint8Array(dataBuffer)).promise;
       const numPages = pdf.numPages;
 
       debug(`Processing ${numPages} pages with OCR`);
       let fullText = '';
+      const outputBuffers: Buffer[] = [];
 
       // Process each page
       for (let i = 1; i <= numPages; i++) {
@@ -111,6 +136,10 @@ async function processFile(filename: string): Promise<RenameResult> {
         debug(`Page ${i} OCR Confidence: ${data.confidence}%`);
 
         fullText += data.text + '\n\n';
+
+        // Create searchable PDF page with the OCR'd text
+        const pageBuffer = await createSearchablePDF(imageBuffer, data.text);
+        outputBuffers.push(pageBuffer);
       }
 
       if (!fullText.trim()) {
@@ -120,11 +149,16 @@ async function processFile(filename: string): Promise<RenameResult> {
       debug(`Successfully extracted ${fullText.length} characters using OCR`);
       const newName = await suggestNewName(filename, fullText);
 
+      // Save the combined PDF with embedded text
+      const tempPath = filepath + '.new.pdf';
+      await fs.promises.writeFile(tempPath, Buffer.concat(outputBuffers));
+
       return {
         success: true,
         oldName: filename,
         newName: newName || filename,
-        content: fullText
+        content: fullText,
+        tempPath
       };
 
     } finally {
@@ -156,11 +190,21 @@ async function renameFile(result: RenameResult) {
     const oldPath = path.join(getScanDir(), result.oldName);
     const newPath = path.join(getScanDir(), result.newName);
 
+    // If we have a new PDF with embedded text, use it instead
+    if (result.tempPath) {
+      // Replace the original file with the new one
+      await fs.promises.rename(result.tempPath, newPath);
+      // Delete the original file
+      await fs.promises.unlink(oldPath);
+    } else {
+      // Fall back to simple rename if no new PDF was created
+      await fs.promises.rename(oldPath, newPath);
+    }
 
-    await fs.promises.rename(oldPath, newPath);
     console.log(`✅ Renamed file:
       From: ${path.basename(oldPath)}
-      To:   ${path.basename(newPath)}`);
+      To:   ${path.basename(newPath)}
+      ${result.tempPath ? '(with embedded OCR text)' : ''}`);
     return true;
   } catch (error) {
     const err = error as Error;
@@ -173,37 +217,36 @@ async function main() {
   const filenames = await getFilenames();
   const existingMappings = loadExistingMappings();
 
-
-  // Only process files that haven't been successfully renamed
-  const unprocessedFiles = filenames.filter((filename: string) => {
-    const mapping = existingMappings[filename];
-    return !mapping || !mapping.success;
+  // Process files that either:
+  // 1. Haven't been processed yet, or
+  // 2. Were processed but failed (success = false)
+  const filesToProcess = filenames.filter((filename) => {
+    const mapping = existingMappings.find(m => m.newName === filename);
+    const shouldProcess = !mapping || !mapping.success;
+    return shouldProcess;
   });
 
 
-
-  if (unprocessedFiles.length === 0) {
+  if (filesToProcess.length === 0) {
     console.log('✅ All files have been successfully processed');
     return;
   }
 
-  console.log(`🆕 Files to rename: ${unprocessedFiles.length}`);
+  console.log(`\n🆕 Files to rename: ${filesToProcess.length}`);
 
   let processedCount = 0;
   let successCount = 0;
 
-  for (const filename of unprocessedFiles) {
-    console.log(`\n📋 Processing: ${filename} (${++processedCount}/${unprocessedFiles.length})`);
+  for (const filename of filesToProcess) {
+    console.log(`\n📋 Processing: ${filename} (${++processedCount}/${filesToProcess.length})`);
 
     const result = await processFile(filename);
-
     const renameSuccess = await renameFile(result);
 
     const mapping: RenameMapping = {
       ...result,
       success: result.success && renameSuccess,
-      timestamp: new Date().toISOString(),
-      content: result.content
+      timestamp: new Date().toISOString()
     };
 
     await saveRenameMapping(mapping);
@@ -214,9 +257,9 @@ async function main() {
   }
 
   console.log(`\n Final Summary:
-    Total files processed: ${unprocessedFiles.length}
+    Total files processed: ${filesToProcess.length}
     Successfully renamed: ${successCount}
-    Failed to rename: ${unprocessedFiles.length - successCount}`);
+    Failed to rename: ${filesToProcess.length - successCount}`);
 }
 
 main().catch(console.error);
