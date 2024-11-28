@@ -15,7 +15,7 @@
     "src/**/*",
     "tests/**/*",
     "*.ts"
-  ],
+, "scripts/migrate-mappings.ts", "scripts/test-pdf.ts"  ],
   "exclude": [
     "node_modules",
     "dist"

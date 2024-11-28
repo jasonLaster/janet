@@ -1,4 +1,5 @@
 node_modules
 dist
 rename-mappings.json
+.env
   

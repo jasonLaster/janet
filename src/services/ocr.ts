@@ -4,6 +4,9 @@ import { convertPDFPageToImage } from './pdf.js';
 import PDFDocument from 'pdfkit';
 import * as fs from 'fs';
 import { getDocument } from 'pdfjs-dist';
+import * as os from 'os';
+import * as path from 'path';
+import { randomUUID } from 'crypto';
 
 async function createSearchablePDF(imageBuffer: Buffer, text: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -63,7 +66,7 @@ export async function performOCR(filepath: string): Promise<OCRResult> {
       throw new Error('OCR extraction produced no text');
     }
 
-    const tempPath = filepath + '.new.pdf';
+    const tempPath = path.join(os.tmpdir(), `ocr-${randomUUID()}.pdf`);
     await fs.promises.writeFile(tempPath, Buffer.concat(outputBuffers));
 
     return {
