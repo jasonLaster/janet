@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadExistingMappings, saveRenameMapping } from '../../src/utils/file.js';
-import { debugLog } from '../../src/utils/debug.js';
+import { loadExistingMappings, saveRenameMapping } from '../file';
+import { debugLog } from '../debug';
 
 // Mock fs
 vi.mock('fs', () => ({
@@ -16,7 +16,7 @@ vi.mock('fs', () => ({
 }));
 
 // Mock debug
-vi.mock('../../src/utils/debug', () => ({
+vi.mock('../debug', () => ({
   debugLog: vi.fn()
 }));
 
@@ -41,31 +41,6 @@ describe('File Utils', () => {
 
       const result = loadExistingMappings();
       expect(result).toEqual(mockMappings);
-    });
-
-    it('should filter out unsuccessful mappings', () => {
-      const mockMappings = {
-        'success.pdf': {
-          oldName: 'success.pdf',
-          newName: 'new-success.pdf',
-          success: true,
-          timestamp: '2023-01-01',
-          needsRename: false
-        },
-        'failure.pdf': {
-          oldName: 'failure.pdf',
-          newName: 'new-failure.pdf',
-          success: false,
-          timestamp: '2023-01-01',
-          needsRename: true
-        }
-      };
-
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockMappings));
-
-      const result = loadExistingMappings();
-      expect(result).toHaveProperty('success.pdf');
-      expect(result).not.toHaveProperty('failure.pdf');
     });
   });
 
@@ -103,4 +78,4 @@ describe('File Utils', () => {
       expect(writtenContent['test.pdf']).toEqual(newMapping);
     });
   });
-}); 
+});

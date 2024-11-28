@@ -119,7 +119,7 @@ describe('PDF Service', () => {
       // Use actual fs module for this test
       vi.unmock('fs');
 
-      const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'sample.pdf');
+      const fixturePath = path.join(process.cwd(), '__tests__', 'fixtures', 'sample.pdf');
       const result = await extractTextFromPDF(fixturePath);
 
       // Assert specific content we know exists in the Travelers notice
@@ -134,7 +134,7 @@ describe('PDF Service', () => {
     it('should handle multi-page PDFs', async () => {
       vi.unmock('fs');
 
-      const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'sample.pdf');
+      const fixturePath = path.join(process.cwd(), '__tests__', 'fixtures', 'sample.pdf');
       const result = await extractTextFromPDF(fixturePath);
 
       // Test that we got content from multiple pages
@@ -147,7 +147,7 @@ describe('PDF Service', () => {
     it('should extract numbers and dates correctly', async () => {
       vi.unmock('fs');
 
-      const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'sample.pdf');
+      const fixturePath = path.join(process.cwd(), '__tests__', 'fixtures', 'sample.pdf');
       const result = await extractTextFromPDF(fixturePath);
 
       // Test specific formatted data
