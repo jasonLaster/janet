@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractTextFromPDF } from '../pdf';
+import { extractTextFromPDF } from '../pdf.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as tesseract from 'tesseract.js';
@@ -55,8 +55,8 @@ describe('PDF Service', () => {
       vi.mocked(fs.promises.access).mockResolvedValue(undefined);
 
       // Setup fs.promises.readFile mock
-      const mockReadFile = vi.fn((path: string) => {
-        if (path.endsWith('.png')) {
+      const mockReadFile = vi.fn().mockImplementation((path: string | Buffer | URL) => {
+        if (path.toString().endsWith('.png')) {
           return Promise.resolve(Buffer.from('fake png data'));
         }
         return Promise.resolve(Buffer.from('fake pdf data'));

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractTextFromPDF, convertPDFPageToImage } from '../../src/services/pdf';
+import { extractTextFromPDF, convertPDFPageToImage } from '../../src/services/pdf.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as tesseract from 'tesseract.js';

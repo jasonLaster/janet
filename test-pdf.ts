@@ -106,7 +106,7 @@ async function extractWithTesseract(filepath: string) {
     // Process each page
     for (let i = 1; i <= numPages; i++) {
       console.log(`Converting page ${i}/${numPages} to image...`);
-      const imageBuffer = await convertPDFPageToImage(filepath, i);
+      const imageBuffer = await convertPDFPageToImage(filepath);
 
       console.log(`Running OCR on page ${i}...`);
       const { data } = await worker.recognize(imageBuffer);
