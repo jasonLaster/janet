@@ -1,10 +1,18 @@
-import { extractTextFromPDF, convertPDFPageToImage } from './src/services/pdf';
-import { getScanDir } from './src/utils/file';
+import { extractTextFromPDF, convertPDFPageToImage } from './src/services/pdf.js';
+import { getScanDir } from './src/utils/file.js';
 import * as path from 'path';
 import pdfParse from 'pdf-parse';
 import { PDFDocument } from 'pdf-lib';
-import { getDocument } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import * as tesseract from 'tesseract.js';
+
+// Configure PDF.js worker
+if (typeof window === 'undefined') {
+  // Use the ESM version of the worker
+  GlobalWorkerOptions.workerSrc = require.resolve(
+    'pdfjs-dist/build/pdf.worker.mjs'
+  );
+}
 
 async function extractWithPdfParse(filepath: string) {
   const dataBuffer = await Bun.file(filepath).arrayBuffer();
@@ -42,7 +50,7 @@ async function extractWithPdfJs(filepath: string) {
 
   console.log('PDF.js document info:', {
     numPages: pdf.numPages,
-    fingerprint: pdf.fingerprint,
+    fingerprints: pdf.fingerprints,
   });
 
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -55,13 +63,24 @@ async function extractWithPdfJs(filepath: string) {
     const textContent = await page.getTextContent();
     console.log(`Page ${i} items:`, textContent.items.length);
 
+    interface TextItem {
+      str: string;
+      dir: string;
+      transform: number[];
+      width: number;
+      height: number;
+      // Add other required properties
+    }
+
     const pageText = textContent.items
-      .map((item: any) => {
-        // Log first few items to see their structure
-        if (i === 1 && textContent.items.indexOf(item) < 5) {
-          console.log('Text item:', item);
+      .map((item) => {
+        if ('str' in item) {
+          if (i === 1 && textContent.items.indexOf(item) < 5) {
+            console.log('Text item:', item);
+          }
+          return item.str;
         }
-        return item.str;
+        return '';
       })
       .join(' ');
     fullText += pageText + '\n';
@@ -103,7 +122,7 @@ async function extractWithTesseract(filepath: string) {
 }
 
 async function testPDF(filename: string) {
-  console.log(`🔍 Testing PDF: ${filename}`);
+  console.log(`\n🔍 Testing PDF: ${filename}`);
 
   const filepath = path.join(getScanDir(), filename);
   console.log(`📄 Full path: ${filepath}`);
@@ -115,6 +134,8 @@ async function testPDF(filename: string) {
     { name: 'pdf.js (Direct)', fn: () => extractWithPdfJs(filepath) },
     { name: 'Tesseract OCR', fn: () => extractWithTesseract(filepath) }
   ];
+
+  let anyMethodSucceeded = false;
 
   for (const method of methods) {
     console.log(`\n📚 Trying ${method.name}:`);
@@ -129,21 +150,51 @@ async function testPDF(filename: string) {
         console.log('⚠️  Warning: Extracted text is empty');
       } else {
         console.log(`Preview: ${preview}${content.length > 500 ? '...' : ''}`);
+        anyMethodSucceeded = true;
       }
       // Show non-printable characters
       console.log('First 100 chars (hex):', Buffer.from(content.slice(0, 100)).toString('hex'));
-    } catch (error) {
+    } catch (error: unknown) {
       console.log('❌ Failed:');
-      console.log(error.message);
-      if (error.stack) {
-        console.log('Stack:', error.stack);
+      if (error instanceof Error) {
+        console.log('Error name:', error.name);
+        console.log('Error message:', error.message);
+        if (error.stack) {
+          console.log('Stack:', error.stack);
+        }
+        if ('cause' in error) {
+          console.log('Cause:', error.cause);
+        }
+      } else {
+        console.log('Unknown error:', error);
       }
     }
     console.log('----------------------------------------');
   }
+
+  if (!anyMethodSucceeded) {
+    console.log('❌ All methods failed to extract text from this PDF');
+    // You might want to examine the PDF structure
+    try {
+      const dataBuffer = await Bun.file(filepath).arrayBuffer();
+      const pdfDoc = await PDFDocument.load(dataBuffer);
+      const pages = pdfDoc.getPages();
+      console.log('PDF Structure:');
+      console.log('- Number of pages:', pages.length);
+      console.log('- First page size:', pages[0].getSize());
+      // Get version from document metadata
+      const pdfInfo = await pdfParse(Buffer.from(dataBuffer));
+      console.log('- PDF Version:', pdfInfo.version);
+      // Add more PDF structure information as needed
+    } catch (error) {
+      console.log('Failed to examine PDF structure:', error);
+    }
+  }
+
+  return anyMethodSucceeded;
 }
 
-// Get filename by joining all arguments after the script name
+// Get filename from arguments
 const filename = process.argv.slice(2).join(' ');
 
 if (!filename) {

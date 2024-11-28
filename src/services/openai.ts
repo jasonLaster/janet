@@ -40,7 +40,7 @@ Suggestions:
 - Use the document number as part of the filename
 - Include a description of the content of the document as part of the filename
 - prefer spaces to underscores between words
-- use :: to separate the company name from the document type
+- use a dash to separate the company name from the document type
 
 
           <content>
@@ -50,28 +50,28 @@ Suggestions:
           
           Here are some examples of good filenames:
           <examples>
-          2024-07-12 Octave Health Group :: 1095C Employer Provided Health Insurance Coverage.pdf
-          2024-07-12 Pettinato Associates :: Claim Confirmation 10119982.pdf
-          2024-07-12 Chase Credit Card :: Returned Payment Notice 03724.pdf
-          2024-07-12 Mozilla :: Earnings Summary W2 203488.pdf
-          2024-07-12 Weight Watchers :: W2 Earnings Summary 156930.pdf
-          2024-07-12 OConnor Davies :: Tax Organizer 756359.pdf
+          2024-07-12 Octave Health Group - 1095C Employer Provided Health Insurance Coverage.pdf
+          2024-07-12 Pettinato Associates - Claim Confirmation 10119982.pdf
+          2024-07-12 Chase Credit Card - Returned Payment Notice 03724.pdf
+          2024-07-12 Mozilla - Earnings Summary W2 203488.pdf
+          2024-07-12 Weight Watchers - W2 Earnings Summary 156930.pdf
+          2024-07-12 OConnor Davies - Tax Organizer 756359.pdf
           </examples>
 
           Here are some examples of bad filenames:
           <examples>
           {
-            "filename": "20210923 Sutter Health :: Outpatient Perinatal Services Antepartum Testing Orders 60928.pdf",
+            "filename": "20210923 Sutter Health - Outpatient Perinatal Services Antepartum Testing Orders 60928.pdf",
             "reason": "The date is not in YYYY-MM-DD format."
           }
 
           {
             "filename": "2021-09-23 Sutter Health Outpatient Perinatal Services Antepartum Testing Orders 60928.pdf",
-            "reason": "The company is missing the :: separator."
+            "reason": "The company is missing the - separator."
           }
 
           {
-            "filename": "20240712_AT&T // Direct TV Stream Setup and Installation Guide",
+            "filename": "20240712_AT&T - Direct TV Stream Setup and Installation Guide",
             "reason": "The date is not YYYY-MM-DD format. There is an underscore after the date. The // should be ::"
           }
           </example>
@@ -79,12 +79,12 @@ Suggestions:
 
 
           Here are some example of bad renaming:
-            From: 2024-07-01 Stanford Health Care :: Monthly Statement 102800925.pdf
-            To:   20240701_Stanford Health Care :: Monthly Statement 102800925.pdf
+            From: 2024-07-01 Stanford Health Care - Monthly Statement 102800925.pdf
+            To:   20240701_Stanford Health Care - Monthly Statement 102800925.pdf
             Reason: the date is not in YYYY-MM-DD format.
 
-            From: 20230626 East Bay Pediatrics :: Statement 33309.pdf
-            To:   20230626_East Bay Pediatrics :: Statement 33309.pdf
+            From: 20230626 East Bay Pediatrics - Statement 33309.pdf
+            To:   20230626_East Bay Pediatrics - Statement 33309.pdf
             Reason: the date is not in YYYY-MM-DD format. There is an underscore after the date.
           `
         }

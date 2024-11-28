@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { RenameMapping } from '../types.js';
-import { debugLog, errorLog } from './debug';
+import { debugLog, errorLog } from './debug.js';
 
 function expandPath(filepath: string): string {
   if (filepath.startsWith('~/')) {
@@ -66,11 +66,11 @@ export function loadExistingMappings(): Record<string, RenameMapping> {
 
   try {
     const content = fs.readFileSync(outputPath, 'utf-8');
-    const mappings = JSON.parse(content);
+    const mappings = JSON.parse(content) as Record<string, RenameMapping>;
 
     // Filter out unsuccessful mappings
     return Object.fromEntries(
-      Object.entries(mappings).filter(([_, mapping]) => (mapping as RenameMapping).success)
+      Object.entries(mappings).filter(([_, mapping]) => mapping.success)
     );
   } catch (error) {
     debugLog(`No existing mappings found or error reading file: ${error}`);

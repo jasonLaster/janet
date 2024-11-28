@@ -1,8 +1,8 @@
-import { getFilenames, loadExistingMappings, saveRenameMapping, getScanDir } from './src/utils/file';
-import { suggestNewName } from './src/services/openai';
-import { extractTextFromPDF, convertPDFPageToImage } from './src/services/pdf';
-import { RenameMapping, RemappingCache } from './src/types';
-import { debugLog as debug } from './src/utils/debug';
+import { getFilenames, loadExistingMappings, saveRenameMapping, getScanDir } from './src/utils/file.js';
+import { suggestNewName } from './src/services/openai.js';
+import { extractTextFromPDF, convertPDFPageToImage } from './src/services/pdf.js';
+import { RenameMapping, RemappingCache } from './src/types.js';
+import { debugLog as debug } from './src/utils/debug.js';
 import * as path from 'path';
 import * as fs from 'fs';
 import { getDocument } from 'pdfjs-dist';
@@ -60,6 +60,7 @@ interface RenameResult {
   error?: string;
   oldName: string;
   newName: string;
+  content: string;
 }
 
 async function processFile(filename: string): Promise<RenameResult> {
@@ -79,8 +80,8 @@ async function processFile(filename: string): Promise<RenameResult> {
           content
         };
       }
-    } catch (error) {
-      if (error.name !== 'NoTextContentError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'NoTextContentError') {
         throw error;  // Re-throw if it's not a "no text" error
       }
       debug('No text content found, falling back to OCR');
@@ -138,7 +139,8 @@ async function processFile(filename: string): Promise<RenameResult> {
       success: false,
       error: errorMessage,
       oldName: filename,
-      newName: filename
+      newName: filename,
+      content: ''
     };
   }
 }
@@ -173,7 +175,7 @@ async function main() {
 
 
   // Only process files that haven't been successfully renamed
-  const unprocessedFiles = filenames.filter(filename => {
+  const unprocessedFiles = filenames.filter((filename: string) => {
     const mapping = existingMappings[filename];
     return !mapping || !mapping.success;
   });

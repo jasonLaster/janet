@@ -1,42 +1,57 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { extractTextFromPDF } from '../../src/services/pdf.js';
-import * as fs from 'fs';
-import * as pdfjsLib from 'pdfjs-dist';
-import * as pdfParse from 'pdf-parse';
-import * as tesseract from 'tesseract.js';
-
-// Mock fs
-vi.mock('fs');
-
-// Mock pdf-parse
-vi.mock('pdf-parse', () => ({
-  default: vi.fn()
-}));
-
-// Mock tesseract.js
-vi.mock('tesseract.js', () => ({
-  recognize: vi.fn()
-}));
+import { getScanDir } from '../../src/utils/file.js';
+import * as path from 'path';
 
 describe('PDF Service', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  // Test files we know exist in the scan directory
+  const testPDFs = {
+    // A medical bill that we know has embedded text
+    searchable: '2023-07-30 Empire HealthChoice.pdf',
+    // A scanned document we know needs OCR
+    scanned: '2023-08-15 Scan.pdf',
+  };
+
+  // Helper to get full path to test PDFs
+  const getTestPDFPath = (filename: string) => path.join(getScanDir(), filename);
 
   describe('extractTextFromPDF', () => {
-    it('should fall back to OCR when text extraction fails', async () => {
-      // Mock pdf-parse to throw an error
-      vi.mocked(pdfParse.default).mockRejectedValue(new Error('PDF parsing failed'));
+    it('should extract text from searchable PDF', async () => {
+      const result = await extractTextFromPDF(getTestPDFPath(testPDFs.searchable));
 
-      // Mock tesseract to return OCR result
-      vi.mocked(tesseract.recognize).mockResolvedValue({
-        data: { text: 'OCR Text' }
-      });
-
-      const result = await extractTextFromPDF('test.pdf');
+      // Basic validations
       expect(result).toBeDefined();
-      expect(result).toBe('OCR Text');
-      expect(tesseract.recognize).toHaveBeenCalledWith('test.pdf');
+      expect(result.length).toBeGreaterThan(0);
+
+      // Content-specific validations
+      expect(result).toContain('Empire');
+      expect(result).toContain('HealthChoice');
+
+      // Log preview for debugging
+      console.log('Preview:', result.slice(0, 200).replace(/\n/g, ' '));
+      console.log('Characters:', result.length);
+
+      // Show non-printable characters for debugging
+      console.log('First 100 chars (hex):', Buffer.from(result.slice(0, 100)).toString('hex'));
+    }, 30000);
+
+    it('should handle scanned PDFs using OCR', async () => {
+      const result = await extractTextFromPDF(getTestPDFPath(testPDFs.scanned));
+
+      // Basic validations
+      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThan(0);
+
+      // Log preview for debugging
+      console.log('Preview:', result.slice(0, 200).replace(/\n/g, ' '));
+      console.log('Characters:', result.length);
+      console.log('First 100 chars (hex):', Buffer.from(result.slice(0, 100)).toString('hex'));
+    }, 60000);
+
+    it('should throw error for non-existent PDF', async () => {
+      await expect(
+        extractTextFromPDF(path.join(getScanDir(), 'non-existent.pdf'))
+      ).rejects.toThrow('PDF file not found');
     });
   });
 }); 

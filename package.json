@@ -9,7 +9,10 @@
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.8.69",
     "sharp": "^0.32.6",
-    "tesseract.js": "^5.1.1"
+    "tesseract.js": "^5.1.1",
+    "typescript": "^5.0.0",
+    "vitest": "^0.34.0",
+    "ts-node": "^10.9.0"
   },
   "name": "pdf-ocd",
   "version": "1.0.0",
@@ -23,8 +26,7 @@
     "@types/pdfjs-dist": "^2.10.378",
     "@types/tesseract.js": "^2.0.0",
     "@vitest/coverage-v8": "^2.1.6",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.6"
+    "bun-types": "^1.1.37"
   },
   "scripts": {
     "test": "vitest",

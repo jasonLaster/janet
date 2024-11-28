@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadExistingMappings, saveRenameMapping } from '../../src/utils/file';
-import { debug } from '../../src/utils/debug';
+import { loadExistingMappings, saveRenameMapping } from '../../src/utils/file.js';
+import { debug } from '../../src/utils/debug.js';
 
 // Mock fs
 vi.mock('fs', () => ({
@@ -97,7 +97,7 @@ describe('File Utils', () => {
 
       expect(fs.promises.writeFile).toHaveBeenCalled();
       const writeCall = vi.mocked(fs.promises.writeFile).mock.calls[0];
-      const writtenContent = JSON.parse(writeCall[1]);
+      const writtenContent = JSON.parse(writeCall[1].toString());
 
       expect(writtenContent).toHaveProperty('existing.pdf');
       expect(writtenContent).toHaveProperty('test.pdf');
