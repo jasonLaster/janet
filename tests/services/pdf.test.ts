@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractTextFromPDF, convertPDFPageToImage } from '../../src/services/pdf.js';
+import { extractTextFromPDF, convertPDFPageToImage } from '../../src/services/pdf';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
+import type { Worker } from 'tesseract.js';
 import { getDocument } from 'pdfjs-dist';
 
 // Mock fs

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { suggestNewName } from '../../src/services/openai.js';
+import { suggestNewName } from '../../src/services/openai';
 
 // Use vi.hoisted to create mock function that's available during module initialization
 const mockCreateFn = vi.hoisted(() => vi.fn());

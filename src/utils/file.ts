@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { debugLog as debug } from './debug.js';
-import { RenameMapping } from '../types.js';
+import { debugLog as debug } from './debug';
+import { RenameMapping } from '../types';
 
 const MAPPINGS_FILE = 'rename-mappings.json';
 

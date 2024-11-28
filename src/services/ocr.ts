@@ -1,6 +1,7 @@
-import * as tesseract from 'tesseract.js';
-import { debugLog as debug } from '../utils/debug.js';
-import { convertPDFPageToImage } from './pdf.js';
+import { createWorker } from 'tesseract.js';
+import type { Worker } from 'tesseract.js';
+import { debugLog as debug } from '../utils/debug';
+import { convertPDFPageToImage } from './pdf';
 import PDFDocument from 'pdfkit';
 import * as fs from 'fs';
 import { getDocument } from 'pdfjs-dist';
@@ -37,7 +38,7 @@ export interface OCRResult {
 }
 
 export async function performOCR(filepath: string): Promise<OCRResult> {
-  const worker = await tesseract.createWorker();
+  const worker: Worker = await createWorker();
 
   try {
     const dataBuffer = await fs.promises.readFile(filepath);

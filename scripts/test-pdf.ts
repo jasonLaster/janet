@@ -1,10 +1,11 @@
-import { extractTextFromPDF, convertPDFPageToImage } from '../src/services/pdf.js';
-import { getScanDir } from '../src/utils/file.js';
+import { extractTextFromPDF, convertPDFPageToImage } from '../src/services/pdf';
+import { getScanDir } from '../src/utils/file';
 import * as path from 'path';
 import pdfParse from 'pdf-parse';
 import { PDFDocument } from 'pdf-lib';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import * as tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
+import type { Worker } from 'tesseract.js';
 
 // Configure PDF.js worker
 if (typeof window === 'undefined') {
@@ -91,8 +92,7 @@ async function extractWithPdfJs(filepath: string) {
 
 async function extractWithTesseract(filepath: string) {
   console.log('Converting PDF to image for OCR...');
-  const { createWorker } = tesseract;
-  const worker = await createWorker();
+  const worker: Worker = await createWorker();
 
   try {
     // Load PDF to get page count

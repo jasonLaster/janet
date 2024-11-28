@@ -1,10 +1,10 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { getScanDir } from '../utils/file.js';
-import { extractTextFromPDF } from './pdf.js';
-import { suggestNewName } from './openai.js';
-import { performOCR } from './ocr.js';
-import { debugLog as debug } from '../utils/debug.js';
+import { getScanDir } from '../utils/file';
+import { extractTextFromPDF } from './pdf';
+import { suggestNewName } from './openai';
+import { performOCR } from './ocr';
+import { debugLog as debug } from '../utils/debug';
 
 export interface ProcessResult {
   success: boolean;

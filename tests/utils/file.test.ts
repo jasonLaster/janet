@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadExistingMappings, saveRenameMapping } from '../../src/utils/file.js';
-import { debugLog } from '../../src/utils/debug.js';
+import { loadExistingMappings, saveRenameMapping } from '../../src/utils/file';
+import { debugLog } from '../../src/utils/debug';
 
 // Mock fs
 vi.mock('fs', () => ({

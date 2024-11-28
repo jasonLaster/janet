@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractTextFromPDF } from '../pdf.js';
+import { extractTextFromPDF } from '../pdf';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
+import type { Worker } from 'tesseract.js';
 import { getDocument } from 'pdfjs-dist';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -149,7 +150,7 @@ describe('PDF Service', () => {
       });
 
       // Mock tesseract to also fail
-      vi.mocked(tesseract.createWorker).mockRejectedValue(new Error('OCR failed'));
+      vi.mocked(createWorker).mockRejectedValue(new Error('OCR failed'));
 
       await expect(extractTextFromPDF('invalid.pdf'))
         .rejects

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import pdfParse from 'pdf-parse';
-import * as tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
+import type { Worker, LoggerMessage } from 'tesseract.js';
 import { PDFDocument } from 'pdf-lib'
 import { debugLog as debug } from '../utils/debug.js'
 import * as path from 'path';
@@ -16,7 +17,7 @@ if (typeof window === 'undefined') {
   GlobalWorkerOptions.workerSrc = workerPath;
 } else {
   // Browser environment
-  GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+  GlobalWorkerOptions.workerSrc = '/pdf.worker';
 }
 
 /**
@@ -102,10 +103,7 @@ export async function extractTextFromPDF(pdfPath: string): Promise<string> {
 
     // Fall back to OCR
     try {
-      const worker = await tesseract.createWorker('eng', 1, {
-        logger: m => debug('Tesseract:', m),
-        errorHandler: err => debug('Tesseract error:', err)
-      });
+      const worker: Worker = await createWorker();
 
       try {
         // Convert PDF to image first

@@ -1,6 +1,5 @@
-import { getFilenames, loadExistingMappings, saveRenameMapping, getScanDir } from './src/utils/file.js';
-import { processFile } from './src/services/fileProcessor.js';
-import { ProcessResult } from './src/types.js';
+import { getFilenames, loadExistingMappings, saveRenameMapping, getScanDir } from './src/utils/file';
+import { processFile, ProcessResult } from './src/services/fileProcessor';
 import * as path from 'path';
 import * as fs from 'fs';
 

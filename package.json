@@ -2,6 +2,7 @@
   "dependencies": {
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.1",
+    "tesseract.js": "^5.1.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0",
     "vitest": "^0.34.0"
