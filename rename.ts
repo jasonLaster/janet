@@ -1,10 +1,12 @@
-import { getFilenames, loadExistingMappings, saveRenameMapping, getScanDir } from './src/utils/file.js';
-import { suggestNewName } from './src/services/openai.js';
-import { extractTextFromPDF, updatePDFWithOCRText } from './src/services/pdf.js';
-import { RenameMapping, RemappingCache } from './src/types.js';
-import { debugLog as debug } from './src/utils/debug.js';
+import { getFilenames, loadExistingMappings, saveRenameMapping, getScanDir } from './src/utils/file';
+import { suggestNewName } from './src/services/openai';
+import { extractTextFromPDF, convertPDFPageToImage } from './src/services/pdf';
+import { RenameMapping, RemappingCache } from './src/types';
+import { debugLog as debug } from './src/utils/debug';
 import * as path from 'path';
 import * as fs from 'fs';
+import { getDocument } from 'pdfjs-dist';
+import * as tesseract from 'tesseract.js';
 
 interface Cache {
   version: string;
@@ -64,31 +66,70 @@ async function processFile(filename: string): Promise<RenameResult> {
   const filepath = path.join(getScanDir(), filename);
 
   try {
-    const content = await extractTextFromPDF(filepath);
-    if (!content) {
-      console.warn('No content extracted, possibly due to font issues');
-      return { oldName: filename, newName: filename, success: false };
+    // First try normal text extraction
+    try {
+      const content = await extractTextFromPDF(filepath);
+      if (content) {
+        debug('Successfully extracted text directly from PDF');
+        const newName = await suggestNewName(filename, content);
+        return {
+          success: true,
+          oldName: filename,
+          newName: newName || filename,
+          content
+        };
+      }
+    } catch (error) {
+      if (error.name !== 'NoTextContentError') {
+        throw error;  // Re-throw if it's not a "no text" error
+      }
+      debug('No text content found, falling back to OCR');
     }
 
-    if (process.env.DEBUG) {
-      console.log(`📄 Extracted ${content.length} characters of content`);
-      console.log(`📝 First 100 characters: ${content.slice(0, 100).replace(/\n/g, ' ')}...`);
+    // If text extraction failed, try OCR
+    debug('Starting OCR process');
+    const { createWorker } = tesseract;
+    const worker = await createWorker();
+
+    try {
+      // Get page count
+      const dataBuffer = await fs.promises.readFile(filepath);
+      const pdf = await getDocument(new Uint8Array(dataBuffer)).promise;
+      const numPages = pdf.numPages;
+
+      debug(`Processing ${numPages} pages with OCR`);
+      let fullText = '';
+
+      // Process each page
+      for (let i = 1; i <= numPages; i++) {
+        debug(`Converting page ${i}/${numPages} to image`);
+        const imageBuffer = await convertPDFPageToImage(filepath, i);
+
+        debug(`Running OCR on page ${i}`);
+        const { data } = await worker.recognize(imageBuffer);
+        debug(`Page ${i} OCR Confidence: ${data.confidence}%`);
+
+        fullText += data.text + '\n\n';
+      }
+
+      if (!fullText.trim()) {
+        throw new Error('OCR extraction produced no text');
+      }
+
+      debug(`Successfully extracted ${fullText.length} characters using OCR`);
+      const newName = await suggestNewName(filename, fullText);
+
+      return {
+        success: true,
+        oldName: filename,
+        newName: newName || filename,
+        content: fullText
+      };
+
+    } finally {
+      await worker.terminate();
     }
 
-    const newName = await suggestNewName(filename, content);
-
-    // if (path.extname(filepath).toLowerCase() === '.pdf') {
-    //   const ocrPath = await updatePDFWithOCRText(filepath, content); // Reuse existing content instead of re-extracting
-    //   await updateRemappingCache(filepath, newName, ocrPath);
-    // } else {
-    // await updateCache('rename-mappings.json', filepath, newName);
-    // }
-
-    return {
-      success: true,
-      oldName: filename,
-      newName: newName || filename
-    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     debug(`Error processing ${filename}: ${errorMessage}`);
@@ -102,8 +143,18 @@ async function processFile(filename: string): Promise<RenameResult> {
   }
 }
 
-async function renameFile(oldPath: string, newPath: string) {
+async function renameFile(result: RenameResult) {
+
+  if (!result.success) {
+    console.log(`❌ Skipping because it failed to process`);
+    return false;
+  }
+
   try {
+    const oldPath = path.join(getScanDir(), result.oldName);
+    const newPath = path.join(getScanDir(), result.newName);
+
+
     await fs.promises.rename(oldPath, newPath);
     console.log(`✅ Renamed file:
       From: ${path.basename(oldPath)}
@@ -143,10 +194,8 @@ async function main() {
     console.log(`\n📋 Processing: ${filename} (${++processedCount}/${unprocessedFiles.length})`);
 
     const result = await processFile(filename);
-    const oldPath = path.join(getScanDir(), result.oldName);
-    const newPath = path.join(getScanDir(), result.newName);
 
-    const renameSuccess = await renameFile(oldPath, newPath);
+    const renameSuccess = await renameFile(result);
 
     const mapping: RenameMapping = {
       ...result,

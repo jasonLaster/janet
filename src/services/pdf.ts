@@ -2,13 +2,15 @@ import * as fs from 'fs';
 import pdfParse from 'pdf-parse';
 import * as tesseract from 'tesseract.js';
 import { PDFDocument, rgb } from 'pdf-lib'
-import { createWriteStream } from 'fs'
 import { debugLog as debug } from '../utils/debug'
 import * as path from 'path';
-import { createCanvas } from 'canvas';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import { StandardFonts } from 'pdf-lib'
 import { safeReadFile, ensureFileExists, getScanDir, getRelativeToScanDir } from '../utils/file';
+import sharp from 'sharp';
+import { promisify } from 'util';
+import { exec as execCallback } from 'child_process';
+const exec = promisify(execCallback);
 
 // Configure PDF.js worker
 if (typeof window === 'undefined') {
@@ -78,7 +80,7 @@ export async function extractTextFromPDF(pdfPath: string): Promise<string> {
   }
 }
 
-async function convertPDFPageToImage(pdfPath: string, pageNumber = 1): Promise<Buffer> {
+export async function convertPDFPageToImage(pdfPath: string, pageNumber = 1): Promise<Buffer> {
   debug(`Converting PDF page to image: ${getRelativeToScanDir(pdfPath)}`);
 
   try {
@@ -87,32 +89,24 @@ async function convertPDFPageToImage(pdfPath: string, pageNumber = 1): Promise<B
       throw new Error(`PDF file not found: ${pdfPath}`);
     }
 
-    const dataBuffer = await safeReadFile(pdfPath);
+    // Create a temporary output file
+    const tempOutput = `/tmp/pdf-page-${Date.now()}.png`;
 
-    // Convert Buffer to Uint8Array
-    const uint8Array = new Uint8Array(dataBuffer);
+    try {
+      // Use pdftocairo to convert PDF page to PNG
+      await exec(`pdftocairo -png -singlefile -f ${pageNumber} -l ${pageNumber} "${pdfPath}" "${tempOutput}"`);
 
-    const loadingTask = getDocument({
-      data: uint8Array,
-      verbosity: 0
-    });
+      // Read the generated image
+      const imageBuffer = await fs.promises.readFile(`${tempOutput}.png`);
 
-    const pdf = await loadingTask.promise;
-    const page = await pdf.getPage(pageNumber);
+      // Clean up the temporary file
+      await fs.promises.unlink(`${tempOutput}.png`);
 
-    const scale = 2.0;
-    const viewport = page.getViewport({ scale });
-
-    const canvas = createCanvas(viewport.width, viewport.height);
-    const context = canvas.getContext('2d');
-
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport,
-    };
-
-    await page.render(renderContext).promise;
-    return canvas.toBuffer('image/png');
+      return imageBuffer;
+    } catch (error) {
+      debug('Failed to convert PDF using pdftocairo:', error);
+      throw new Error(`Failed to convert PDF using pdftocairo: ${error.message}`);
+    }
   } catch (error) {
     debug('Failed to convert PDF page to image:', error);
     throw new Error(`Failed to convert PDF page to image ${pdfPath}: ${error.message}`);
