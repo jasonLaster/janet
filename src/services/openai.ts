@@ -34,58 +34,41 @@ export async function suggestNewName(filename: string, content: string): Promise
 Current filename: ${filename}
 
 Suggestions:
-- Include the company name at the beginning of the filename
-- Use the date of the document as part of the filename. Convert the date to YYYY-MM-DD. 
-- Use the document type as part of the filename
-- Use the document number as part of the filename
-- Include a description of the content of the document as part of the filename
-- prefer spaces to underscores between words
-- use a dash to separate the company name from the document type
+- The filename should follow this exact format: YYYY-MM-DD Company Name - Description
+- The company name should be at the beginning after the date
+- The date must be in YYYY-MM-DD format (with dashes)
+- Use a single dash (-) to separate the company name from the description
+- Use spaces between other words, not underscores
+- The description should be concise but informative, including:
+  - Document type (e.g. W2, 1095C, Statement)
+  - Document number if available
+  - Key details about the content
 
+Here are some examples of good filenames:
+<examples>
+2024-07-12 Octave Health Group - 1095C Form 10119982.pdf
+2024-07-12 Pettinato Associates - Insurance Claim 10119982.pdf
+2024-07-12 Chase - Credit Card Statement 03724.pdf
+2024-07-12 Mozilla - W2 Form 203488.pdf
+2024-07-12 Weight Watchers - W2 Form 156930.pdf
+2024-07-12 OConnor Davies - Tax Organizer 756359.pdf
+</examples>
 
-          <content>
-          ${content.slice(0, 10000)}
-          </content>
-          
-          
-          Here are some examples of good filenames:
-          <examples>
-          2024-07-12 Octave Health Group - 1095C Employer Provided Health Insurance Coverage.pdf
-          2024-07-12 Pettinato Associates - Claim Confirmation 10119982.pdf
-          2024-07-12 Chase Credit Card - Returned Payment Notice 03724.pdf
-          2024-07-12 Mozilla - Earnings Summary W2 203488.pdf
-          2024-07-12 Weight Watchers - W2 Earnings Summary 156930.pdf
-          2024-07-12 OConnor Davies - Tax Organizer 756359.pdf
-          </examples>
+Here are some examples of bad filenames:
+<examples>
+- 20240712 Sutter Health - Medical Statement.pdf
+  (Date is not in YYYY-MM-DD format with dashes)
 
-          Here are some examples of bad filenames:
-          <examples>
-          {
-            "filename": "20210923 Sutter Health - Outpatient Perinatal Services Antepartum Testing Orders 60928.pdf",
-            "reason": "The date is not in YYYY-MM-DD format."
-          }
+- 2024-07-12_Sutter_Health-Medical_Statement.pdf
+  (Uses underscores instead of spaces)
 
-          {
-            "filename": "2021-09-23 Sutter Health Outpatient Perinatal Services Antepartum Testing Orders 60928.pdf",
-            "reason": "The company is missing the - separator."
-          }
+- 2024-07-12 Sutter Health Medical Statement.pdf
+  (Missing the dash separator after company name)
+</examples>
 
-          {
-            "filename": "20240712_AT&T - Direct TV Stream Setup and Installation Guide",
-            "reason": "The date is not YYYY-MM-DD format. There is an underscore after the date. The // should be ::"
-          }
-          </example>
-          </examples>
-
-
-          Here are some example of bad renaming:
-            From: 2024-07-01 Stanford Health Care - Monthly Statement 102800925.pdf
-            To:   20240701_Stanford Health Care - Monthly Statement 102800925.pdf
-            Reason: the date is not in YYYY-MM-DD format.
-
-            From: 20230626 East Bay Pediatrics - Statement 33309.pdf
-            To:   20230626_East Bay Pediatrics - Statement 33309.pdf
-            Reason: the date is not in YYYY-MM-DD format. There is an underscore after the date.
+<content>
+${content.slice(0, 10000)}
+</content>
           `
         }
       ],
