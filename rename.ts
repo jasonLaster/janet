@@ -43,6 +43,7 @@ async function main() {
 
   if (filesToProcess.length === 0) {
     console.log('✅ All files have been successfully processed');
+    process.exit(0);
     return;
   }
 
@@ -70,6 +71,11 @@ async function main() {
     Total files processed: ${filesToProcess.length}
     Successfully renamed: ${successCount}
     Failed to rename: ${filesToProcess.length - successCount}`);
+
+  process.exit(0);
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

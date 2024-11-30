@@ -3,4 +3,5 @@ dist
 rename-mappings.json
 .env
 eng.traineddata
+output.log
   

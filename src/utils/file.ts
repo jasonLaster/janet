@@ -3,7 +3,10 @@ import * as path from 'path';
 import { debugLog as debug } from './debug';
 import { RenameMapping } from '../types';
 
-const MAPPINGS_FILE = 'rename-mappings.json';
+import { homedir } from 'os'
+import { join } from 'path'
+
+const MAPPINGS_FILE = join(homedir(), 'src/projects/PDF-OCR/rename-mappings.json')
 
 function expandPath(filepath: string): string {
   if (filepath.startsWith('~/')) {
