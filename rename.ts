@@ -3,6 +3,18 @@ import { processFile, ProcessResult } from './src/services/fileProcessor';
 import * as path from 'path';
 import * as fs from 'fs';
 
+async function backupMappings(mappings: ProcessResult[]) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupDir = path.join('output', 'cache');
+  const backupPath = path.join(backupDir, `rename-mappings-${timestamp}.json`);
+
+  // Ensure backup directory exists
+  await fs.promises.mkdir(backupDir, { recursive: true });
+
+  console.log(`📦 Backing up mappings to ${backupPath}`);
+  await fs.promises.writeFile(backupPath, JSON.stringify(mappings, null, 2));
+}
+
 async function renameFile(result: ProcessResult) {
   if (!result.success) {
     console.log(`❌ Skipping because it failed to process`);
@@ -35,6 +47,11 @@ async function renameFile(result: ProcessResult) {
 async function main() {
   const filenames = await getFilenames();
   const existingMappings = loadExistingMappings();
+
+  // Backup existing mappings before processing new files
+  if (existingMappings.length > 0) {
+    await backupMappings(existingMappings);
+  }
 
   const filesToProcess = filenames.filter((filename) => {
     const mapping = existingMappings.find(m => m.newName === filename);

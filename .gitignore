@@ -4,4 +4,5 @@ rename-mappings.json
 .env
 eng.traineddata
 output.log
+output
   
