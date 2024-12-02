@@ -102,21 +102,33 @@ export async function extractTextFromPDF(pdfPath: string): Promise<string> {
     }
 
     // Fall back to OCR
+    let worker: Worker | null = null;
     try {
-      const worker: Worker = await createWorker();
+      worker = await createWorker();
 
-      try {
-        // Convert PDF to image first
-        const imageBuffer = await convertPDFPageToImage(pdfPath);
+      // Convert PDF to image first
+      const imageBuffer = await convertPDFPageToImage(pdfPath);
 
-        const { data } = await worker.recognize(imageBuffer);
-        return data.text.trim();
-      } finally {
-        await worker.terminate();
-      }
+      const { data } = await worker.recognize(imageBuffer);
+      const text = data.text.trim();
+
+      // Explicitly terminate worker before returning
+      await worker.terminate();
+      worker = null;
+
+      return text;
     } catch (error) {
       debug('OCR failed:', error);
       throw error;
+    } finally {
+      // Ensure worker is terminated even if an error occurs
+      if (worker) {
+        try {
+          await worker.terminate();
+        } catch (err) {
+          debug('Failed to terminate worker:', err);
+        }
+      }
     }
   } catch (error) {
     debug('PDF extraction failed:', error);

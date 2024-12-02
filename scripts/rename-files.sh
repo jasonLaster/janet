@@ -4,7 +4,7 @@
 # Load environment variables directly
 set -a
 source ~/.zshrc
-source "$(dirname "$0")/.env"
+source "$(dirname "$0")/../.env"
 set +a
 
 
@@ -16,7 +16,8 @@ TEST_EXIT_CODE=$?
 
 # Send a notification based on the test result
 if [ $TEST_EXIT_CODE -eq 0 ]; then
-    # osascript -e 'display notification "Renaming passed. "PDF OCD"'
+    # osascript -e 'display notification "Renaming passed" with title "PDF OCD"'
+    :  # No-op
 else
     osascript -e 'display notification "Renaming failed. Check ~/src/projects/PDF-OCR/output.log" with title "PDF OCD"'
 fi 
