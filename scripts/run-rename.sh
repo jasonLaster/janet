@@ -12,5 +12,8 @@ if [ -f .env ]; then
     source .env
 fi
 
-# Run the script
-/usr/local/bin/bun run rename.ts >> "$PROJECT_DIR/output/rename-$(date +\%Y-\%m-\%d).log" 2>&1 
+# Create logs directory if it doesn't exist
+mkdir -p "$PROJECT_DIR/output/logs"
+
+# Run the script with timestamped log file
+$(which bun) $PROJECT_DIR/rename.ts >> "$PROJECT_DIR/output/logs/rename-$(date +\%Y-\%m-\%dT\%H-\%M-\%S).log" 2>&1
