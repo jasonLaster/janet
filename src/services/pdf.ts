@@ -34,8 +34,12 @@ export async function convertPDFPageToImage(pdfPath: string): Promise<Buffer> {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Convert PDF to PNG using pdftoppm (first page only)
-    await execAsync(`pdftoppm -png -f 1 -l 1 -singlefile "${pdfPath}" "${outputBasePath}"`);
+    // Properly escape the paths for shell command
+    const escapedPdfPath = pdfPath.replace(/'/g, "'\\''");
+    const escapedOutputPath = outputBasePath.replace(/'/g, "'\\''");
+
+    // Use single quotes to handle paths with spaces and special characters
+    await execAsync(`pdftoppm -png -f 1 -l 1 -singlefile '${escapedPdfPath}' '${escapedOutputPath}'`);
 
     // Read the generated image
     const imageBuffer = await fs.promises.readFile(outputBasePath + '.png');
