@@ -8,6 +8,7 @@ import * as path from 'path';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import { promisify } from 'util';
 import { exec } from 'child_process';
+import type { Subprocess } from 'bun';
 
 // Configure PDF.js worker
 if (typeof window === 'undefined') {
@@ -24,41 +25,105 @@ if (typeof window === 'undefined') {
  * Convert a PDF page to an image buffer using pdftoppm
  */
 export async function convertPDFPageToImage(pdfPath: string): Promise<Buffer> {
-  const execAsync = promisify(exec);
   const tempDir = path.join(process.cwd(), 'temp');
   const outputBasePath = path.join(tempDir, 'temp');
+  let proc: Subprocess | null = null;
 
   try {
+    // Validate input path
+    if (!pdfPath || typeof pdfPath !== 'string') {
+      throw new Error('Invalid PDF path provided');
+    }
+
+    // Ensure the PDF file exists and is readable
+    try {
+      await fs.promises.access(pdfPath, fs.constants.R_OK);
+    } catch (error) {
+      throw new Error(`Cannot access PDF file: ${pdfPath}`);
+    }
+
     // Create temp directory if it doesn't exist
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Properly escape the paths for shell command
-    const escapedPdfPath = pdfPath.replace(/'/g, "'\\''");
-    const escapedOutputPath = outputBasePath.replace(/'/g, "'\\''");
+    // Convert PDF to PNG using pdftoppm (first page only)
+    proc = Bun.spawn(['pdftoppm', '-png', '-f', '1', '-l', '1', '-singlefile', pdfPath, outputBasePath], {
+      stderr: 'pipe',
+      stdout: 'pipe',
+      onExit(proc, exitCode, signalCode, error) {
+        if (error) debug('Process error:', error);
+        if (signalCode) debug('Process terminated with signal:', signalCode);
+      }
+    });
 
-    // Use single quotes to handle paths with spaces and special characters
-    await execAsync(`pdftoppm -png -f 1 -l 1 -singlefile '${escapedPdfPath}' '${escapedOutputPath}'`);
+    // Set a timeout for the process
+    const timeoutMs = 30000; // 30 seconds
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('PDF conversion timed out')), timeoutMs);
+    });
+
+    // Wait for process completion with timeout
+    const [exitCode] = await Promise.race([
+      Promise.all([proc.exited, Promise.resolve()]),
+      timeoutPromise
+    ]);
+
+    // Collect stderr output
+    const stderrChunks: Uint8Array[] = [];
+    if (proc.stderr && proc.stderr instanceof ReadableStream) {
+      const reader = proc.stderr.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) stderrChunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    }
+
+    if (exitCode !== 0) {
+      const stderr = Buffer.concat(stderrChunks).toString().trim();
+      throw new Error(`pdftoppm error (${exitCode}): ${stderr || 'No error message available'}`);
+    }
+
+    // Verify the output file exists
+    const outputPath = outputBasePath + '.png';
+    try {
+      await fs.promises.access(outputPath, fs.constants.R_OK);
+    } catch (error) {
+      throw new Error('PDF conversion failed: output file not created');
+    }
 
     // Read the generated image
-    const imageBuffer = await fs.promises.readFile(outputBasePath + '.png');
-
-    // Clean up
-    await fs.promises.unlink(outputBasePath + '.png');
+    const imageBuffer = await fs.promises.readFile(outputPath);
+    if (!imageBuffer || imageBuffer.length === 0) {
+      throw new Error('PDF conversion failed: output file is empty');
+    }
 
     return imageBuffer;
   } catch (error) {
     debug('PDF to image conversion failed:', error);
     throw error;
   } finally {
-    // Clean up temp directory
+    // Kill the process if it's still running
+    if (proc && !proc.exited) {
+      proc.kill();
+    }
+
+    // Clean up temp files
     try {
+      const outputPath = outputBasePath + '.png';
+      if (fs.existsSync(outputPath)) {
+        await fs.promises.unlink(outputPath);
+      }
       if (fs.existsSync(tempDir)) {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
     } catch (err) {
-      debug('Failed to clean up temp directory:', err);
+      debug('Failed to clean up temporary files:', err);
     }
   }
 }
