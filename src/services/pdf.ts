@@ -48,7 +48,7 @@ export async function convertPDFPageToImage(pdfPath: string): Promise<Buffer> {
     }
 
     // Convert PDF to PNG using pdftoppm (first page only)
-    proc = Bun.spawn(['pdftoppm', '-png', '-f', '1', '-l', '1', '-singlefile', pdfPath, outputBasePath], {
+    proc = Bun.spawn(['/opt/homebrew/bin/pdftoppm', '-png', '-f', '1', '-l', '1', '-singlefile', pdfPath, outputBasePath], {
       stderr: 'pipe',
       stdout: 'pipe',
       onExit(proc, exitCode, signalCode, error) {

@@ -7,6 +7,8 @@ source ~/.zshrc
 source "$(dirname "$0")/../.env"
 set +a
 
+# Ensure Homebrew binaries are in PATH
+export PATH="/opt/homebrew/bin:$PATH"
 
 bun --version
 
