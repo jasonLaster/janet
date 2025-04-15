@@ -1,4 +1,10 @@
 {
+  "name": "pdf-ocd",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
   "dependencies": {
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.1",
@@ -6,12 +12,6 @@
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0",
     "vitest": "^0.34.0"
-  },
-  "name": "pdf-ocd",
-  "version": "1.0.0",
-  "main": "text.js",
-  "directories": {
-    "test": "tests"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
