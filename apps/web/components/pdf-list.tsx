@@ -141,9 +141,14 @@ export function PdfList() {
         <p className="text-muted-foreground mb-4">
           Upload your first PDF to get started
         </p>
-        <FileUpload dropZoneOnly={true}>
-          <Button>Upload PDF</Button>
-        </FileUpload>
+        <div className="flex justify-center gap-4">
+          <FileUpload dropZoneOnly={true}>
+            <Button>Upload PDF</Button>
+          </FileUpload>
+          <Button variant="outline" onClick={() => router.push("/chat")}>
+            Go to Chat
+          </Button>
+        </div>
       </div>
     );
   }
@@ -165,6 +170,17 @@ export function PdfList() {
 
   return (
     <div className="w-full">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-medium">Your PDFs</h2>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push("/chat")}>
+            Chat with PDFs
+          </Button>
+          <FileUpload>
+            <Button>Upload PDF</Button>
+          </FileUpload>
+        </div>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -208,6 +224,12 @@ export function PdfList() {
                     >
                       <ExternalLinkIcon className="h-4 w-4 mr-2" />
                       View
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/chat?pdf=${pdf.id}`)}
+                    >
+                      <SearchIcon className="h-4 w-4 mr-2" />
+                      Chat with PDF
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => router.push(`/search?pdf=${pdf.id}`)}
