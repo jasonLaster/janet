@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPdfById } from "@/lib/db";
+import { getPdfById, PDF } from "@/lib/db";
 
 export async function GET(
   request: Request,

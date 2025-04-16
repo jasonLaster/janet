@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -61,7 +61,7 @@
     "postcss": "^8",
     "react": "^19",
     "react-day-picker": "8.10.1",
-    "react-dom": "^19",
+    "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.1",
     "react-markdown": "^10.1.0",
     "react-pdf": "latest",

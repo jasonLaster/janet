@@ -57,7 +57,7 @@ export default function SearchRedirect({
   return null;
 }
 
-export function SearchPage() {
+const SearchPageComponent = () => {
   const [query, setQuery] = useState("");
   const [pdfFilter, setPdfFilter] = useState<string>("all");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -255,4 +255,4 @@ export function SearchPage() {
       )}
     </div>
   );
-}
+};
