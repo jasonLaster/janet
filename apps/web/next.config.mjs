@@ -22,6 +22,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Add webpack config for pdf.js worker
+  webpack: (config) => {
+    config.resolve.alias.canvas = false;
+    config.resolve.alias.encoding = false;
+    return config;
+  },
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
