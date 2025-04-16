@@ -5,7 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -30,12 +30,13 @@ export async function POST(request: Request) {
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    // Store metadata in the database, including the user ID
+    // Store metadata in the database, including the user ID and orgId
     const pdfRecord = await insertPdf({
       filename: file.name,
       blob_url: blob.url,
       size_bytes: file.size,
       user_id: userId,
+      organization_id: orgId,
       // We'll update page count later after processing the PDF
     });
 

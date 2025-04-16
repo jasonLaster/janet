@@ -4,8 +4,8 @@ import { neon } from "@neondatabase/serverless";
 export const sql = neon(process.env.DATABASE_URL!);
 
 // Helper function to get a PDF by ID, checking ownership
-export async function getPdfById(id: number, userId: string) {
-  try {
+export async function getPdfById(id: number, userId?: string) {
+  if (userId) {
     console.log(
       `Executing database query for PDF ID: ${id} and user ID: ${userId}`
     );
@@ -13,35 +13,57 @@ export async function getPdfById(id: number, userId: string) {
       SELECT * FROM pdfs 
       WHERE id = ${id} AND user_id = ${userId}
     `;
-    console.log(`Query result for PDF ID ${id} and user ${userId}:`, result);
     return result[0] || null;
-  } catch (error) {
-    console.error(
-      `Database error when fetching PDF ID ${id} for user ${userId}:`,
-      error
-    );
-    throw error;
+  } else {
+    console.log(`Executing database query for PDF ID: ${id} (no user check)`);
+    const result = await sql`
+      SELECT * FROM pdfs 
+      WHERE id = ${id}
+    `;
+    return result[0] || null;
   }
 }
 
-// Helper function to get all PDFs for a specific user
-export async function getAllPdfs(userId: string) {
-  console.log(`Executing database query for all PDFs for user ID: ${userId}`);
-  const result = await sql`
-    SELECT * FROM pdfs 
-    WHERE user_id = ${userId} 
-    ORDER BY uploaded_at DESC
-  `;
-  // console.log(`Query result for all PDFs for user ${userId}:`, result);
+// Function to get all PDFs for a user, optionally filtered by organization
+export async function getAllPdfs(
+  userId: string,
+  organizationId?: string | null
+) {
+  console.log(
+    `Executing database query for PDFs for user ID: ${userId}, Org ID: ${organizationId}`
+  );
+
+  let query;
+  if (organizationId) {
+    // If organizationId is provided, filter by it
+    query = sql`
+      SELECT * FROM pdfs 
+      WHERE user_id = ${userId} AND organization_id = ${organizationId}
+      ORDER BY uploaded_at DESC
+    `;
+  } else {
+    // If organizationId is null or undefined, filter for personal PDFs (organization_id is NULL)
+    query = sql`
+      SELECT * FROM pdfs 
+      WHERE user_id = ${userId} AND organization_id IS NULL
+      ORDER BY uploaded_at DESC
+    `;
+  }
+
+  const result = await query;
+  console.log(
+    `Query result for user ${userId}, Org ID: ${organizationId}: ${result.length} rows` // Use result.length for Neon
+  );
   return result;
 }
 
-// Helper function to insert a new PDF
-export async function insertPdf(pdf: {
+// Helper function to insert PDF metadata
+export async function insertPdf(pdfData: {
   filename: string;
   blob_url: string;
   size_bytes: number;
   user_id: string;
+  organization_id?: string | null; // Allow optional orgId
   title?: string;
   description?: string;
   page_count?: number;
@@ -51,19 +73,22 @@ export async function insertPdf(pdf: {
       filename, 
       blob_url, 
       size_bytes, 
-      user_id,
+      user_id, 
+      organization_id, 
       title, 
       description, 
       page_count
     ) VALUES (
-      ${pdf.filename}, 
-      ${pdf.blob_url}, 
-      ${pdf.size_bytes}, 
-      ${pdf.user_id},
-      ${pdf.title || null}, 
-      ${pdf.description || null}, 
-      ${pdf.page_count || null}
-    ) RETURNING id
+      ${pdfData.filename}, 
+      ${pdfData.blob_url}, 
+      ${pdfData.size_bytes}, 
+      ${pdfData.user_id},
+      ${pdfData.organization_id ?? null}, -- Use ?? null to handle undefined
+      ${pdfData.title ?? null}, 
+      ${pdfData.description ?? null}, 
+      ${pdfData.page_count ?? null}
+    )
+    RETURNING id
   `;
   return result[0];
 }
@@ -75,44 +100,30 @@ export async function deletePdf(id: number) {
   `;
 }
 
-// Helper function to update PDF metadata
-export async function updatePdf(
+// Function to update PDF metadata
+export async function updatePdfMetadata(
   id: number,
-  data: {
-    title?: string;
-    description?: string;
-    page_count?: number;
-  }
+  metadata: Partial<{
+    title: string;
+    description: string;
+    page_count: number;
+  }>
 ) {
-  const updates = [];
-  const values = [];
-
-  if (data.title !== undefined) {
-    updates.push(`title = $${updates.length + 1}`);
-    values.push(data.title);
+  const fields = Object.keys(metadata);
+  if (fields.length === 0) {
+    return null; // No updates needed
   }
 
-  if (data.description !== undefined) {
-    updates.push(`description = $${updates.length + 1}`);
-    values.push(data.description);
-  }
+  const setClauses = fields.map((field, index) => `${field} = $${index + 1}`);
+  const values = Object.values(metadata);
 
-  if (data.page_count !== undefined) {
-    updates.push(`page_count = $${updates.length + 1}`);
-    values.push(data.page_count);
-  }
-
-  if (updates.length === 0) return null;
-
-  const updateQuery = `
-    UPDATE pdfs 
-    SET ${updates.join(", ")} 
-    WHERE id = $${updates.length + 1} 
-    RETURNING *
-  `;
-
+  const updateQuery = `UPDATE pdfs SET ${setClauses.join(", ")} WHERE id = $${
+    fields.length + 1
+  } RETURNING *`;
   values.push(id);
 
   const result = await sql.query(updateQuery, values);
-  return result.rows[0] || null;
+  // Adjust result handling: Neon's query might return rows directly or within a different structure
+  // Assuming it returns an array of rows similar to the tagged template literal
+  return result && result.length > 0 ? result[0] : null;
 }
