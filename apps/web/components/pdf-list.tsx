@@ -170,17 +170,6 @@ export function PdfList() {
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-medium">Your PDFs</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push("/chat")}>
-            Chat with PDFs
-          </Button>
-          <FileUpload>
-            <Button>Upload PDF</Button>
-          </FileUpload>
-        </div>
-      </div>
       <Table>
         <TableHeader>
           <TableRow>

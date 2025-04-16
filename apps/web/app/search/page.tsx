@@ -156,12 +156,6 @@ export function SearchPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Search across your PDFs</CardTitle>
-          <CardDescription>
-            Enter a query to search through the content of your PDFs
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row">
