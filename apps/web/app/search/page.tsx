@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, FileIcon, SearchIcon } from "lucide-react";
 import { useSearchParams, redirect } from "next/navigation";
+import { debounce } from "lodash";
 
 interface PDF {
   id: number;
@@ -67,7 +68,7 @@ const SearchPageComponent = () => {
   const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
 
   const searchParams = useSearchParams();
-  const pdfIdParam = searchParams.get("pdf");
+  const pdfIdParam = searchParams?.get("pdf");
 
   useEffect(() => {
     if (pdfIdParam) {

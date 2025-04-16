@@ -45,15 +45,25 @@ export const fetchPdfsAtom = atom(null, async (get, set) => {
   try {
     const response = await fetch("/api/pdfs");
     if (!response.ok) {
-      throw new Error("Failed to fetch PDFs");
+      // Attempt to get more specific error from response body if available
+      let errorBody = "Failed to fetch PDFs";
+      try {
+        const errorJson = await response.json();
+        errorBody = errorJson.error || errorBody; // Use error from JSON if present
+      } catch (_) {
+        // Ignore if response is not JSON or body is empty
+      }
+      throw new Error(errorBody);
     }
     const data = await response.json();
     set(pdfsAtom, data.pdfs);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching PDFs:", error);
-    set(pdfsErrorAtom, error.message || "Failed to load PDFs");
-    // Optionally show toast here if not handled in component
-    // toast({ title: "Error", description: "Failed to load your PDFs", variant: "destructive" });
+    const message =
+      error instanceof Error
+        ? error.message
+        : "An unknown error occurred while fetching PDFs";
+    set(pdfsErrorAtom, message);
   } finally {
     set(pdfsLoadingAtom, false);
   }
@@ -95,7 +105,7 @@ export const uploadFileAtom = atom(
       clearInterval(interval);
 
       if (!response.ok) {
-        const errorData = await response.text();
+        const errorData = await response.text(); // Keep as text for potential non-JSON errors
         throw new Error(`Upload failed: ${response.statusText || errorData}`);
       }
 
@@ -121,9 +131,14 @@ export const uploadFileAtom = atom(
           prev.filter((f) => f.id !== uploadId)
         );
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearInterval(interval);
       console.error("Upload error:", error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unknown upload error occurred.";
 
       // Update state with error message
       set(uploadingFilesAtom, (prev) =>
@@ -132,7 +147,7 @@ export const uploadFileAtom = atom(
             ? {
                 ...f,
                 uploading: false,
-                error: error.message || "Upload failed",
+                error: message,
                 progress: 0, // Reset progress on error
               }
             : f
@@ -142,7 +157,7 @@ export const uploadFileAtom = atom(
       // Show error toast
       toast({
         title: `Upload failed for ${fileToUpload.name}`,
-        description: error.message || "An unknown error occurred.",
+        description: message,
         variant: "destructive",
       });
     }

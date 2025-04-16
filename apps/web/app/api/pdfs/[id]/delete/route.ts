@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { deletePdf, getPdfById } from "@/lib/db";
 import { del } from "@vercel/blob";

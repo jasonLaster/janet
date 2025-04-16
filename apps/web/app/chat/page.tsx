@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { useChat } from "ai/react";
 
 export default function ChatWithPDF() {
   const [messages, setMessages] = useState<
@@ -16,6 +17,26 @@ export default function ChatWithPDF() {
   const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const {
+    messages: chatMessages,
+    input: chatInput,
+    handleInputChange: chatHandleInputChange,
+    handleSubmit: chatHandleSubmit,
+    append: chatAppend,
+  } = useChat({
+    api: "/api/chat", // Ensure this points to your Next.js API route
+    onError: (error: unknown) => {
+      // Handle errors, e.g., show a toast notification
+      console.error("Chat error:", error);
+      toast({
+        title: "Chat Error",
+        description: "Failed to get response.",
+        variant: "destructive",
+      });
+    },
+    body: { pdfUrl: files ? URL.createObjectURL(files[0]) : null }, // Pass the pdfUrl to the API
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
