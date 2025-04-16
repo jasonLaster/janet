@@ -3,25 +3,36 @@ import { neon } from "@neondatabase/serverless";
 // Create a SQL client with the pooled connection
 export const sql = neon(process.env.DATABASE_URL!);
 
-// Helper function to get a PDF by ID, checking ownership
-export async function getPdfById(id: number, userId?: string) {
-  if (userId) {
-    console.log(
-      `Executing database query for PDF ID: ${id} and user ID: ${userId}`
-    );
-    const result = await sql`
+// Helper function to get a PDF by ID, checking ownership and organization context
+export async function getPdfById(
+  id: number,
+  userId: string,
+  orgId?: string | null
+) {
+  console.log(
+    `Executing database query for PDF ID: ${id}, User ID: ${userId}, Org ID: ${orgId}`
+  );
+
+  let query;
+  if (orgId) {
+    // If orgId is provided, check user and organization
+    query = sql`
       SELECT * FROM pdfs 
-      WHERE id = ${id} AND user_id = ${userId}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${orgId}
     `;
-    return result[0] || null;
   } else {
-    console.log(`Executing database query for PDF ID: ${id} (no user check)`);
-    const result = await sql`
+    // If orgId is null, check user and that organization_id IS NULL (personal workspace)
+    query = sql`
       SELECT * FROM pdfs 
-      WHERE id = ${id}
+      WHERE id = ${id} AND user_id = ${userId} AND organization_id IS NULL
     `;
-    return result[0] || null;
   }
+
+  const result = await query;
+  console.log(
+    `Query result for PDF ID ${id}, user ${userId}, Org ID: ${orgId}: ${result.length} row(s)`
+  );
+  return result[0] || null;
 }
 
 // Function to get all PDFs for a user, optionally filtered by organization

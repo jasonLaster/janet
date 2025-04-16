@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
+import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import {
@@ -47,6 +48,7 @@ export function PdfList() {
   const { toast } = useToast();
   const router = useRouter();
   const searchQuery = useContext(SearchContext);
+  const { organization } = useOrganization();
 
   useEffect(() => {
     async function fetchPdfs() {
@@ -71,7 +73,7 @@ export function PdfList() {
     }
 
     fetchPdfs();
-  }, [toast]);
+  }, [toast, organization?.id]);
 
   const handleDelete = async (id: number) => {
     try {
@@ -187,7 +189,7 @@ export function PdfList() {
             <TableRow key={pdf.id} className="hover:bg-muted/50 cursor-pointer">
               <TableCell
                 className="font-medium"
-                onClick={() => router.push(`/viewer/${pdf.id}`)}
+                onClick={() => router.push(`/pdfs/${pdf.id}`)}
               >
                 <div className="flex items-center gap-2">
                   <FileIcon className="h-5 w-5 text-blue-500" />
@@ -205,7 +207,7 @@ export function PdfList() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => router.push(`/viewer/${pdf.id}`)}
+                      onClick={() => router.push(`/pdfs/${pdf.id}`)}
                     >
                       <ExternalLinkIcon className="h-4 w-4 mr-2" />
                       View
