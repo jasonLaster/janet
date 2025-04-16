@@ -28,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SearchContext } from "@/app/layout-wrapper";
+import { SearchContext } from "@/app/(app)/layout";
 
 interface PDF {
   id: number;
@@ -178,9 +178,7 @@ export function PdfList() {
                 Name <SortAscIcon className="h-3 w-3 ml-1" />
               </div>
             </TableHead>
-            <TableHead>Owner</TableHead>
             <TableHead>Last modified</TableHead>
-            <TableHead>File size</TableHead>
             <TableHead className="w-[60px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -196,9 +194,7 @@ export function PdfList() {
                   <span className="truncate">{pdf.title || pdf.name}</span>
                 </div>
               </TableCell>
-              <TableCell>Me</TableCell>
               <TableCell>{formatDate(pdf.uploadedAt)}</TableCell>
-              <TableCell>{(pdf.size / 1024 / 1024).toFixed(2)} MB</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

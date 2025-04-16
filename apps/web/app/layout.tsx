@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import LayoutWrapper from "./layout-wrapper";
 import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
@@ -16,9 +15,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body>
-          <LayoutWrapper>{children}</LayoutWrapper>
-        </body>
+        <body>{children}</body>
       </html>
     </ClerkProvider>
   );

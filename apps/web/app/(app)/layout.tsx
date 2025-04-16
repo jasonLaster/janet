@@ -2,19 +2,18 @@
 
 import { useState, createContext } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { FileUpload } from "@/components/file-upload";
 import { Input } from "@/components/ui/input";
-import { FileIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
 
 // Create a context for the search query
 export const SearchContext = createContext("");
 
-export default function LayoutWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Renamed from LayoutWrapper to RootLayout or similar standard name for layout files
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
@@ -24,7 +23,7 @@ export default function LayoutWrapper({
         {/* Logo and Title */}
         <div className="p-4 border-b flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <FileIcon className="h-6 w-6 text-blue-500" />
+            <Image src="/logo.png" alt="Janet Logo" width={24} height={24} />
             <h1 className="text-xl font-semibold">Janet</h1>
           </Link>
         </div>
@@ -36,17 +35,27 @@ export default function LayoutWrapper({
           </div>
         </nav>
 
-        {/* Upload Area */}
-        <div className="p-2 mt-auto">
+        {/* User/Upload Area in Sidebar - Still uses SignedIn/Out */}
+        <div className="mt-auto">
           <SignedOut>
-            <SignInButton className="text-blue-500 underline hover:cursor " />
+            {/* Optionally keep a sign-in prompt here, or remove if redundant */}
+            <div className="p-2 text-center">
+              <SignInButton mode="modal">
+                <Button variant="outline" size="sm">
+                  Sign In
+                </Button>
+              </SignInButton>
+            </div>
           </SignedOut>
           <SignedIn>
-            <UserButton />
+            <div className="p-2">
+              <FileUpload dropZoneOnly={true}></FileUpload>
+            </div>
+            <div className="p-2 border-t flex items-center justify-between">
+              <UserButton afterSignOutUrl="/" />
+              {/* Add other signed-in user controls if needed */}
+            </div>
           </SignedIn>
-        </div>
-        <div className="p-2 mt-auto">
-          <FileUpload dropZoneOnly={true}></FileUpload>
         </div>
       </div>
 
@@ -66,13 +75,12 @@ export default function LayoutWrapper({
           </div>
         </header>
 
-        {/* Main content with search query passed as prop */}
-        <div className="flex-1 overflow-auto">
-          {/* Pass the searchQuery to the child components via context */}
+        {/* Main content area - No longer needs SignedIn/SignedOut wrapper */}
+        <main className="flex-1 overflow-auto">
           <SearchContext.Provider value={searchQuery}>
             {children}
           </SearchContext.Provider>
-        </div>
+        </main>
       </div>
     </div>
   );
