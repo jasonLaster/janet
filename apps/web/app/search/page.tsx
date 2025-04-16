@@ -1,74 +1,106 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, FileIcon, SearchIcon } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, FileIcon, SearchIcon } from "lucide-react";
+import { useSearchParams, redirect } from "next/navigation";
 
 interface PDF {
-  id: number
-  name: string
-  title?: string
+  id: number;
+  name: string;
+  title?: string;
 }
 
 interface SearchResult {
-  pdfId: number
-  pdfName: string
-  page: number
-  text: string
-  context: string
+  pdfId: number;
+  pdfName: string;
+  page: number;
+  text: string;
+  context: string;
 }
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("")
-  const [pdfFilter, setPdfFilter] = useState<string>("all")
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [hasSearched, setHasSearched] = useState(false)
-  const [pdfs, setPdfs] = useState<PDF[]>([])
-  const [isLoadingPdfs, setIsLoadingPdfs] = useState(true)
+export default function SearchRedirect({
+  searchParams,
+}: {
+  searchParams: { pdf?: string; q?: string };
+}) {
+  // If there's an existing search query, redirect to home with the query
+  if (searchParams.q) {
+    redirect(`/?q=${encodeURIComponent(searchParams.q)}`);
+  }
 
-  const searchParams = useSearchParams()
-  const pdfIdParam = searchParams.get("pdf")
+  // If there's a PDF ID, redirect to home with PDF ID
+  if (searchParams.pdf) {
+    redirect(`/?pdf=${encodeURIComponent(searchParams.pdf)}`);
+  }
+
+  // Otherwise just redirect to home
+  redirect("/");
+  return null;
+}
+
+export function SearchPage() {
+  const [query, setQuery] = useState("");
+  const [pdfFilter, setPdfFilter] = useState<string>("all");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [pdfs, setPdfs] = useState<PDF[]>([]);
+  const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
+
+  const searchParams = useSearchParams();
+  const pdfIdParam = searchParams.get("pdf");
 
   useEffect(() => {
     if (pdfIdParam) {
-      setPdfFilter(pdfIdParam)
+      setPdfFilter(pdfIdParam);
     }
-  }, [pdfIdParam])
+  }, [pdfIdParam]);
 
   useEffect(() => {
     async function fetchPdfs() {
       try {
-        setIsLoadingPdfs(true)
-        const response = await fetch("/api/pdfs")
+        setIsLoadingPdfs(true);
+        const response = await fetch("/api/pdfs");
         if (!response.ok) {
-          throw new Error("Failed to fetch PDFs")
+          throw new Error("Failed to fetch PDFs");
         }
-        const data = await response.json()
-        setPdfs(data.pdfs)
+        const data = await response.json();
+        setPdfs(data.pdfs);
       } catch (error) {
-        console.error("Error fetching PDFs:", error)
+        console.error("Error fetching PDFs:", error);
       } finally {
-        setIsLoadingPdfs(false)
+        setIsLoadingPdfs(false);
       }
     }
 
-    fetchPdfs()
-  }, [])
+    fetchPdfs();
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!query.trim()) return
+    e.preventDefault();
+    if (!query.trim()) return;
 
-    setIsSearching(true)
-    setHasSearched(true)
+    setIsSearching(true);
+    setHasSearched(true);
 
     // In a real app, this would call the API to search PDFs
     // For demo purposes, we'll simulate a search with mock data
@@ -87,7 +119,8 @@ export default function SearchPage() {
           pdfName: "Project Proposal.pdf",
           page: 2,
           text: "Project Timeline",
-          context: "...The project timeline spans 6 months, with key milestones scheduled at the end of each month...",
+          context:
+            "...The project timeline spans 6 months, with key milestones scheduled at the end of each month...",
         },
         {
           pdfId: 3,
@@ -97,16 +130,18 @@ export default function SearchPage() {
           context:
             "...The research methodology employed a mixed-methods approach, combining qualitative interviews with quantitative surveys...",
         },
-      ]
+      ];
 
       // Filter results if a specific PDF is selected
       const filteredResults =
-        pdfFilter === "all" ? mockResults : mockResults.filter((r) => r.pdfId === Number(pdfFilter))
+        pdfFilter === "all"
+          ? mockResults
+          : mockResults.filter((r) => r.pdfId === Number(pdfFilter));
 
-      setResults(filteredResults)
-      setIsSearching(false)
-    }, 1500)
-  }
+      setResults(filteredResults);
+      setIsSearching(false);
+    }, 1500);
+  };
 
   return (
     <div className="container mx-auto py-10">
@@ -123,7 +158,9 @@ export default function SearchPage() {
       <Card>
         <CardHeader>
           <CardTitle>Search across your PDFs</CardTitle>
-          <CardDescription>Enter a query to search through the content of your PDFs</CardDescription>
+          <CardDescription>
+            Enter a query to search through the content of your PDFs
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSearch} className="space-y-4">
@@ -136,9 +173,17 @@ export default function SearchPage() {
                 />
               </div>
               <div className="w-full sm:w-48">
-                <Select value={pdfFilter} onValueChange={setPdfFilter} disabled={isLoadingPdfs}>
+                <Select
+                  value={pdfFilter}
+                  onValueChange={setPdfFilter}
+                  disabled={isLoadingPdfs}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder={isLoadingPdfs ? "Loading PDFs..." : "All PDFs"} />
+                    <SelectValue
+                      placeholder={
+                        isLoadingPdfs ? "Loading PDFs..." : "All PDFs"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All PDFs</SelectItem>
@@ -161,7 +206,11 @@ export default function SearchPage() {
       {hasSearched && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">
-            {isSearching ? "Searching..." : results.length > 0 ? `${results.length} results found` : "No results found"}
+            {isSearching
+              ? "Searching..."
+              : results.length > 0
+              ? `${results.length} results found`
+              : "No results found"}
           </h2>
 
           {isSearching ? (
@@ -181,18 +230,24 @@ export default function SearchPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <FileIcon className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle className="text-base">{result.pdfName}</CardTitle>
+                        <CardTitle className="text-base">
+                          {result.pdfName}
+                        </CardTitle>
                       </div>
                       <CardDescription>Page {result.page}</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="py-3">
                     <p className="mb-2 font-medium">{result.text}</p>
-                    <p className="text-sm text-muted-foreground">{result.context}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {result.context}
+                    </p>
                   </CardContent>
                   <div className="px-6 py-3 bg-muted/20 flex justify-end">
                     <Button asChild variant="outline" size="sm">
-                      <Link href={`/viewer/${result.pdfId}?page=${result.page}`}>
+                      <Link
+                        href={`/viewer/${result.pdfId}?page=${result.page}`}
+                      >
                         <SearchIcon className="h-4 w-4 mr-1" />
                         View in PDF
                       </Link>
@@ -205,5 +260,5 @@ export default function SearchPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
