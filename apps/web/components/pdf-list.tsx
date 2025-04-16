@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useContext, useEffect } from "react";
 import Link from "next/link";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -30,50 +30,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SearchContext } from "@/app/(app)/layout";
-
-interface PDF {
-  id: number;
-  name: string;
-  size: number;
-  uploadedAt: string;
-  url: string;
-  title?: string;
-  description?: string;
-  pageCount?: number;
-}
+import { useAtom, useAtomValue } from "jotai";
+import {
+  pdfsAtom,
+  pdfsLoadingAtom,
+  pdfsErrorAtom,
+  fetchPdfsAtom,
+} from "@/lib/store";
 
 export function PdfList() {
-  const [pdfs, setPdfs] = useState<PDF[]>([]);
-  const [loading, setLoading] = useState(true);
+  const pdfs = useAtomValue(pdfsAtom);
+  const loading = useAtomValue(pdfsLoadingAtom);
+  const error = useAtomValue(pdfsErrorAtom);
+  const [, fetchPdfs] = useAtom(fetchPdfsAtom);
   const { toast } = useToast();
   const router = useRouter();
   const searchQuery = useContext(SearchContext);
   const { organization } = useOrganization();
 
   useEffect(() => {
-    async function fetchPdfs() {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/pdfs");
-        if (!response.ok) {
-          throw new Error("Failed to fetch PDFs");
-        }
-        const data = await response.json();
-        setPdfs(data.pdfs);
-      } catch (error) {
-        console.error("Error fetching PDFs:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load your PDFs",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchPdfs();
-  }, [toast, organization?.id]);
+  }, [fetchPdfs, organization?.id]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error Loading PDFs",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   const handleDelete = async (id: number) => {
     try {
@@ -85,7 +72,7 @@ export function PdfList() {
         throw new Error("Failed to delete PDF");
       }
 
-      setPdfs(pdfs.filter((pdf) => pdf.id !== id));
+      fetchPdfs();
 
       toast({
         title: "PDF deleted",
@@ -110,7 +97,6 @@ export function PdfList() {
     }).format(date);
   };
 
-  // Filter PDFs based on search query
   const filteredPdfs = pdfs.filter((pdf) => {
     if (!searchQuery) return true;
 
@@ -135,7 +121,18 @@ export function PdfList() {
     );
   }
 
-  if (pdfs.length === 0) {
+  if (error && !loading) {
+    return (
+      <div className="text-center py-12 text-destructive">
+        <p>Error loading PDFs: {error}</p>
+        <Button onClick={() => fetchPdfs()} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (pdfs.length === 0 && !loading) {
     return (
       <div className="text-center py-12">
         <FileIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -144,9 +141,7 @@ export function PdfList() {
           Upload your first PDF to get started
         </p>
         <div className="flex justify-center gap-4">
-          <FileUpload dropZoneOnly={true}>
-            <Button>Upload PDF</Button>
-          </FileUpload>
+          <FileUpload dropZoneOnly={true} className="w-auto" />
           <Button variant="outline" onClick={() => router.push("/chat")}>
             Go to Chat
           </Button>
@@ -155,7 +150,7 @@ export function PdfList() {
     );
   }
 
-  if (filteredPdfs.length === 0) {
+  if (filteredPdfs.length === 0 && pdfs.length > 0 && !loading) {
     return (
       <div className="text-center py-12">
         <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

@@ -1,14 +1,20 @@
 "use client";
 
-import type React from "react";
-
-import { useState, useRef } from "react";
+import React from "react";
+import { useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { FileIcon, UploadCloudIcon } from "lucide-react";
+import { FileIcon, UploadCloudIcon, XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+import {
+  uploadingFilesAtom,
+  uploadFileAtom,
+  removeUploadingFileAtom,
+} from "@/lib/store";
 
 interface FileUploadProps {
   dropZoneOnly?: boolean;
@@ -19,36 +25,48 @@ export function FileUpload({
   dropZoneOnly = false,
   className = "",
 }: FileUploadProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useAtom(uploadingFilesAtom);
+  const [, uploadFile] = useAtom(uploadFileAtom);
+  const [, removeFile] = useAtom(removeUploadingFileAtom);
+
+  const [isDragging, setIsDragging] = React.useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      processFile(selectedFile);
-    }
-  };
+  const processFiles = (selectedFiles: FileList | File[]) => {
+    const pdfFiles = Array.from(selectedFiles).filter(
+      (file) => file.type === "application/pdf"
+    );
+    const nonPdfFiles = Array.from(selectedFiles).filter(
+      (file) => file.type !== "application/pdf"
+    );
 
-  const processFile = (selectedFile: File) => {
-    if (selectedFile.type !== "application/pdf") {
+    if (nonPdfFiles.length > 0) {
       toast({
         title: "Invalid file type",
-        description: "Please select a PDF file",
-        variant: "destructive",
+        description: `${nonPdfFiles.length} file(s) were not PDFs and were ignored.`,
+        variant: "default",
       });
-      return;
     }
-    setFile(selectedFile);
 
-    // If dropZoneOnly is true, upload immediately
-    if (dropZoneOnly && !uploading) {
-      handleUpload(selectedFile);
+    pdfFiles.forEach((file) => {
+      if (
+        !uploadingFiles.some(
+          (f) => f.file.name === file.name && (f.uploading || f.progress === 0)
+        )
+      ) {
+        uploadFile(file);
+      }
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      processFiles(e.target.files);
+      e.target.value = "";
     }
   };
 
@@ -61,9 +79,8 @@ export function FileUpload({
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-
-    // Only set dragging to false if leaving the actual drop zone (not a child element)
-    if (e.currentTarget === dropZoneRef.current) {
+    const relatedTarget = e.relatedTarget as Node;
+    if (!dropZoneRef.current?.contains(relatedTarget)) {
       setIsDragging(false);
     }
   };
@@ -71,7 +88,6 @@ export function FileUpload({
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // Explicitly set the drop effect to 'copy'
     e.dataTransfer.dropEffect = "copy";
     setIsDragging(true);
   };
@@ -80,92 +96,95 @@ export function FileUpload({
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const droppedFile = e.dataTransfer.files[0];
-      processFile(droppedFile);
+      processFiles(e.dataTransfer.files);
     }
   };
 
-  const handleUpload = async (fileToUpload = file) => {
-    if (!fileToUpload) return;
+  const isAnyFileUploading = uploadingFiles.some((f) => f.uploading);
 
-    setUploading(true);
-    setProgress(0);
-
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(interval);
-          return 95;
-        }
-        return prev + 5;
-      });
-    }, 100);
-
-    try {
-      const formData = new FormData();
-      formData.append("pdf", fileToUpload);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      const data = await response.json();
-
-      clearInterval(interval);
-      setProgress(100);
-
-      toast({
-        title: "Upload successful",
-        description: "Your PDF has been uploaded",
-      });
-
-      // Reset form and refresh data
-      setTimeout(() => {
-        setFile(null);
-        setUploading(false);
-        setProgress(0);
-        // Only refresh the page, don't navigate away
-        router.refresh();
-      }, 1000);
-    } catch (error) {
-      clearInterval(interval);
-      setUploading(false);
-
-      toast({
-        title: "Upload failed",
-        description: "There was an error uploading your PDF",
-        variant: "destructive",
-      });
-    }
-  };
+  const dropZoneText = isDragging
+    ? "Drop PDF(s) here"
+    : uploadingFiles.length > 0
+    ? "Add more PDFs..."
+    : dropZoneOnly
+    ? "Upload PDF"
+    : "Drag & Drop PDF(s) or Click to Upload";
 
   const dropZoneContent = (
-    <div className="bg-blue-500 text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors cursor-pointer border-2  border-blue-400 h-8 w-40 text-sm">
+    <div
+      className={`text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer border-2 border-dashed h-12 w-full text-sm ${
+        isDragging
+          ? "bg-blue-600 border-blue-300"
+          : "bg-blue-500 hover:bg-blue-600 border-blue-400"
+      }`}
+    >
       <UploadCloudIcon className="h-5 w-5" />
-      <span>Upload PDF</span>
+      <span>{dropZoneText}</span>
     </div>
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
+      {uploadingFiles.length > 0 && (
+        <div className="space-y-2">
+          {uploadingFiles.map(({ id, file, progress, uploading, error }) => (
+            <div
+              key={id}
+              className="p-3 border rounded-lg flex items-center gap-3"
+            >
+              <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{file.name}</p>
+                {!error && (uploading || progress > 0) && progress < 100 && (
+                  <Progress value={progress} className="w-full h-2 mt-1" />
+                )}
+                {error && (
+                  <p className="text-xs text-destructive mt-1">
+                    Error: {error}
+                  </p>
+                )}
+                {!error && progress === 100 && (
+                  <p className="text-xs text-green-600 mt-1">Upload complete</p>
+                )}
+                {!error && !uploading && progress === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB - Pending...
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => removeFile(id)}
+                  disabled={uploading}
+                >
+                  <XIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div
         ref={dropZoneRef}
-        className={`${className || "hover:bg-muted/50 transition-colors"} ${
-          isDragging ? "bg-accent/40 border-accent" : ""
+        className={`rounded-lg cursor-pointer ${className} ${
+          isDragging ? "ring-2 ring-primary ring-offset-2" : ""
         }`}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !isAnyFileUploading && fileInputRef.current?.click()}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        role="button"
+        aria-label="Upload PDF files"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+        }}
       >
         {dropZoneContent}
         <Input
@@ -174,37 +193,10 @@ export function FileUpload({
           accept="application/pdf"
           onChange={handleFileChange}
           className="hidden"
+          multiple
+          disabled={isAnyFileUploading}
         />
       </div>
-
-      {file && !dropZoneOnly && (
-        <div className="p-3 border rounded-lg flex items-center gap-3">
-          <FileIcon className="h-5 w-5 text-muted-foreground" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{file.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </p>
-          </div>
-          {uploading ? (
-            <Progress value={progress} className="w-20" />
-          ) : (
-            <Button size="sm" onClick={() => handleUpload()}>
-              Upload
-            </Button>
-          )}
-        </div>
-      )}
-
-      {uploading && dropZoneOnly && (
-        <div className="p-3 border rounded-lg flex items-center gap-3">
-          <FileIcon className="h-5 w-5 text-muted-foreground mr-2" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{file?.name}</p>
-          </div>
-          <Progress value={progress} className="w-20" />
-        </div>
-      )}
     </div>
   );
 }
