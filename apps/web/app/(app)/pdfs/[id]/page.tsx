@@ -13,7 +13,6 @@ interface PageProps {
 }
 
 export default async function PDFViewPage({ params }: PageProps) {
-  const { userId, orgId } = await auth();
   const pdfId = Number.parseInt(params.id);
 
   if (!userId) {
@@ -24,7 +23,7 @@ export default async function PDFViewPage({ params }: PageProps) {
     notFound();
   }
 
-  const pdf = await getPdfById(pdfId, userId, orgId);
+  const pdf = await getPdfById(pdfId);
 
   if (!pdf) {
     notFound();

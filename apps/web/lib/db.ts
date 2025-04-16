@@ -1,17 +1,21 @@
+import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
+import { NextResponse } from "next/server";
 
 // Create a SQL client with the pooled connection
 export const sql = neon(process.env.DATABASE_URL!);
 
 // Helper function to get a PDF by ID, checking ownership and organization context
-export async function getPdfById(
-  id: number,
-  userId: string,
-  orgId?: string | null
-) {
+export async function getPdfById(id: number) {
+  const { userId, orgId } = await auth();
+
   console.log(
     `Executing database query for PDF ID: ${id}, User ID: ${userId}, Org ID: ${orgId}`
   );
+
+  if (!userId) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
 
   let query;
   if (orgId) {
