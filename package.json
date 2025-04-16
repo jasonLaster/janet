@@ -25,7 +25,8 @@
   "scripts": {
     "test": "vitest",
     "test:watch": "vitest watch",
-    "dev:web": "pnpm --filter web dev"
+    "dev:web": "pnpm --filter web dev",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' next build"
   },
   "author": "",
   "license": "ISC",

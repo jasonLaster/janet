@@ -2,11 +2,25 @@ import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
 import { NextResponse } from "next/server";
 
+// Define PDF interface for type safety
+export interface PDF {
+  id: number;
+  filename: string;
+  blob_url: string;
+  size_bytes: number;
+  user_id: string;
+  organization_id?: string | null;
+  title?: string;
+  description?: string;
+  page_count?: number;
+  uploaded_at: string;
+}
+
 // Create a SQL client with the pooled connection
 export const sql = neon(process.env.DATABASE_URL!);
 
 // Helper function to get a PDF by ID, checking ownership and organization context
-export async function getPdfById(id: number) {
+export async function getPdfById(id: number): Promise<PDF | null> {
   const { userId, orgId } = await auth();
 
   console.log(
@@ -14,7 +28,7 @@ export async function getPdfById(id: number) {
   );
 
   if (!userId) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    throw new Error("Unauthorized");
   }
 
   let query;
@@ -36,14 +50,14 @@ export async function getPdfById(id: number) {
   console.log(
     `Query result for PDF ID ${id}, user ${userId}, Org ID: ${orgId}: ${result.length} row(s)`
   );
-  return result[0] || null;
+  return result[0] as PDF | null;
 }
 
 // Function to get all PDFs for a user, optionally filtered by organization
 export async function getAllPdfs(
   userId: string,
   organizationId?: string | null
-) {
+): Promise<PDF[]> {
   console.log(
     `Executing database query for PDFs for user ID: ${userId}, Org ID: ${organizationId}`
   );
@@ -69,7 +83,7 @@ export async function getAllPdfs(
   console.log(
     `Query result for user ${userId}, Org ID: ${organizationId}: ${result.length} rows` // Use result.length for Neon
   );
-  return result;
+  return result as PDF[];
 }
 
 // Helper function to insert PDF metadata
@@ -82,7 +96,7 @@ export async function insertPdf(pdfData: {
   title?: string;
   description?: string;
   page_count?: number;
-}) {
+}): Promise<{ id: number }> {
   const result = await sql`
     INSERT INTO pdfs (
       filename, 
@@ -105,11 +119,11 @@ export async function insertPdf(pdfData: {
     )
     RETURNING id
   `;
-  return result[0];
+  return result[0] as { id: number };
 }
 
 // Helper function to delete a PDF
-export async function deletePdf(id: number) {
+export async function deletePdf(id: number): Promise<void> {
   await sql`
     DELETE FROM pdfs WHERE id = ${id}
   `;
@@ -123,7 +137,7 @@ export async function updatePdfMetadata(
     description: string;
     page_count: number;
   }>
-) {
+): Promise<PDF | null> {
   const fields = Object.keys(metadata);
   if (fields.length === 0) {
     return null; // No updates needed
@@ -140,5 +154,5 @@ export async function updatePdfMetadata(
   const result = await sql.query(updateQuery, values);
   // Adjust result handling: Neon's query might return rows directly or within a different structure
   // Assuming it returns an array of rows similar to the tagged template literal
-  return result && result.length > 0 ? result[0] : null;
+  return result && result.length > 0 ? (result[0] as PDF) : null;
 }

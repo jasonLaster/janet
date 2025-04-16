@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { insertPdf } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 
 export async function POST(request: Request) {
   try {
