@@ -6,7 +6,13 @@ import Image from "next/image";
 import { FileUpload } from "@/components/file-upload";
 import { Input } from "@/components/ui/input";
 import { SearchIcon } from "lucide-react";
-import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+  OrganizationSwitcher,
+} from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
 // Create a context for the search query
@@ -52,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <FileUpload dropZoneOnly={true}></FileUpload>
             </div>
             <div className="p-2 border-t flex items-center justify-between">
-              <UserButton afterSignOutUrl="/" />
+              <OrganizationSwitcher />
               {/* Add other signed-in user controls if needed */}
             </div>
           </SignedIn>

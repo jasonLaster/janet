@@ -4,15 +4,16 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-    console.log("loggedIn user", userId);
+    const { userId, orgId } = await auth(); // orgId can be null here
+    console.log("Logged in user:", userId, "Org ID:", orgId);
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Get all PDFs for the specific user
-    const pdfs = await getAllPdfs(userId); // Pass userId to the DB function
+    // If orgId is null, it implies the personal workspace
+    // Pass userId and the potentially null orgId to the DB function
+    const pdfs = await getAllPdfs(userId, orgId);
 
     // Transform database records to match our PDF interface
     const formattedPdfs = pdfs.map((pdf) => ({
