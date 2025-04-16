@@ -24,7 +24,8 @@
   },
   "scripts": {
     "test": "vitest",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "dev:web": "pnpm --filter web dev"
   },
   "author": "",
   "license": "ISC",
