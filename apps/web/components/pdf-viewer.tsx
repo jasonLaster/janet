@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Document, Page, Outline } from "react-pdf";
-import { pdfjs } from 'react-pdf';
+import { pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,18 +18,22 @@ import {
   Layers,
   EyeOff,
   ListFilter,
+  Minus,
+  Plus,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 
 // Using dynamic import for the worker
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   // In the browser environment only
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 }
 
 // Configuration - use simple options for reliability
 const options = {
-  cMapUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/cmaps/',
+  cMapUrl: "https://unpkg.com/pdfjs-dist@4.8.69/cmaps/",
   cMapPacked: true,
 };
 
@@ -60,6 +64,7 @@ export function PdfViewer({
   const mainContentRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const [searchText, setSearchText] = useState<string>("");
 
   // Manual resize observer implementation instead of using the hook
   useEffect(() => {
@@ -79,76 +84,84 @@ export function PdfViewer({
   // Track visible page based on scroll position
   useEffect(() => {
     if (!mainContentRef.current || numPages === 0) return;
-    
+
     const handleScroll = () => {
       // Skip scroll handling if we're in a manual page change
       if (!mainContentRef.current || isManualPageChange) return;
-      
+
       // Clear any existing timeout to debounce scroll events
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
-      
+
       // Use a small timeout to avoid excessive updates while scrolling
       scrollTimeoutRef.current = setTimeout(() => {
         if (!mainContentRef.current) return;
-        
+
         const scrollPosition = mainContentRef.current.scrollTop;
         const viewportHeight = mainContentRef.current.clientHeight;
-        const pageContainers = Array.from(document.querySelectorAll('.pdf-page-container'));
-        
+        const pageContainers = Array.from(
+          document.querySelectorAll(".pdf-page-container")
+        );
+
         // Find the page that is most visible in the viewport
         let bestVisiblePage = 1;
         let maxVisibleArea = 0;
-        
+
         for (let i = 0; i < pageContainers.length; i++) {
           const container = pageContainers[i] as HTMLElement;
           const rect = container.getBoundingClientRect();
-          const mainContentRect = mainContentRef.current.getBoundingClientRect();
-          
+          const mainContentRect =
+            mainContentRef.current.getBoundingClientRect();
+
           // Calculate how much of the page is visible
           const top = Math.max(rect.top, mainContentRect.top);
           const bottom = Math.min(rect.bottom, mainContentRect.bottom);
           const visibleHeight = Math.max(0, bottom - top);
-          
+
           // Get page number from element id
           const pageId = container.id;
-          const pageNum = parseInt(pageId.replace('page-', ''));
-          
+          const pageNum = parseInt(pageId.replace("page-", ""));
+
           // Update if this page has more visible area than previous best
           if (visibleHeight > maxVisibleArea) {
             maxVisibleArea = visibleHeight;
             bestVisiblePage = pageNum;
           }
         }
-        
+
         // Only update when page changes to avoid unnecessary re-renders
         if (bestVisiblePage !== pageNumber) {
           setPageNumber(bestVisiblePage);
-          
+
           // Update sidebar scroll position to show current page
-          const sidebarItem = document.querySelector(`[data-page-thumb="${bestVisiblePage}"]`);
+          const sidebarItem = document.querySelector(
+            `[data-page-thumb="${bestVisiblePage}"]`
+          );
           if (sidebarItem) {
-            sidebarItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            sidebarItem.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
           }
-          
+
           // Update URL without page reload
           const url = new URL(window.location.href);
-          url.searchParams.set('page', bestVisiblePage.toString());
-          window.history.replaceState({}, '', url.toString());
+          url.searchParams.set("page", bestVisiblePage.toString());
+          window.history.replaceState({}, "", url.toString());
         }
       }, 100); // Short debounce time for better responsiveness
     };
 
     const scrollContainer = mainContentRef.current;
-    scrollContainer.addEventListener('scroll', handleScroll);
-    
+    scrollContainer.addEventListener("scroll", handleScroll);
+
     // Initial check after a delay to ensure PDF has rendered
     const initialCheckTimeout = setTimeout(handleScroll, 500);
-    
+
     return () => {
       if (scrollContainer) {
-        scrollContainer.removeEventListener('scroll', handleScroll);
+        scrollContainer.removeEventListener("scroll", handleScroll);
       }
       // Clean up timeouts
       if (scrollTimeoutRef.current) {
@@ -157,6 +170,11 @@ export function PdfViewer({
       clearTimeout(initialCheckTimeout);
     };
   }, [mainContentRef, pageNumber, numPages, isManualPageChange]);
+
+  useEffect(() => {
+    // Reset page number when PDF URL changes
+    setPageNumber(1);
+  }, [pdfUrl]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -187,14 +205,14 @@ export function PdfViewer({
       // Set flag to prevent scroll detection from overriding manual navigation
       setIsManualPageChange(true);
       setPageNumber(page);
-      
+
       // Scroll to the selected page
       if (mainContentRef.current) {
         const targetElement = document.getElementById(`page-${page}`);
         if (targetElement) {
           // Use smooth scrolling for better UX
-          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          
+          targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+
           // Reset the manual page change flag after scrolling finishes
           setTimeout(() => {
             setIsManualPageChange(false);
@@ -204,7 +222,10 @@ export function PdfViewer({
           setTimeout(() => {
             const retryElement = document.getElementById(`page-${page}`);
             if (retryElement) {
-              retryElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              retryElement.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
             }
             setIsManualPageChange(false);
           }, 500);
@@ -245,11 +266,11 @@ export function PdfViewer({
   };
 
   const toggleThumbnails = () => {
-    setShowThumbnails(prev => !prev);
+    setShowThumbnails((prev) => !prev);
   };
 
   const toggleTextLayer = () => {
-    setShowTextLayer(prev => !prev);
+    setShowTextLayer((prev) => !prev);
   };
 
   // Calculate width to display page with
@@ -258,10 +279,18 @@ export function PdfViewer({
     : maxWidth;
 
   // Generate array of page numbers for rendering thumbnails
-  const pageNumbers = Array.from(
-    { length: numPages },
-    (_, index) => index + 1
-  );
+  const pageNumbers = Array.from({ length: numPages }, (_, index) => index + 1);
+
+  // Extract PDF ID from URL or use the one from props
+  const pdfId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("id") ||
+        window.location.pathname.split("/").pop() ||
+        "0"
+      : "0";
+
+  // Convert to number for the chat component
+  const pdfIdNumber = parseInt(pdfId, 10);
 
   // If we have a PDF error, show a fallback UI
   if (pdfError) {
@@ -342,7 +371,9 @@ export function PdfViewer({
             onClick={toggleThumbnails}
             title={showThumbnails ? "Hide thumbnails" : "Show thumbnails"}
           >
-            <Layers className={`h-4 w-4 ${showThumbnails ? 'text-blue-500' : ''}`} />
+            <Layers
+              className={`h-4 w-4 ${showThumbnails ? "text-blue-500" : ""}`}
+            />
             <span className="sr-only">Toggle thumbnails</span>
           </Button>
           <Button
@@ -351,7 +382,9 @@ export function PdfViewer({
             onClick={toggleTextLayer}
             title={showTextLayer ? "Hide text layer" : "Show text layer"}
           >
-            <EyeOff className={`h-4 w-4 ${!showTextLayer ? 'text-blue-500' : ''}`} />
+            <EyeOff
+              className={`h-4 w-4 ${!showTextLayer ? "text-blue-500" : ""}`}
+            />
             <span className="sr-only">Toggle text layer</span>
           </Button>
           <Button
@@ -373,30 +406,30 @@ export function PdfViewer({
             <ZoomIn className="h-4 w-4" />
             <span className="sr-only">Zoom in</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleRotate}
-          >
+          <Button variant="outline" size="icon" onClick={handleRotate}>
             <RotateCw className="h-4 w-4" />
             <span className="sr-only">Rotate</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleDownload}
-          >
+          <Button variant="outline" size="icon" onClick={handleDownload}>
             <Download className="h-4 w-4" />
             <span className="sr-only">Download</span>
           </Button>
         </div>
+
+        <div className="flex items-center space-x-2 max-w-xs">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="h-8"
+          />
+        </div>
       </div>
 
       {/* Main content area with optional sidebar */}
-      <div
-        className="flex-1 flex overflow-hidden" 
-        ref={setContainerRef}
-      >
+      <div className="flex-1 flex overflow-hidden" ref={setContainerRef}>
         {/* Thumbnails sidebar */}
         {showThumbnails && (
           <div className="w-[180px] border-r border-gray-200 bg-gray-50 overflow-hidden flex flex-col">
@@ -408,14 +441,20 @@ export function PdfViewer({
                 <Document
                   file={pdfUrl}
                   options={options}
-                  loading={<div className="p-4 text-center text-sm text-gray-500">Loading thumbnails...</div>}
+                  loading={
+                    <div className="p-4 text-center text-sm text-gray-500">
+                      Loading thumbnails...
+                    </div>
+                  }
                 >
                   {pageNumbers.map((pageNum) => (
-                    <div 
+                    <div
                       key={`thumb-${pageNum}`}
                       data-page-thumb={pageNum}
                       className={`cursor-pointer p-1 rounded-md transition-colors mb-2 ${
-                        pageNumber === pageNum ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
+                        pageNumber === pageNum
+                          ? "bg-blue-100 border border-blue-300"
+                          : "hover:bg-gray-100"
                       }`}
                       onClick={() => goToPage(pageNum)}
                     >
@@ -430,7 +469,9 @@ export function PdfViewer({
                         className="thumbnail-page"
                         loading={
                           <div className="h-[150px] w-[120px] bg-gray-100 animate-pulse flex items-center justify-center">
-                            <span className="text-xs text-gray-400">Loading...</span>
+                            <span className="text-xs text-gray-400">
+                              Loading...
+                            </span>
                           </div>
                         }
                       />
@@ -443,7 +484,7 @@ export function PdfViewer({
         )}
 
         {/* Main PDF viewer */}
-        <div 
+        <div
           className="flex-1 overflow-auto p-4 flex flex-col items-center bg-gray-100 pdf-content-scroll"
           ref={mainContentRef}
         >
@@ -467,48 +508,61 @@ export function PdfViewer({
               }
               options={options}
             >
-              {numPages > 0 && pageNumbers.map((pageNum) => (
-                <div 
-                  key={`page_${pageNum}`} 
-                  className="mb-8 pdf-page-container"
-                  id={`page-${pageNum}`}
-                >
-                  <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300">
-                    Page {pageNum} of {numPages}
-                  </div>
-                  <Page
+              {numPages > 0 &&
+                pageNumbers.map((pageNum) => (
+                  <div
                     key={`page_${pageNum}`}
-                    pageNumber={pageNum}
-                    scale={scale}
-                    rotate={rotation}
-                    width={pageWidth}
-                    loading={
-                      <div className="flex items-center justify-center h-[600px] w-[450px]">
-                        <div className="animate-pulse text-gray-500">
-                          Loading page {pageNum}...
+                    className="mb-8 pdf-page-container"
+                    id={`page-${pageNum}`}
+                  >
+                    <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300">
+                      Page {pageNum} of {numPages}
+                    </div>
+                    <Page
+                      key={`page_${pageNum}`}
+                      pageNumber={pageNum}
+                      scale={scale}
+                      rotate={rotation}
+                      width={pageWidth}
+                      loading={
+                        <div className="flex items-center justify-center h-[600px] w-[450px]">
+                          <div className="animate-pulse text-gray-500">
+                            Loading page {pageNum}...
+                          </div>
                         </div>
-                      </div>
-                    }
-                    renderTextLayer={showTextLayer}
-                    renderAnnotationLayer={showTextLayer}
-                    className="pdf-page shadow-md"
-                    onRenderSuccess={() => {
-                      // If this is a manual page change and this is the target page,
-                      // ensure it's visible when rendered
-                      if (isManualPageChange && pageNum === pageNumber) {
-                        const element = document.getElementById(`page-${pageNum}`);
-                        if (element && mainContentRef.current) {
-                          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
                       }
-                    }}
-                  />
-                </div>
-              ))}
+                      renderTextLayer={showTextLayer}
+                      renderAnnotationLayer={showTextLayer}
+                      className="pdf-page shadow-md"
+                      onRenderSuccess={() => {
+                        // If this is a manual page change and this is the target page,
+                        // ensure it's visible when rendered
+                        if (isManualPageChange && pageNum === pageNumber) {
+                          const element = document.getElementById(
+                            `page-${pageNum}`
+                          );
+                          if (element && mainContentRef.current) {
+                            element.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
             </Document>
           </div>
         </div>
       </div>
+
+      {/* Floating Chat Component */}
+      <FloatingPdfChat
+        pdfId={pdfIdNumber}
+        pdfTitle={pdfTitle}
+        pdfUrl={pdfUrl}
+      />
     </div>
   );
 }
