@@ -24,7 +24,7 @@ export default function LayoutWrapper({
         <div className="p-4 border-b flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
             <FileIcon className="h-6 w-6 text-blue-500" />
-            <h1 className="text-xl font-semibold">PDF Manager</h1>
+            <h1 className="text-xl font-semibold">Janet</h1>
           </Link>
         </div>
 

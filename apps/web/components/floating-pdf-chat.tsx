@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useChat } from "ai/react";
-import { MessageSquare, X, Send, MinusIcon, PlusIcon } from "lucide-react";
+import { MessageSquare, X, MinusIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, SendHorizontal } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface FloatingPdfChatProps {
   pdfId: number;
@@ -112,6 +111,12 @@ export function FloatingPdfChat({
     }
   };
 
+  const handleClose = () => {
+    if (typeof onClose === "function") {
+      onClose();
+    }
+  };
+
   return (
     <Card className="fixed bottom-4 right-4 max-w-md w-full bg-background shadow-lg border rounded-lg overflow-hidden transition-all duration-200 z-50">
       <div className="flex items-center justify-between p-4 border-b">
@@ -133,7 +138,7 @@ export function FloatingPdfChat({
           )}
           <X
             className="h-5 w-5 ml-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-            onClick={onClose}
+            onClick={handleClose}
           />
         </div>
       </div>
@@ -161,13 +166,17 @@ export function FloatingPdfChat({
                     className={cn(
                       "flex flex-col max-w-[90%] rounded-lg p-3",
                       message.role === "user"
-                        ? "ml-auto bg-primary text-primary-foreground"
-                        : "bg-muted"
+                        ? "ml-auto bg-muted"
+                        : "bg-muted/50"
                     )}
                   >
-                    <p className="text-sm whitespace-pre-wrap">
-                      {message.content}
-                    </p>
+                    <div className="prose dark:prose-invert prose-sm max-w-none">
+                      {message.role === "assistant" ? (
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      ) : (
+                        message.content
+                      )}
+                    </div>
                   </div>
                 ))}
                 {isLoading && (

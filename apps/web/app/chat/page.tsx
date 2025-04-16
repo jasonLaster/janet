@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
 
 export default function ChatWithPDF() {
   const [messages, setMessages] = useState<
@@ -109,12 +110,20 @@ export default function ChatWithPDF() {
         {messages.map((m) => (
           <div
             key={m.id}
-            className="whitespace-pre-wrap p-4 rounded-lg bg-muted/50"
+            className={`whitespace-pre-wrap p-4 rounded-lg ${
+              m.role === "user" ? "bg-muted" : "bg-muted/50"
+            }`}
           >
             <div className="font-semibold mb-2">
               {m.role === "user" ? "You" : "AI"}:
             </div>
-            <div>{m.content}</div>
+            <div className="prose dark:prose-invert max-w-none">
+              {m.role === "assistant" ? (
+                <ReactMarkdown>{m.content}</ReactMarkdown>
+              ) : (
+                m.content
+              )}
+            </div>
             <div className="mt-3">
               {m.attachments
                 ?.filter(
