@@ -4,7 +4,8 @@ import { useState, createContext } from "react";
 import Link from "next/link";
 import { FileUpload } from "@/components/file-upload";
 import { Input } from "@/components/ui/input";
-import { FileIcon, SearchIcon, UploadCloudIcon } from "lucide-react";
+import { FileIcon, SearchIcon } from "lucide-react";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 // Create a context for the search query
 export const SearchContext = createContext("");
@@ -36,13 +37,16 @@ export default function LayoutWrapper({
         </nav>
 
         {/* Upload Area */}
-        <div className="p-4 border-t mt-auto">
-          <FileUpload dropZoneOnly={true}>
-            <div className="bg-blue-500 text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors cursor-pointer border-2  border-blue-400">
-              <UploadCloudIcon className="h-5 w-5" />
-              <span>Upload PDF</span>
-            </div>
-          </FileUpload>
+        <div className="p-2 mt-auto">
+          <SignedOut>
+            <SignInButton className="text-blue-500 underline hover:cursor " />
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+        </div>
+        <div className="p-2 mt-auto">
+          <FileUpload dropZoneOnly={true}></FileUpload>
         </div>
       </div>
 

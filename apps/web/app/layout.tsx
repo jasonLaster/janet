@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import LayoutWrapper from "./layout-wrapper";
+import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
   title: "PDF Manager",
@@ -13,10 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
-        <LayoutWrapper>{children}</LayoutWrapper>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

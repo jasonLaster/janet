@@ -7,19 +7,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { FileIcon, UploadIcon } from "lucide-react";
+import { FileIcon, UploadCloudIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FileUploadProps {
   dropZoneOnly?: boolean;
   className?: string;
-  children?: React.ReactNode;
 }
 
 export function FileUpload({
   dropZoneOnly = false,
   className = "",
-  children,
 }: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -149,24 +147,20 @@ export function FileUpload({
     }
   };
 
-  const dropZoneContent = children || (
-    <>
-      <UploadIcon className="h-10 w-10 text-muted-foreground mb-2" />
-      <p className="text-sm text-muted-foreground mb-1">
-        Click to upload or drag and drop
-      </p>
-      <p className="text-xs text-muted-foreground">PDF (max 10MB)</p>
-    </>
+  const dropZoneContent = (
+    <div className="bg-blue-500 text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors cursor-pointer border-2  border-blue-400 h-8 w-40 text-sm">
+      <UploadCloudIcon className="h-5 w-5" />
+      <span>Upload PDF</span>
+    </div>
   );
 
   return (
     <div className="space-y-4">
       <div
         ref={dropZoneRef}
-        className={`${
-          className ||
-          "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors"
-        } ${isDragging ? "bg-accent/40 border-accent" : ""}`}
+        className={`${className || "hover:bg-muted/50 transition-colors"} ${
+          isDragging ? "bg-accent/40 border-accent" : ""
+        }`}
         onClick={() => fileInputRef.current?.click()}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
