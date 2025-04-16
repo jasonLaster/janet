@@ -32,7 +32,7 @@ export default async function PDFViewerPage({ params }: PageProps) {
   // the "Not Found" state immediately if the PDF doesn't exist for the user,
   // rather than waiting for the client-side fetch.
   try {
-    const pdf = await getPdfById(id, userId);
+    const pdf = await getPdfById(id);
 
     if (!pdf) {
       // Use notFound() which renders the standard Next.js 404 page

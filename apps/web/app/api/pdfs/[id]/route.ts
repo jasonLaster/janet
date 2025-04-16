@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
 import { getPdfById } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
     const id = Number.parseInt(params.id, 10);
 
     if (isNaN(id)) {
@@ -19,13 +13,11 @@ export async function GET(
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    console.log(`Fetching PDF with ID: ${id} for user: ${userId}`);
-    const pdf = await getPdfById(id, userId);
+    console.log(`Fetching PDF with ID: ${id} `);
+    const pdf = await getPdfById(id);
 
     if (!pdf) {
-      console.error(
-        `PDF not found with ID: ${id} or not owned by user ${userId}`
-      );
+      console.error(`PDF not found with ID: ${id} `);
       return NextResponse.json({ error: "PDF not found" }, { status: 404 });
     }
 
