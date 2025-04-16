@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { PdfViewer } from "@/components/pdf-viewer";

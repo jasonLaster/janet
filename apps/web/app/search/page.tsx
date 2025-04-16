@@ -1,8 +1,5 @@
 "use client";
 
-import type React from "react";
-
-import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +19,9 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, FileIcon, SearchIcon } from "lucide-react";
 import { useSearchParams, redirect } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { debounce } from "lodash";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 interface PDF {
   id: number;
@@ -69,6 +68,8 @@ const SearchPageComponent = () => {
 
   const searchParams = useSearchParams();
   const pdfIdParam = searchParams?.get("pdf");
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (pdfIdParam) {

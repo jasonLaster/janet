@@ -12,6 +12,7 @@ import {
   ExternalLinkIcon,
   MoreHorizontalIcon,
   SortAscIcon,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -221,10 +222,15 @@ export function PdfList() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onClick={() => handleDelete(pdf.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(pdf.id);
+                      }}
                     >
-                      <TrashIcon className="h-4 w-4 mr-2" />
-                      Delete
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">
+                        Delete &quot;{pdf.title || pdf.name}&quot;
+                      </span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

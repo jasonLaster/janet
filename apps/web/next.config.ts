@@ -16,9 +16,9 @@ const nextConfig = {
 
     return config;
   },
-  experimental: {
-    webpackBuildWorker: true,
-  },
+  // experimental: {
+  //   webpackBuildWorker: true,
+  // },
   // React 19 compatibility settings
   reactStrictMode: true,
 };
