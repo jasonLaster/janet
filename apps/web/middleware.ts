@@ -5,32 +5,25 @@ import { NextResponse } from "next/server";
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)", // Matches /sign-in and /sign-in/*
   "/sign-up(.*)", // Matches /sign-up and /sign-up/*
-  // "/", // Typically the landing page
   "/api/webhooks/(.*)", // Example for webhook endpoints
   // Add any other public routes here
 ]);
 
 // Make the middleware function async to allow await
-export default clerkMiddleware(async (auth, req) => {
-  // Await the auth() call as the linter suggests
-  const { userId } = await auth();
-
-  // Add logging to see what's happening
+export default clerkMiddleware((auth, req) => {
+  // Middleware runs for every matched route.
   console.log("Middleware running for:", req.url);
-  console.log("Is Public Route:", isPublicRoute(req));
-  console.log("User ID:", userId);
 
-  // If the route is not public and the user is not signed in, redirect to sign-in
-  if (!isPublicRoute(req) && !userId) {
-    console.log("Redirecting to sign-in...");
-    const signInUrl = new URL("/sign-in", req.url);
-    // You can add a redirect back URL if needed:
-    // signInUrl.searchParams.set('redirect_url', req.url);
-    return NextResponse.redirect(signInUrl);
+  // If the route is not public, clerkMiddleware will automatically protect it.
+  // No need for explicit checks or redirections here unless you have complex logic.
+  if (isPublicRoute(req)) {
+    // Allow public routes to proceed without authentication checks.
+    return NextResponse.next();
   }
 
-  // If the route is public or the user is signed in, allow the request to proceed
-  return NextResponse.next();
+  // For all other routes (non-public), clerkMiddleware handles authentication.
+  // If the user is not authenticated, it will redirect to the sign-in page.
+  // If the user is authenticated, it allows the request to proceed.
 });
 
 export const config = {

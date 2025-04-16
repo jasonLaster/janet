@@ -1,107 +1,126 @@
+import { auth } from "@clerk/nextjs/server";
+import { CoreMessage, streamText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { NextResponse } from "next/server";
 
 export const maxDuration = 60; // Increase duration for PDF processing
 
 // Define the file attachment type
-interface FileAttachment {
-  type: "file";
-  source: {
-    type: "base64";
-    media_type: string;
-    data: string;
+// interface FileAttachment { // Unused Interface
+//   type: "file";
+//   source: {
+//     type: "base64";
+//     media_type: string;
+//     data: string;
+//   };
+// }
+
+// interface UserMessage { // Unused Interface
+//   role: string;
+//   content: string;
+//   id?: string;
+// }
+
+// Define message types for Anthropic
+// interface AnthropicMessage { // Unused Interface
+//   role: string;
+//   content: string | Array<{ type: string; [key: string]: unknown }>;
+// }
+
+interface ChatRequest {
+  messages: CoreMessage[];
+  data: {
+    fileId: string;
+    query: string;
   };
 }
 
-interface UserMessage {
-  role: string;
-  content: string;
-  id?: string;
-}
-
-// Define message types for Anthropic
-interface AnthropicMessage {
-  role: string;
-  content: string | Array<{ type: string; [key: string]: any }>;
-}
-
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { messages, pdfUrl } = body;
-
-    console.log("Chatting with PDF", pdfUrl);
-
-    // Validate Anthropic API key
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Anthropic API key is not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+    const authResult = await auth();
+    if (!authResult.userId) {
+      return new Response("Unauthorized", { status: 401 });
     }
 
-    // If there's a PDF URL, fetch it
-    let pdfBuffer: ArrayBuffer | undefined;
-    if (pdfUrl && !pdfUrl.includes("undefined")) {
-      try {
-        console.log("Fetching PDF from:", pdfUrl);
-        const pdfResponse = await fetch(pdfUrl);
+    const json = await req.json();
+    // Explicitly type the parsed JSON to avoid implicit any
+    const {
+      messages,
+      data,
+    }: { messages: CoreMessage[]; data: { fileId: string; query: string } } =
+      json;
+    const { fileId, query } = data;
 
-        if (!pdfResponse.ok) {
-          throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
-        }
-
-        pdfBuffer = await pdfResponse.arrayBuffer();
-        console.log("PDF fetched successfully");
-      } catch (error) {
-        console.error("Error processing PDF:", error);
-        // Continue without PDF if there's an error
-      }
+    if (!fileId) {
+      return NextResponse.json({ error: "Missing fileId" }, { status: 400 });
     }
 
-    // Format user messages
-    const formattedMessages = messages.map((message: any) => {
-      // For the last user message, attach the PDF if available
-      if (
-        message.role === "user" &&
-        message === messages[messages.length - 1] &&
-        pdfBuffer
-      ) {
-        return {
-          role: "user",
-          content: [
-            { type: "text", text: message.content },
-            {
-              type: "file",
-              data: new Uint8Array(pdfBuffer),
-              mimeType: "application/pdf",
-            },
-          ],
-        };
-      }
-      return message;
+    if (!query) {
+      return NextResponse.json({ error: "Missing query" }, { status: 400 });
+    }
+
+    // Fetch file content from R2
+    const fileContent = await fetchFileContent(fileId);
+
+    // Construct the prompt for Anthropic
+    const anthropicMessages: CoreMessage[] = [
+      {
+        role: "system",
+        content:
+          "You are an AI assistant specialized in analyzing PDF documents. Answer the user's questions based on the provided PDF content. If the answer is not found in the document, state that clearly.",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Here is the content of the PDF document (id: ${fileId}):\n\n${fileContent}\n\nNow, please answer the following question based on this document:\n\n${query}`,
+          },
+        ],
+      },
+    ];
+
+    const result = await streamText({
+      model: anthropic("claude-3-haiku-20240307"),
+      messages: anthropicMessages, // Removed 'as any'
     });
 
-    // Use generateText instead of streamText
-    const result = await generateText({
-      model: anthropic("claude-3-5-sonnet-20240620"),
-      messages: formattedMessages,
-      system:
-        "You are a helpful AI assistant specialized in answering questions about PDF documents.",
-      maxTokens: 1500,
-    });
-
-    return new Response(JSON.stringify({ text: result.text }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error: any) {
-    console.error("Error processing chat with PDFs:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Failed to process your request",
-        details: error?.message || String(error),
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    // Assuming the result structure allows for this response type
+    return result.toDataStreamResponse();
+  } catch (error: unknown) {
+    // Use unknown instead of any for error handling
+    console.error("Error processing chat request:", error);
+    // Provide a generic error message, potentially logging the specific error internally
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+async function fetchFileContent(fileId: string): Promise<string> {
+  const url = `https://r2.files.janet.systems/${fileId}.txt`;
+  console.log(`Fetching file content from: ${url}`);
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const text = await response.text();
+    console.log(`Successfully fetched file content for: ${fileId}`);
+    return text;
+  } catch (error) {
+    console.error(`Error fetching file content for ${fileId}:`, error);
+    throw new Error(`Failed to fetch content for file ${fileId}.`);
+  }
+}
+
+// Ensure the environment variable is set
+if (!process.env.ANTHROPIC_API_KEY) {
+  throw new Error("ANTHROPIC_API_KEY environment variable is not set.");
+}
+
+// No need to instantiate Anthropic client here if using @ai-sdk/anthropic
+// const anthropic = new Anthropic({
+//   apiKey: process.env.ANTHROPIC_API_KEY,
+// });
