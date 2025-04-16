@@ -21,9 +21,16 @@ import {
   Minus,
   Plus,
   Search,
+  MoreVertical,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FloatingPdfChat } from "@/components/floating-pdf-chat";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Using dynamic import for the worker
 if (typeof window !== "undefined") {
@@ -297,7 +304,7 @@ export function PdfViewer({
     return (
       <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b bg-muted/20">
-          <h2 className="text-lg font-medium">{pdfTitle}</h2>
+          <h2 className="font-medium">{pdfTitle}</h2>
           <Button variant="outline" size="sm" onClick={handleDownload}>
             <ExternalLink className="h-4 w-4 mr-1" />
             Open in New Tab
@@ -327,96 +334,9 @@ export function PdfViewer({
     <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b bg-muted/20">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => changePage(-1)}
-            disabled={pageNumber <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Previous page</span>
-          </Button>
-          <div className="flex items-center gap-1 text-sm">
-            <Input
-              type="number"
-              value={pageNumber}
-              onChange={(e) => {
-                const page = Number.parseInt(e.target.value);
-                if (page >= 1 && page <= numPages) {
-                  goToPage(page);
-                }
-              }}
-              className="w-16 h-8"
-              min={1}
-              max={numPages}
-            />
-            <span>/ {numPages}</span>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => changePage(1)}
-            disabled={pageNumber >= numPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-            <span className="sr-only">Next page</span>
-          </Button>
-        </div>
+        <h2 className="font-medium">{pdfTitle}</h2>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleThumbnails}
-            title={showThumbnails ? "Hide thumbnails" : "Show thumbnails"}
-          >
-            <Layers
-              className={`h-4 w-4 ${showThumbnails ? "text-blue-500" : ""}`}
-            />
-            <span className="sr-only">Toggle thumbnails</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleTextLayer}
-            title={showTextLayer ? "Hide text layer" : "Show text layer"}
-          >
-            <EyeOff
-              className={`h-4 w-4 ${!showTextLayer ? "text-blue-500" : ""}`}
-            />
-            <span className="sr-only">Toggle text layer</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleZoomOut}
-            disabled={scale <= 0.5}
-          >
-            <ZoomOut className="h-4 w-4" />
-            <span className="sr-only">Zoom out</span>
-          </Button>
-          <span className="text-sm">{Math.round(scale * 100)}%</span>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleZoomIn}
-            disabled={scale >= 3}
-          >
-            <ZoomIn className="h-4 w-4" />
-            <span className="sr-only">Zoom in</span>
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleRotate}>
-            <RotateCw className="h-4 w-4" />
-            <span className="sr-only">Rotate</span>
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleDownload}>
-            <Download className="h-4 w-4" />
-            <span className="sr-only">Download</span>
-          </Button>
-        </div>
-
-        <div className="flex items-center space-x-2 max-w-xs">
+        <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
@@ -425,6 +345,49 @@ export function PdfViewer({
             onChange={(e) => setSearchText(e.target.value)}
             className="h-8"
           />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={toggleThumbnails}>
+                <Layers
+                  className={`h-4 w-4 mr-2 ${
+                    showThumbnails ? "text-blue-500" : ""
+                  }`}
+                />
+                {showThumbnails ? "Hide thumbnails" : "Show thumbnails"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleTextLayer}>
+                <EyeOff
+                  className={`h-4 w-4 mr-2 ${
+                    !showTextLayer ? "text-blue-500" : ""
+                  }`}
+                />
+                {showTextLayer ? "Hide text layer" : "Show text layer"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleZoomOut} disabled={scale <= 0.5}>
+                <ZoomOut className="h-4 w-4 mr-2" />
+                Zoom out
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleZoomIn} disabled={scale >= 3}>
+                <ZoomIn className="h-4 w-4 mr-2" />
+                Zoom in
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleRotate}>
+                <RotateCw className="h-4 w-4 mr-2" />
+                Rotate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -480,39 +443,79 @@ export function PdfViewer({
                 </Document>
               </div>
             </ScrollArea>
+            {/* Page navigation footer */}
+            <div className="p-2 border-t border-gray-200 bg-gray-100 flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => changePage(-1)}
+                disabled={pageNumber <= 1}
+                className="h-8 w-8"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous page</span>
+              </Button>
+              <div className="flex items-center gap-1 text-sm">
+                <Input
+                  type="number"
+                  value={pageNumber}
+                  onChange={(e) => {
+                    const page = Number.parseInt(e.target.value);
+                    if (page >= 1 && page <= numPages) {
+                      goToPage(page);
+                    }
+                  }}
+                  className="w-12 h-8"
+                  min={1}
+                  max={numPages}
+                />
+                <span>/ {numPages}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => changePage(1)}
+                disabled={pageNumber >= numPages}
+                className="h-8 w-8"
+              >
+                <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Next page</span>
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Main PDF viewer */}
         <div
-          className="flex-1 overflow-auto p-4 flex flex-col items-center bg-gray-100 pdf-content-scroll"
+          className="flex-1 overflow-auto bg-gray-100 pdf-content-scroll w-full"
           ref={mainContentRef}
         >
-          <div className="pdf-container">
+          <div className="pdf-container w-full h-full">
             <Document
               file={pdfUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={
-                <div className="flex items-center justify-center h-[600px] w-[450px]">
+                <div className="flex items-center justify-center h-full w-full">
                   <div className="animate-pulse text-gray-500">
                     Loading PDF...
                   </div>
                 </div>
               }
               error={
-                <div className="flex flex-col items-center justify-center h-[600px] w-[450px] p-4 text-center">
+                <div className="flex flex-col items-center justify-center h-full w-full text-center">
                   <div className="text-red-500 mb-4">Failed to load PDF</div>
                   <Button onClick={handleDownload}>Open PDF in New Tab</Button>
                 </div>
               }
               options={options}
+              className="w-full"
             >
               {numPages > 0 &&
                 pageNumbers.map((pageNum) => (
                   <div
                     key={`page_${pageNum}`}
-                    className="mb-8 pdf-page-container"
+                    className="mb-8 pdf-page-container w-full"
                     id={`page-${pageNum}`}
                   >
                     <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300">
@@ -525,7 +528,7 @@ export function PdfViewer({
                       rotate={rotation}
                       width={pageWidth}
                       loading={
-                        <div className="flex items-center justify-center h-[600px] w-[450px]">
+                        <div className="flex items-center justify-center h-[400px] w-full">
                           <div className="animate-pulse text-gray-500">
                             Loading page {pageNum}...
                           </div>
@@ -533,7 +536,7 @@ export function PdfViewer({
                       }
                       renderTextLayer={showTextLayer}
                       renderAnnotationLayer={showTextLayer}
-                      className="pdf-page shadow-md"
+                      className="pdf-page shadow-md mx-auto"
                       onRenderSuccess={() => {
                         // If this is a manual page change and this is the target page,
                         // ensure it's visible when rendered
@@ -562,6 +565,7 @@ export function PdfViewer({
         pdfId={pdfIdNumber}
         pdfTitle={pdfTitle}
         pdfUrl={pdfUrl}
+        onClose={() => {}}
       />
     </div>
   );
