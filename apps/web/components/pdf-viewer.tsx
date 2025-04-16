@@ -1,25 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Document, Page, Outline } from "react-pdf";
-import { pdfjs } from "react-pdf";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import { useResizeDetector } from "react-resize-detector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  RotateCw,
   ZoomIn,
   ZoomOut,
   Download,
-  RotateCw,
+  Printer,
   ExternalLink,
   AlertTriangle,
   Layers,
   EyeOff,
-  ListFilter,
-  Minus,
-  Plus,
   Search,
   MoreVertical,
 } from "lucide-react";
@@ -61,10 +62,12 @@ export function PdfViewer({
   const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>();
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
-  const [pdfError, setPdfError] = useState<Error | null>(null);
+  const [renderedScale, setRenderedScale] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
   const [showThumbnails, setShowThumbnails] = useState<boolean>(true);
   const [showTextLayer, setShowTextLayer] = useState<boolean>(false);
   const [isManualPageChange, setIsManualPageChange] = useState<boolean>(false);
@@ -72,6 +75,9 @@ export function PdfViewer({
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const [searchText, setSearchText] = useState<string>("");
+
+  const { width, ref } = useResizeDetector();
+  const documentRef = useRef<HTMLDivElement>(null); // Ref for the Document container
 
   // Manual resize observer implementation instead of using the hook
   useEffect(() => {
@@ -138,8 +144,8 @@ export function PdfViewer({
         }
 
         // Only update when page changes to avoid unnecessary re-renders
-        if (bestVisiblePage !== pageNumber) {
-          setPageNumber(bestVisiblePage);
+        if (bestVisiblePage !== currentPage) {
+          setCurrentPage(bestVisiblePage);
 
           // Update sidebar scroll position to show current page
           const sidebarItem = document.querySelector(
@@ -176,11 +182,11 @@ export function PdfViewer({
       }
       clearTimeout(initialCheckTimeout);
     };
-  }, [mainContentRef, pageNumber, numPages, isManualPageChange]);
+  }, [mainContentRef, currentPage, numPages, isManualPageChange]);
 
   useEffect(() => {
     // Reset page number when PDF URL changes
-    setPageNumber(1);
+    setCurrentPage(1);
   }, [pdfUrl]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -189,7 +195,7 @@ export function PdfViewer({
 
   function onDocumentLoadError(error: Error) {
     console.error("Error loading PDF:", error);
-    setPdfError(error);
+    setPdfLoadError(error.message);
 
     toast({
       title: "Error loading PDF",
@@ -201,7 +207,7 @@ export function PdfViewer({
   }
 
   const changePage = (offset: number) => {
-    const newPageNumber = pageNumber + offset;
+    const newPageNumber = currentPage + offset;
     if (newPageNumber >= 1 && newPageNumber <= numPages) {
       goToPage(newPageNumber);
     }
@@ -211,7 +217,7 @@ export function PdfViewer({
     if (page >= 1 && page <= numPages) {
       // Set flag to prevent scroll detection from overriding manual navigation
       setIsManualPageChange(true);
-      setPageNumber(page);
+      setCurrentPage(page);
 
       // Scroll to the selected page
       if (mainContentRef.current) {
@@ -300,7 +306,7 @@ export function PdfViewer({
   const pdfIdNumber = parseInt(pdfId, 10);
 
   // If we have a PDF error, show a fallback UI
-  if (pdfError) {
+  if (pdfLoadError) {
     return (
       <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b bg-muted/20">
@@ -316,9 +322,7 @@ export function PdfViewer({
             <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">PDF Viewer Issue</h3>
             <p className="mb-4 text-gray-600">
-              {`We couldn't load this PDF: ${
-                pdfError?.message || "Unknown error"
-              }`}
+              {`We couldn't load this PDF: ${pdfLoadError}`}
             </p>
             <Button onClick={handleDownload}>
               <ExternalLink className="h-4 w-4 mr-1" />
@@ -415,7 +419,7 @@ export function PdfViewer({
                       key={`thumb-${pageNum}`}
                       data-page-thumb={pageNum}
                       className={`cursor-pointer p-1 rounded-md transition-colors mb-2 ${
-                        pageNumber === pageNum
+                        currentPage === pageNum
                           ? "bg-blue-100 border border-blue-300"
                           : "hover:bg-gray-100"
                       }`}
@@ -449,7 +453,7 @@ export function PdfViewer({
                 variant="outline"
                 size="icon"
                 onClick={() => changePage(-1)}
-                disabled={pageNumber <= 1}
+                disabled={currentPage <= 1}
                 className="h-8 w-8"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -458,7 +462,7 @@ export function PdfViewer({
               <div className="flex items-center gap-1 text-sm">
                 <Input
                   type="number"
-                  value={pageNumber}
+                  value={currentPage}
                   onChange={(e) => {
                     const page = Number.parseInt(e.target.value);
                     if (page >= 1 && page <= numPages) {
@@ -475,7 +479,7 @@ export function PdfViewer({
                 variant="outline"
                 size="icon"
                 onClick={() => changePage(1)}
-                disabled={pageNumber >= numPages}
+                disabled={currentPage >= numPages}
                 className="h-8 w-8"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -540,7 +544,7 @@ export function PdfViewer({
                       onRenderSuccess={() => {
                         // If this is a manual page change and this is the target page,
                         // ensure it's visible when rendered
-                        if (isManualPageChange && pageNum === pageNumber) {
+                        if (isManualPageChange && pageNum === currentPage) {
                           const element = document.getElementById(
                             `page-${pageNum}`
                           );

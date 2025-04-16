@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";

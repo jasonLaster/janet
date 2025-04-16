@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
-import { NextResponse } from "next/server";
 
 // Define PDF interface for type safety
 export interface PDF {

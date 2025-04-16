@@ -186,3 +186,10 @@ export const removeUploadingFileAtom = atom(
 // );
 
 // Action atoms for fetching, uploading, deleting will be added next.
+
+export const setUploadingFilesAtom = atom(null, (get, set, update: File[]) => {
+  set(uploadingFilesAtom, update);
+});
+
+// Atom to get the current isUploading state
+// ... existing code ...

@@ -7,9 +7,16 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "ai/react";
 
+// Define the attachment type
+interface Attachment {
+  url: string;
+  name: string;
+  contentType: string;
+}
+
 export default function ChatWithPDF() {
   const [messages, setMessages] = useState<
-    { id: string; role: string; content: string; attachments?: any[] }[]
+    { id: string; role: string; content: string; attachments?: Attachment[] }[]
   >([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -18,13 +25,7 @@ export default function ChatWithPDF() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const {
-    messages: chatMessages,
-    input: chatInput,
-    handleInputChange: chatHandleInputChange,
-    handleSubmit: chatHandleSubmit,
-    append: chatAppend,
-  } = useChat({
+  useChat({
     api: "/api/chat", // Ensure this points to your Next.js API route
     onError: (error: unknown) => {
       // Handle errors, e.g., show a toast notification

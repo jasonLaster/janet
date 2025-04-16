@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, SendHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface FloatingPdfChatProps {
   pdfId: number;
@@ -155,11 +156,11 @@ export function FloatingPdfChat({
                 <MessageSquare className="h-12 w-12 mb-4 text-muted-foreground/50" />
                 <p className="mb-2">Ask questions about your PDF document</p>
                 <p className="text-sm">
-                  "What is this document about?"
+                  &quot;What is this document about?&quot;
                   <br />
-                  "Summarize the key points"
+                  &quot;Summarize the key points&quot;
                   <br />
-                  "Extract the data from page 3"
+                  &quot;Extract the data from page 3&quot;
                 </p>
               </div>
             ) : (
