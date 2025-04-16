@@ -1,9 +1,11 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Document, Page, pdfjs } from "react-pdf"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useRef } from "react";
+import { Document, Page, Outline } from "react-pdf";
+import { pdfjs } from 'react-pdf';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,88 +15,220 @@ import {
   RotateCw,
   ExternalLink,
   AlertTriangle,
-} from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+  Layers,
+  EyeOff,
+  ListFilter,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-// Try to set up the worker with a more reliable approach
-// We'll use a try-catch block to handle potential errors
-try {
-  // Try to use a different CDN
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
-} catch (error) {
-  console.error("Failed to set up PDF.js worker:", error)
-  // If that fails, we'll handle it in the component
+// Using dynamic import for the worker
+if (typeof window !== 'undefined') {
+  // In the browser environment only
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 }
+
+// Configuration - use simple options for reliability
+const options = {
+  cMapUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/cmaps/',
+  cMapPacked: true,
+};
+
+const maxWidth = 800;
+const thumbnailWidth = 150;
 
 interface PdfViewerProps {
-  pdfUrl: string
-  pdfTitle?: string
-  onError?: () => void
+  pdfUrl: string;
+  pdfTitle?: string;
+  onError?: () => void;
 }
 
-export function PdfViewer({ pdfUrl, pdfTitle = "Document", onError }: PdfViewerProps) {
-  const [numPages, setNumPages] = useState<number>(0)
-  const [pageNumber, setPageNumber] = useState<number>(1)
-  const [scale, setScale] = useState<number>(1.0)
-  const [rotation, setRotation] = useState<number>(0)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [workerError, setWorkerError] = useState<boolean>(false)
-  const [pdfError, setPdfError] = useState<Error | null>(null)
-  const { toast } = useToast()
+export function PdfViewer({
+  pdfUrl,
+  pdfTitle = "Document",
+  onError,
+}: PdfViewerProps) {
+  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>();
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1.0);
+  const [rotation, setRotation] = useState<number>(0);
+  const [pdfError, setPdfError] = useState<Error | null>(null);
+  const [showThumbnails, setShowThumbnails] = useState<boolean>(true);
+  const [showTextLayer, setShowTextLayer] = useState<boolean>(false);
+  const [isManualPageChange, setIsManualPageChange] = useState<boolean>(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
 
-  // Check if the worker is available
+  // Manual resize observer implementation instead of using the hook
   useEffect(() => {
-    const checkWorker = async () => {
-      try {
-        // Try to dynamically import the worker
-        await import("pdfjs-dist/build/pdf.worker.entry")
-      } catch (error) {
-        console.error("Failed to load PDF.js worker:", error)
-        setWorkerError(true)
-        if (onError) onError()
-      }
-    }
+    if (!containerRef) return;
 
-    checkWorker()
-  }, [onError])
+    const resizeObserver = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(containerRef);
+    return () => resizeObserver.disconnect();
+  }, [containerRef]);
+
+  // Track visible page based on scroll position
+  useEffect(() => {
+    if (!mainContentRef.current || numPages === 0) return;
+    
+    const handleScroll = () => {
+      // Skip scroll handling if we're in a manual page change
+      if (!mainContentRef.current || isManualPageChange) return;
+      
+      // Clear any existing timeout to debounce scroll events
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Use a small timeout to avoid excessive updates while scrolling
+      scrollTimeoutRef.current = setTimeout(() => {
+        if (!mainContentRef.current) return;
+        
+        const scrollPosition = mainContentRef.current.scrollTop;
+        const viewportHeight = mainContentRef.current.clientHeight;
+        const pageContainers = Array.from(document.querySelectorAll('.pdf-page-container'));
+        
+        // Find the page that is most visible in the viewport
+        let bestVisiblePage = 1;
+        let maxVisibleArea = 0;
+        
+        for (let i = 0; i < pageContainers.length; i++) {
+          const container = pageContainers[i] as HTMLElement;
+          const rect = container.getBoundingClientRect();
+          const mainContentRect = mainContentRef.current.getBoundingClientRect();
+          
+          // Calculate how much of the page is visible
+          const top = Math.max(rect.top, mainContentRect.top);
+          const bottom = Math.min(rect.bottom, mainContentRect.bottom);
+          const visibleHeight = Math.max(0, bottom - top);
+          
+          // Get page number from element id
+          const pageId = container.id;
+          const pageNum = parseInt(pageId.replace('page-', ''));
+          
+          // Update if this page has more visible area than previous best
+          if (visibleHeight > maxVisibleArea) {
+            maxVisibleArea = visibleHeight;
+            bestVisiblePage = pageNum;
+          }
+        }
+        
+        // Only update when page changes to avoid unnecessary re-renders
+        if (bestVisiblePage !== pageNumber) {
+          setPageNumber(bestVisiblePage);
+          
+          // Update sidebar scroll position to show current page
+          const sidebarItem = document.querySelector(`[data-page-thumb="${bestVisiblePage}"]`);
+          if (sidebarItem) {
+            sidebarItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          
+          // Update URL without page reload
+          const url = new URL(window.location.href);
+          url.searchParams.set('page', bestVisiblePage.toString());
+          window.history.replaceState({}, '', url.toString());
+        }
+      }, 100); // Short debounce time for better responsiveness
+    };
+
+    const scrollContainer = mainContentRef.current;
+    scrollContainer.addEventListener('scroll', handleScroll);
+    
+    // Initial check after a delay to ensure PDF has rendered
+    const initialCheckTimeout = setTimeout(handleScroll, 500);
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+      // Clean up timeouts
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      clearTimeout(initialCheckTimeout);
+    };
+  }, [mainContentRef, pageNumber, numPages, isManualPageChange]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages)
-    setIsLoading(false)
+    setNumPages(numPages);
   }
 
   function onDocumentLoadError(error: Error) {
-    console.error("Error loading PDF:", error)
-    setPdfError(error)
-    setIsLoading(false)
+    console.error("Error loading PDF:", error);
+    setPdfError(error);
 
     toast({
       title: "Error loading PDF",
       description: error.message,
       variant: "destructive",
-    })
+    });
 
-    if (onError) onError()
+    if (onError) onError();
   }
 
   const changePage = (offset: number) => {
-    setPageNumber((prevPageNumber) => {
-      const newPageNumber = prevPageNumber + offset
-      return newPageNumber >= 1 && newPageNumber <= numPages ? newPageNumber : prevPageNumber
-    })
-  }
+    const newPageNumber = pageNumber + offset;
+    if (newPageNumber >= 1 && newPageNumber <= numPages) {
+      goToPage(newPageNumber);
+    }
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= numPages) {
+      // Set flag to prevent scroll detection from overriding manual navigation
+      setIsManualPageChange(true);
+      setPageNumber(page);
+      
+      // Scroll to the selected page
+      if (mainContentRef.current) {
+        const targetElement = document.getElementById(`page-${page}`);
+        if (targetElement) {
+          // Use smooth scrolling for better UX
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // Reset the manual page change flag after scrolling finishes
+          setTimeout(() => {
+            setIsManualPageChange(false);
+          }, 800); // Allow time for the scroll animation to complete
+        } else {
+          // If we can't find the target element yet (still loading), wait and try again
+          setTimeout(() => {
+            const retryElement = document.getElementById(`page-${page}`);
+            if (retryElement) {
+              retryElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            setIsManualPageChange(false);
+          }, 500);
+        }
+      } else {
+        // If no main content ref, just reset the flag
+        setTimeout(() => {
+          setIsManualPageChange(false);
+        }, 500);
+      }
+    }
+  };
 
   const handleZoomIn = () => {
-    setScale((prevScale) => Math.min(prevScale + 0.2, 3))
-  }
+    setScale((prevScale) => Math.min(prevScale + 0.2, 3));
+  };
 
   const handleZoomOut = () => {
-    setScale((prevScale) => Math.max(prevScale - 0.2, 0.5))
-  }
+    setScale((prevScale) => Math.max(prevScale - 0.2, 0.5));
+  };
 
   const handleRotate = () => {
-    setRotation((prevRotation) => (prevRotation + 90) % 360)
-  }
+    setRotation((prevRotation) => (prevRotation + 90) % 360);
+  };
 
   const handleDownload = () => {
     if (!pdfUrl.startsWith("http") && !pdfUrl.startsWith("/")) {
@@ -102,16 +236,35 @@ export function PdfViewer({ pdfUrl, pdfTitle = "Document", onError }: PdfViewerP
         title: "Download error",
         description: "Cannot download this PDF",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Open the PDF in a new tab for download
-    window.open(pdfUrl, "_blank")
-  }
+    window.open(pdfUrl, "_blank");
+  };
 
-  // If we have a worker error or PDF error, show a fallback UI
-  if (workerError || pdfError) {
+  const toggleThumbnails = () => {
+    setShowThumbnails(prev => !prev);
+  };
+
+  const toggleTextLayer = () => {
+    setShowTextLayer(prev => !prev);
+  };
+
+  // Calculate width to display page with
+  const pageWidth = containerWidth
+    ? Math.min(containerWidth - (showThumbnails ? 180 : 0), maxWidth)
+    : maxWidth;
+
+  // Generate array of page numbers for rendering thumbnails
+  const pageNumbers = Array.from(
+    { length: numPages },
+    (_, index) => index + 1
+  );
+
+  // If we have a PDF error, show a fallback UI
+  if (pdfError) {
     return (
       <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b bg-muted/20">
@@ -127,9 +280,9 @@ export function PdfViewer({ pdfUrl, pdfTitle = "Document", onError }: PdfViewerP
             <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">PDF Viewer Issue</h3>
             <p className="mb-4 text-gray-600">
-              {workerError
-                ? "We couldn't load the PDF viewer components. This might be due to network restrictions or browser security settings."
-                : `We couldn't load this PDF: ${pdfError?.message || "Unknown error"}`}
+              {`We couldn't load this PDF: ${
+                pdfError?.message || "Unknown error"
+              }`}
             </p>
             <Button onClick={handleDownload}>
               <ExternalLink className="h-4 w-4 mr-1" />
@@ -138,14 +291,20 @@ export function PdfViewer({ pdfUrl, pdfTitle = "Document", onError }: PdfViewerP
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b bg-muted/20">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => changePage(-1)} disabled={pageNumber <= 1}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => changePage(-1)}
+            disabled={pageNumber <= 1}
+          >
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Previous page</span>
           </Button>
@@ -154,9 +313,9 @@ export function PdfViewer({ pdfUrl, pdfTitle = "Document", onError }: PdfViewerP
               type="number"
               value={pageNumber}
               onChange={(e) => {
-                const page = Number.parseInt(e.target.value)
+                const page = Number.parseInt(e.target.value);
                 if (page >= 1 && page <= numPages) {
-                  setPageNumber(page)
+                  goToPage(page);
                 }
               }}
               className="w-16 h-8"
@@ -165,71 +324,191 @@ export function PdfViewer({ pdfUrl, pdfTitle = "Document", onError }: PdfViewerP
             />
             <span>/ {numPages}</span>
           </div>
-          <Button variant="outline" size="icon" onClick={() => changePage(1)} disabled={pageNumber >= numPages}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => changePage(1)}
+            disabled={pageNumber >= numPages}
+          >
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Next page</span>
           </Button>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handleZoomOut} disabled={scale <= 0.5}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleThumbnails}
+            title={showThumbnails ? "Hide thumbnails" : "Show thumbnails"}
+          >
+            <Layers className={`h-4 w-4 ${showThumbnails ? 'text-blue-500' : ''}`} />
+            <span className="sr-only">Toggle thumbnails</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleTextLayer}
+            title={showTextLayer ? "Hide text layer" : "Show text layer"}
+          >
+            <EyeOff className={`h-4 w-4 ${!showTextLayer ? 'text-blue-500' : ''}`} />
+            <span className="sr-only">Toggle text layer</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleZoomOut}
+            disabled={scale <= 0.5}
+          >
             <ZoomOut className="h-4 w-4" />
             <span className="sr-only">Zoom out</span>
           </Button>
           <span className="text-sm">{Math.round(scale * 100)}%</span>
-          <Button variant="outline" size="icon" onClick={handleZoomIn} disabled={scale >= 3}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleZoomIn}
+            disabled={scale >= 3}
+          >
             <ZoomIn className="h-4 w-4" />
             <span className="sr-only">Zoom in</span>
           </Button>
-          <Button variant="outline" size="icon" onClick={handleRotate}>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleRotate}
+          >
             <RotateCw className="h-4 w-4" />
             <span className="sr-only">Rotate</span>
           </Button>
-          <Button variant="outline" size="icon" onClick={handleDownload}>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleDownload}
+          >
             <Download className="h-4 w-4" />
             <span className="sr-only">Download</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 flex justify-center bg-gray-100">
-        <div className="pdf-container">
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <div className="flex items-center justify-center h-[600px] w-[450px]">
-                <div className="animate-pulse text-gray-500">Loading PDF...</div>
+      {/* Main content area with optional sidebar */}
+      <div
+        className="flex-1 flex overflow-hidden" 
+        ref={setContainerRef}
+      >
+        {/* Thumbnails sidebar */}
+        {showThumbnails && (
+          <div className="w-[180px] border-r border-gray-200 bg-gray-50 overflow-hidden flex flex-col">
+            <div className="p-2 border-b border-gray-200 bg-gray-100 font-medium text-sm">
+              Pages
+            </div>
+            <ScrollArea className="flex-1 pdf-sidebar-scroll">
+              <div className="p-2 space-y-2">
+                <Document
+                  file={pdfUrl}
+                  options={options}
+                  loading={<div className="p-4 text-center text-sm text-gray-500">Loading thumbnails...</div>}
+                >
+                  {pageNumbers.map((pageNum) => (
+                    <div 
+                      key={`thumb-${pageNum}`}
+                      data-page-thumb={pageNum}
+                      className={`cursor-pointer p-1 rounded-md transition-colors mb-2 ${
+                        pageNumber === pageNum ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => goToPage(pageNum)}
+                    >
+                      <div className="text-center text-xs text-gray-600 mb-1">
+                        {pageNum}
+                      </div>
+                      <Page
+                        pageNumber={pageNum}
+                        width={thumbnailWidth}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        className="thumbnail-page"
+                        loading={
+                          <div className="h-[150px] w-[120px] bg-gray-100 animate-pulse flex items-center justify-center">
+                            <span className="text-xs text-gray-400">Loading...</span>
+                          </div>
+                        }
+                      />
+                    </div>
+                  ))}
+                </Document>
               </div>
-            }
-            error={
-              <div className="flex flex-col items-center justify-center h-[600px] w-[450px] p-4 text-center">
-                <div className="text-red-500 mb-4">Failed to load PDF</div>
-                <Button onClick={handleDownload}>Open PDF in New Tab</Button>
-              </div>
-            }
-            options={{
-              cMapUrl: "https://unpkg.com/pdfjs-dist@3.4.120/cmaps/",
-              cMapPacked: true,
-            }}
-          >
-            <Page
-              pageNumber={pageNumber}
-              scale={scale}
-              rotate={rotation}
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* Main PDF viewer */}
+        <div 
+          className="flex-1 overflow-auto p-4 flex flex-col items-center bg-gray-100 pdf-content-scroll"
+          ref={mainContentRef}
+        >
+          <div className="pdf-container">
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
               loading={
                 <div className="flex items-center justify-center h-[600px] w-[450px]">
-                  <div className="animate-pulse text-gray-500">Loading page {pageNumber}...</div>
+                  <div className="animate-pulse text-gray-500">
+                    Loading PDF...
+                  </div>
                 </div>
               }
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-              className="pdf-page"
-            />
-          </Document>
+              error={
+                <div className="flex flex-col items-center justify-center h-[600px] w-[450px] p-4 text-center">
+                  <div className="text-red-500 mb-4">Failed to load PDF</div>
+                  <Button onClick={handleDownload}>Open PDF in New Tab</Button>
+                </div>
+              }
+              options={options}
+            >
+              {numPages > 0 && pageNumbers.map((pageNum) => (
+                <div 
+                  key={`page_${pageNum}`} 
+                  className="mb-8 pdf-page-container"
+                  id={`page-${pageNum}`}
+                >
+                  <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300">
+                    Page {pageNum} of {numPages}
+                  </div>
+                  <Page
+                    key={`page_${pageNum}`}
+                    pageNumber={pageNum}
+                    scale={scale}
+                    rotate={rotation}
+                    width={pageWidth}
+                    loading={
+                      <div className="flex items-center justify-center h-[600px] w-[450px]">
+                        <div className="animate-pulse text-gray-500">
+                          Loading page {pageNum}...
+                        </div>
+                      </div>
+                    }
+                    renderTextLayer={showTextLayer}
+                    renderAnnotationLayer={showTextLayer}
+                    className="pdf-page shadow-md"
+                    onRenderSuccess={() => {
+                      // If this is a manual page change and this is the target page,
+                      // ensure it's visible when rendered
+                      if (isManualPageChange && pageNum === pageNumber) {
+                        const element = document.getElementById(`page-${pageNum}`);
+                        if (element && mainContentRef.current) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </Document>
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
