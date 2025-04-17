@@ -67,8 +67,7 @@ export function PdfViewer({
   const { toast } = useToast();
   const [searchText, setSearchText] = useState<string>("");
   const [reactPdf, setReactPdf] = useState<any>(null);
-  const { width, ref } = useResizeDetector();
-  const documentRef = useRef<HTMLDivElement>(null); // Ref for the Document container
+  const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     const loadPdfWorker = async () => {
@@ -193,6 +192,7 @@ export function PdfViewer({
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
+    setDocumentLoaded(true);
   }
 
   function onDocumentLoadError(error: Error) {
@@ -363,7 +363,10 @@ export function PdfViewer({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
+    <div
+      data-document-loaded={documentLoaded}
+      className="flex flex-col h-full bg-white rounded-lg overflow-hidden"
+    >
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b bg-muted/20">
         <h2 className="font-medium">{pdfTitle}</h2>
