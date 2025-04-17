@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PdfViewer } from "@/components/pdf-viewer";
 import { FallbackPdfViewer } from "@/components/fallback-pdf-viewer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
+import { PdfViewer } from "./pdf-viewer";
 interface PdfViewerPageProps {
   pdfId: number;
 }
