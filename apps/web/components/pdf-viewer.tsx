@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
 import { useResizeDetector } from "react-resize-detector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,14 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
   RotateCw,
   ZoomIn,
   ZoomOut,
   Download,
-  Printer,
   ExternalLink,
   AlertTriangle,
   Layers,
@@ -33,11 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Using dynamic import for the worker
-if (typeof window !== "undefined") {
-  // In the browser environment only
-  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
-}
+import { Document, Page } from "react-pdf";
+
+type ReactPdf = typeof import("react-pdf");
 
 // Configuration - use simple options for reliability
 const options = {
@@ -65,8 +58,6 @@ export function PdfViewer({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
-  const [renderedScale, setRenderedScale] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
   const [showThumbnails, setShowThumbnails] = useState<boolean>(true);
   const [showTextLayer, setShowTextLayer] = useState<boolean>(false);
@@ -75,9 +66,20 @@ export function PdfViewer({
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const [searchText, setSearchText] = useState<string>("");
-
+  const [reactPdf, setReactPdf] = useState<any>(null);
   const { width, ref } = useResizeDetector();
   const documentRef = useRef<HTMLDivElement>(null); // Ref for the Document container
+
+  useEffect(() => {
+    const loadPdfWorker = async () => {
+      // Dynamically assign to react-pdf's pdfjs object
+      const reactPdf = await import("react-pdf");
+      reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.js`;
+      setReactPdf(reactPdf as ReactPdf);
+    };
+
+    loadPdfWorker();
+  }, []);
 
   // Manual resize observer implementation instead of using the hook
   useEffect(() => {
@@ -285,6 +287,32 @@ export function PdfViewer({
   const toggleTextLayer = () => {
     setShowTextLayer((prev) => !prev);
   };
+
+  if (!reactPdf) {
+    return (
+      <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden animate-pulse">
+        <div className="flex items-center justify-between p-2 border-b bg-muted/20">
+          <div className="h-6 w-48 bg-gray-200 rounded"></div>
+          <div className="h-8 w-32 bg-gray-200 rounded"></div>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar skeleton */}
+          <div className="w-[180px] border-r bg-gray-50 p-2 flex flex-col gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+
+          {/* Main content skeleton */}
+          <div className="flex-1 overflow-auto p-4 flex flex-col items-center">
+            <div className="w-full max-w-3xl h-[800px] bg-gray-200 rounded mb-4"></div>
+            <div className="w-full max-w-3xl h-[800px] bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate width to display page with
   const pageWidth = containerWidth
