@@ -9,21 +9,23 @@ const isPublicRoute = createRouteMatcher([
   // Add any other public routes here
 ]);
 
-// Make the middleware function async to allow await
-export default clerkMiddleware((auth, req) => {
-  // Middleware runs for every matched route.
+export default clerkMiddleware(async (auth, req) => {
+  // Middleware running for every matched route.
   console.log("Middleware running for:", req.url);
 
-  // If the route is not public, clerkMiddleware will automatically protect it.
-  // No need for explicit checks or redirections here unless you have complex logic.
+  // If the route is public, allow access without authentication
   if (isPublicRoute(req)) {
-    // Allow public routes to proceed without authentication checks.
     return NextResponse.next();
   }
 
-  // For all other routes (non-public), clerkMiddleware handles authentication.
-  // If the user is not authenticated, it will redirect to the sign-in page.
-  // If the user is authenticated, it allows the request to proceed.
+  // For protected routes, check if user is authenticated
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
+  }
+
+  return NextResponse.next();
 });
 
 export const config = {
