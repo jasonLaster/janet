@@ -37,6 +37,7 @@ import {
   pdfsLoadingAtom,
   pdfsErrorAtom,
   fetchPdfsAtom,
+  PDF,
 } from "@/lib/store";
 
 export function PdfList() {
@@ -89,15 +90,6 @@ export function PdfList() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  };
-
   const filteredPdfs = pdfs.filter((pdf) => {
     if (!searchQuery) return true;
 
@@ -113,7 +105,7 @@ export function PdfList() {
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-4">
+      <div data-testid="pdf-list-loading" className="animate-pulse space-y-4">
         <div className="h-10 bg-muted/50 rounded-md w-full"></div>
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-16 bg-muted/30 rounded-md w-full"></div>
@@ -143,9 +135,6 @@ export function PdfList() {
         </p>
         <div className="flex justify-center gap-4">
           <FileUpload dropZoneOnly={true} className="w-auto" />
-          <Button variant="outline" onClick={() => router.push("/chat")}>
-            Go to Chat
-          </Button>
         </div>
       </div>
     );
@@ -167,7 +156,7 @@ export function PdfList() {
   }
 
   return (
-    <div className="w-full">
+    <div data-testid="pdf-list" className="w-full">
       <Table>
         <TableHeader>
           <TableRow>
@@ -182,63 +171,85 @@ export function PdfList() {
         </TableHeader>
         <TableBody>
           {filteredPdfs.map((pdf) => (
-            <TableRow key={pdf.id} className="hover:bg-muted/50 cursor-pointer">
-              <TableCell
-                className="font-medium"
-                onClick={() => router.push(`/pdfs/${pdf.id}`)}
-              >
-                <div className="flex items-center gap-2">
-                  <FileIcon className="h-5 w-5 text-blue-500" />
-                  <span className="truncate">{pdf.title || pdf.name}</span>
-                </div>
-              </TableCell>
-              <TableCell>{formatDate(pdf.uploadedAt)}</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontalIcon className="h-4 w-4" />
-                      <span className="sr-only">Open menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => router.push(`/pdfs/${pdf.id}`)}
-                    >
-                      <ExternalLinkIcon className="h-4 w-4 mr-2" />
-                      View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => router.push(`/chat?pdf=${pdf.id}`)}
-                    >
-                      <SearchIcon className="h-4 w-4 mr-2" />
-                      Chat with PDF
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => router.push(`/search?pdf=${pdf.id}`)}
-                    >
-                      <SearchIcon className="h-4 w-4 mr-2" />
-                      Search Inside
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(pdf.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">
-                        Delete &quot;{pdf.title || pdf.name}&quot;
-                      </span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
+            <PdfListItem key={pdf.id} pdf={pdf} handleDelete={handleDelete} />
           ))}
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+function PdfListItem({
+  pdf,
+  handleDelete,
+}: {
+  pdf: PDF;
+  handleDelete: (id: number) => void;
+}) {
+  const router = useRouter();
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  };
+
+  return (
+    <TableRow key={pdf.id} className="hover:bg-muted/50 cursor-pointer">
+      <TableCell className="font-medium">
+        <Link
+          data-testid="pdf-list-item"
+          href={`/pdfs/${pdf.id}`}
+          className="flex items-center gap-2"
+        >
+          <FileIcon className="h-5 w-5 text-blue-500" />
+          <span className="truncate">{pdf.title || pdf.name}</span>
+        </Link>
+      </TableCell>
+      <TableCell>{formatDate(pdf.uploadedAt)}</TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontalIcon className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push(`/pdfs/${pdf.id}`)}>
+              <ExternalLinkIcon className="h-4 w-4 mr-2" />
+              View
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push(`/chat?pdf=${pdf.id}`)}
+            >
+              <SearchIcon className="h-4 w-4 mr-2" />
+              Chat with PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push(`/search?pdf=${pdf.id}`)}
+            >
+              <SearchIcon className="h-4 w-4 mr-2" />
+              Search Inside
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(pdf.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">
+                Delete &quot;{pdf.title || pdf.name}&quot;
+              </span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }

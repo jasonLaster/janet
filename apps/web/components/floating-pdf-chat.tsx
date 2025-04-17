@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, SendHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface FloatingPdfChatProps {
   pdfId: number;
@@ -19,12 +18,7 @@ interface FloatingPdfChatProps {
   onClose?: () => void;
 }
 
-export function FloatingPdfChat({
-  pdfId,
-  pdfTitle,
-  pdfUrl,
-  onClose,
-}: FloatingPdfChatProps) {
+export function FloatingPdfChat({ pdfUrl, onClose }: FloatingPdfChatProps) {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -123,6 +117,7 @@ export function FloatingPdfChat({
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <Button
+        data-testid="chat-button"
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         size="icon"
@@ -147,6 +142,7 @@ export function FloatingPdfChat({
             <X
               className="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
               onClick={handleClose}
+              data-testid="chat-close-button"
             />
           </div>
 
@@ -181,6 +177,7 @@ export function FloatingPdfChat({
                           ? "ml-auto bg-gray-200 dark:bg-gray-700 max-w-fit"
                           : "bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 max-w-[85%] transition-colors"
                       )}
+                      data-testid={`chat-${message.role}-message`}
                     >
                       <div className="prose dark:prose-invert prose-sm max-w-none">
                         {message.role === "assistant" ? (
@@ -193,7 +190,10 @@ export function FloatingPdfChat({
                   </div>
                 ))}
                 {isLoading && (
-                  <div className="flex justify-start">
+                  <div
+                    data-testid="chat-loading-message"
+                    className="flex justify-start"
+                  >
                     <div className="flex flex-col rounded-lg p-3 bg-transparent">
                       <div className="flex space-x-2">
                         <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse" />
@@ -204,7 +204,10 @@ export function FloatingPdfChat({
                   </div>
                 )}
                 {error && (
-                  <div className="flex justify-start">
+                  <div
+                    data-testid="chat-error-message"
+                    className="flex justify-start"
+                  >
                     <div className="flex flex-col rounded-lg p-3 bg-destructive/10 text-destructive">
                       <p className="text-sm">Error: {error.message}</p>
                     </div>
@@ -223,9 +226,21 @@ export function FloatingPdfChat({
                 placeholder="Ask a question..."
                 value={input}
                 onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
                 className="flex-1"
+                data-testid="chat-input"
               />
-              <Button type="submit" size="sm" disabled={isLoading}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isLoading}
+                data-testid="chat-send-button"
+              >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
