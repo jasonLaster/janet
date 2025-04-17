@@ -6,6 +6,9 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)", // Matches /sign-in and /sign-in/*
   "/sign-up(.*)", // Matches /sign-up and /sign-up/*
   "/api/webhooks/(.*)", // Example for webhook endpoints
+  "/landing", // Landing page for non-authenticated users
+  "/about",
+  "/pricing",
   // Add any other public routes here
 ]);
 
@@ -13,16 +16,32 @@ export default clerkMiddleware(async (auth, req) => {
   // Middleware running for every matched route.
   console.log("Middleware running for:", req.url);
 
-  // If the route is public, allow access without authentication
+  const { userId } = await auth();
+  const url = new URL(req.url);
+
+  // Handle the root route based on authentication status
+  if (url.pathname === "/") {
+    // If user is not logged in and trying to access the root, redirect to landing
+    if (!userId) {
+      return NextResponse.redirect(new URL("/landing", url.origin));
+    }
+    // If user is logged in, they can access the PDF list at root
+    return NextResponse.next();
+  }
+
+  // If user is logged in and trying to access landing page, redirect to root (PDF list)
+  if (userId && url.pathname === "/landing") {
+    return NextResponse.redirect(new URL("/", url.origin));
+  }
+
+  // For other public routes, allow access without authentication
   if (isPublicRoute(req)) {
     return NextResponse.next();
   }
 
-  // For protected routes, check if user is authenticated
-  const { userId } = await auth();
-
+  // For all other protected routes, check if user is authenticated
   if (!userId) {
-    return NextResponse.redirect(new URL("/sign-in", req.url));
+    return NextResponse.redirect(new URL("/sign-in", url.origin));
   }
 
   return NextResponse.next();
