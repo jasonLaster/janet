@@ -2,9 +2,6 @@
   "name": "pdf-ocd",
   "private": true,
   "version": "1.0.0",
-  "workspaces": [
-    "apps/*"
-  ],
   "dependencies": {
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.1",
@@ -20,11 +17,13 @@
     "@types/pdfkit": "^0.13.6",
     "@types/tesseract.js": "^2.0.0",
     "@vitest/coverage-v8": "^2.1.6",
+    "@playwright/test": "^1.52.0",
     "bun-types": "^1.1.37"
   },
   "scripts": {
     "test": "vitest",
     "test:watch": "vitest watch",
+    "test:e2e": "pnpm --filter web test:e2e",
     "dev:web": "pnpm --filter web dev",
     "build": "pnpm --filter web build"
   },
