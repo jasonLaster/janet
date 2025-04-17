@@ -11,6 +11,7 @@ import {
   SignedIn,
   SignedOut,
   OrganizationSwitcher,
+  SignOutButton,
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
@@ -58,6 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="p-2 border-t flex items-center justify-between">
               <OrganizationSwitcher />
+              {/* <SignOutButton /> */}
               {/* Add other signed-in user controls if needed */}
             </div>
           </SignedIn>
