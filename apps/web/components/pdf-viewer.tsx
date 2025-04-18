@@ -63,17 +63,16 @@ const PdfViewerContent = lazy(() =>
 // Create a loading fallback component for PDF document
 function DocumentLoadingFallback() {
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden animate-pulse">
+    <div className="flex flex-col w-full h-full bg-white rounded-lg overflow-hidden animate-pulse">
       <div className="flex items-center justify-between p-2 border-b bg-muted/20">
-        <div className="h-6 w-48 bg-gray-200 rounded"></div>
-        <div className="h-8 w-32 bg-gray-200 rounded"></div>
+        <div className="h-6 w-[50%] bg-gray-100 rounded"></div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar skeleton */}
         <div className="w-[180px] border-r bg-gray-50 p-2 flex flex-col gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-gray-200 rounded"></div>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="h-24 bg-gray-100 rounded"></div>
           ))}
         </div>
 
@@ -322,51 +321,6 @@ export function PdfViewer({
     setShowTextLayer((prev) => !prev);
   };
 
-  if (!PdfViewerContent) {
-    return (
-      <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden animate-pulse">
-        <div className="flex items-center justify-between p-2 border-b bg-muted/20">
-          <div className="h-6 w-48 bg-gray-200 rounded"></div>
-          <div className="h-8 w-32 bg-gray-200 rounded"></div>
-        </div>
-
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar skeleton */}
-          <div className="w-[180px] border-r bg-gray-50 p-2 flex flex-col gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-
-          {/* Main content skeleton */}
-          <div className="flex-1 overflow-auto p-4 flex flex-col items-center">
-            <div className="w-full max-w-3xl h-[800px] bg-gray-200 rounded mb-4"></div>
-            <div className="w-full max-w-3xl h-[800px] bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate width to display page with
-  const pageWidth = containerWidth
-    ? Math.min(containerWidth - (showThumbnails ? 180 : 0), maxWidth)
-    : maxWidth;
-
-  // Generate array of page numbers for rendering thumbnails
-  const pageNumbers = Array.from({ length: numPages }, (_, index) => index + 1);
-
-  // Extract PDF ID from URL or use the one from props
-  const pdfId =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("id") ||
-        window.location.pathname.split("/").pop() ||
-        "0"
-      : "0";
-
-  // Convert to number for the chat component
-  const pdfIdNumber = parseInt(pdfId, 10);
-
   // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
     return (
@@ -395,6 +349,25 @@ export function PdfViewer({
       </div>
     );
   }
+
+  // Calculate width to display page with
+  const pageWidth = containerWidth
+    ? Math.min(containerWidth - (showThumbnails ? 180 : 0), maxWidth)
+    : maxWidth;
+
+  // Generate array of page numbers for rendering thumbnails
+  const pageNumbers = Array.from({ length: numPages }, (_, index) => index + 1);
+
+  // Extract PDF ID from URL or use the one from props
+  const pdfId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("id") ||
+        window.location.pathname.split("/").pop() ||
+        "0"
+      : "0";
+
+  // Convert to number for the chat component
+  const pdfIdNumber = parseInt(pdfId, 10);
 
   return (
     <div
