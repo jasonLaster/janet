@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "migrate": "bun migration/run-migration.js"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.10",

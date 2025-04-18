@@ -13,7 +13,7 @@ import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 import { PdfViewerHeader } from "./pdf-viewer-header";
 import { PdfViewerContent } from "./pdf-viewer-content";
 import { PdfSidebar } from "./pdf-sidebar";
-import { PdfMetadata } from "./pdf-viewer-types";
+import { PdfMetadata, PdfViewerProps } from "./pdf-viewer-types";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 import { pdfjs } from "react-pdf";
 
@@ -25,15 +25,11 @@ if (typeof window !== "undefined") {
 const maxWidth = 800;
 const sidebarDefaultWidth = 250;
 
-interface PdfViewerProps {
-  pdfUrl: string;
-  pdfTitle?: string;
-  onError?: () => void;
-}
-
 export function PdfViewer({
   pdfUrl,
   pdfTitle = "Document",
+  pdfId,
+  existingMetadata,
   onError,
 }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,7 +55,7 @@ export function PdfViewer({
   const [activeTab, setActiveTab] = useState<string>("thumbnails");
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>({});
   const [enhancedMetadata, setEnhancedMetadata] =
-    useState<EnhancedPdfMetadata | null>(null);
+    useState<EnhancedPdfMetadata | null>(existingMetadata || null);
   const [metadataError, setMetadataError] = useState<boolean>(false);
   const [isLoadingAiMetadata, setIsLoadingAiMetadata] =
     useState<boolean>(false);
@@ -304,6 +300,13 @@ export function PdfViewer({
   const fetchEnhancedMetadata = useCallback(async () => {
     if (!pdfUrl) return;
 
+    // Skip fetching if we already have metadata
+    if (existingMetadata) {
+      console.log("Using existing metadata from database");
+      setEnhancedMetadata(existingMetadata);
+      return;
+    }
+
     setIsLoadingAiMetadata(true);
 
     try {
@@ -313,7 +316,7 @@ export function PdfViewer({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ pdfUrl }),
+          body: JSON.stringify({ pdfUrl, pdfId }),
         });
 
         if (response.ok) {
@@ -348,7 +351,7 @@ export function PdfViewer({
     } finally {
       setIsLoadingAiMetadata(false);
     }
-  }, [pdfUrl, toast]);
+  }, [pdfUrl, pdfId, existingMetadata, toast]);
 
   // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
