@@ -59,7 +59,7 @@ export function PdfViewerContent({
 
   return (
     <div
-      className="flex-1 overflow-auto bg-gray-100 pdf-content-scroll w-full"
+      className="flex-1 overflow-auto bg-gray-100 pdf-content-scroll w-full h-full"
       ref={mainContentRef}
     >
       <div className="pdf-container w-full h-full">
