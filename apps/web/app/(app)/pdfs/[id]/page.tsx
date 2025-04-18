@@ -11,7 +11,8 @@ interface PageProps {
 }
 
 export default async function PDFViewPage({ params }: PageProps) {
-  const pdfId = Number.parseInt(params.id);
+  const { id } = await params;
+  const pdfId = Number.parseInt(id);
 
   const { userId } = await auth();
   if (!userId) {
