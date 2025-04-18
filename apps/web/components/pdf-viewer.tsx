@@ -25,6 +25,7 @@ import {
   EyeOff,
   Search,
   MoreVertical,
+  ArrowLeft,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FloatingPdfChat } from "@/components/floating-pdf-chat";
@@ -376,7 +377,18 @@ export function PdfViewer({
     >
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b bg-muted/20">
-        <h2 className="font-medium">{pdfTitle}</h2>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.history.back()}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Back</span>
+          </Button>
+          <h2 className="font-medium">{pdfTitle}</h2>
+        </div>
 
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
