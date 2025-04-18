@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getPdfById } from "@/lib/db";
-import { PdfViewerWithTabs } from "@/components/pdf-viewer-with-tabs";
+import { PdfViewer } from "@/components/pdf-viewer";
 
 interface PageProps {
   params: {
@@ -35,9 +35,6 @@ export default async function PDFViewPage({ params }: PageProps) {
   }
 
   return (
-    <PdfViewerWithTabs
-      pdfUrl={pdf.blob_url}
-      pdfTitle={pdf.title || pdf.filename}
-    />
+    <PdfViewer pdfUrl={pdf.blob_url} pdfTitle={pdf.title || pdf.filename} />
   );
 }
