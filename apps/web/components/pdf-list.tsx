@@ -13,6 +13,8 @@ import {
   MoreHorizontalIcon,
   SortAscIcon,
   Trash2,
+  Building,
+  Tag,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -37,6 +39,7 @@ import {
   pdfsErrorAtom,
   fetchPdfsAtom,
   searchQueryAtom,
+  metadataFilterAtom,
   PDF,
 } from "@/lib/store";
 
@@ -46,6 +49,7 @@ export function PdfList() {
   const error = useAtomValue(pdfsErrorAtom);
   const [, fetchPdfs] = useAtom(fetchPdfsAtom);
   const searchQuery = useAtomValue(searchQueryAtom);
+  const metadataFilter = useAtomValue(metadataFilterAtom);
   const { toast } = useToast();
   const router = useRouter();
   const { organization } = useOrganization();
@@ -90,17 +94,42 @@ export function PdfList() {
     }
   };
 
+  // Filter PDFs based on both search query and metadata filter
   const filteredPdfs = pdfs.filter((pdf) => {
-    if (!searchQuery) return true;
+    // First apply text search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        pdf.title?.toLowerCase().includes(query) ||
+        false ||
+        pdf.name.toLowerCase().includes(query) ||
+        pdf.description?.toLowerCase().includes(query) ||
+        false;
 
-    const query = searchQuery.toLowerCase();
-    return (
-      pdf.title?.toLowerCase().includes(query) ||
-      false ||
-      pdf.name.toLowerCase().includes(query) ||
-      pdf.description?.toLowerCase().includes(query) ||
-      false
-    );
+      if (!matchesSearch) return false;
+    }
+
+    // Then apply metadata filter if active
+    if (metadataFilter.type && metadataFilter.value) {
+      const metadata = (pdf as any).metadata;
+
+      if (metadataFilter.type === "label") {
+        // Check if the PDF has this label
+        return (
+          metadata?.labels &&
+          Array.isArray(metadata.labels) &&
+          metadata.labels.includes(metadataFilter.value)
+        );
+      }
+
+      if (metadataFilter.type === "company") {
+        // Check if the PDF is from this company
+        return metadata?.issuingOrganization === metadataFilter.value;
+      }
+    }
+
+    // If no metadata filter or it passed the filter
+    return true;
   });
 
   if (loading) {
@@ -141,15 +170,36 @@ export function PdfList() {
   }
 
   if (filteredPdfs.length === 0 && pdfs.length > 0 && !loading) {
+    // Determine appropriate message based on active filters
+    let filterMessage: React.ReactNode = "";
+
+    if (metadataFilter.type && metadataFilter.value) {
+      const filterType = metadataFilter.type === "label" ? "label" : "company";
+      const filterIcon =
+        metadataFilter.type === "label" ? (
+          <Tag className="h-4 w-4 mx-1 inline" />
+        ) : (
+          <Building className="h-4 w-4 mx-1 inline" />
+        );
+
+      filterMessage = (
+        <>
+          No PDFs match the {filterType} {filterIcon}
+          <span className="font-medium">"{metadataFilter.value}"</span>
+          {searchQuery && ' and search query "' + searchQuery + '"'}
+        </>
+      );
+    } else if (searchQuery) {
+      filterMessage = <>No PDFs match your search for "{searchQuery}"</>;
+    }
+
     return (
       <div className="text-center py-12">
         <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h2 className="text-xl font-medium mb-2">No matching PDFs</h2>
-        <p className="text-muted-foreground mb-4">
-          No PDFs match your search for "{searchQuery}"
-        </p>
+        <p className="text-muted-foreground mb-4">{filterMessage}</p>
         <Button variant="outline" onClick={() => router.refresh()}>
-          Clear Search
+          Clear Filters
         </Button>
       </div>
     );

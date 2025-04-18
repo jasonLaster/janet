@@ -23,6 +23,17 @@ export interface UploadingFileState {
 // --- Search State Atom ---
 export const searchQueryAtom = atom<string>("");
 
+// Metadata filter for filtering by specific metadata values
+export interface MetadataFilter {
+  type: "label" | "company" | null;
+  value: string | null;
+}
+
+export const metadataFilterAtom = atom<MetadataFilter>({
+  type: null,
+  value: null,
+});
+
 // --- PDF List State Atoms ---
 
 // Holds the array of PDF objects fetched from the API
