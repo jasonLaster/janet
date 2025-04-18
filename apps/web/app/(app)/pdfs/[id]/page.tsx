@@ -1,4 +1,3 @@
-import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getPdfById } from "@/lib/db";
