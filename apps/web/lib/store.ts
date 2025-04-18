@@ -20,6 +20,9 @@ export interface UploadingFileState {
   error?: string;
 }
 
+// --- Search State Atom ---
+export const searchQueryAtom = atom<string>("");
+
 // --- PDF List State Atoms ---
 
 // Holds the array of PDF objects fetched from the API

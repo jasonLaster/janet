@@ -1,11 +1,7 @@
-"use client";
-
-import { useState, createContext } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FileUpload } from "@/components/file-upload";
-import { Input } from "@/components/ui/input";
-import { SearchIcon } from "lucide-react";
+import { Search } from "@/components/search";
 import {
   SignInButton,
   SignedIn,
@@ -15,13 +11,7 @@ import {
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
-// Create a context for the search query
-export const SearchContext = createContext("");
-
-// Renamed from LayoutWrapper to RootLayout or similar standard name for layout files
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [searchQuery, setSearchQuery] = useState("");
-
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
@@ -70,24 +60,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header with search */}
         <header className="border-b p-4">
-          <div className="relative max-w-2xl">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search your PDFs..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <Search />
         </header>
 
-        {/* Main content area - No longer needs SignedIn/SignedOut wrapper */}
-        <main className="flex-1 overflow-auto">
-          <SearchContext.Provider value={searchQuery}>
-            {children}
-          </SearchContext.Provider>
-        </main>
+        {/* Main content area */}
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
   );
