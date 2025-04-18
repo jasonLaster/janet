@@ -1,5 +1,7 @@
 import { FileUpload } from "@/components/file-upload";
 import { Search } from "@/components/search";
+import { DocumentLabels } from "@/components/document-labels";
+import { DocumentCompanies } from "@/components/document-companies";
 import {
   SignInButton,
   SignedIn,
@@ -20,12 +22,12 @@ export function Sidebar() {
 
       <Search />
 
-      {/* Navigation - Empty for now, for future use */}
-      <nav className="flex-1 p-4">
-        <div className="text-sm text-muted-foreground">
-          Available space for future navigation elements
-        </div>
-      </nav>
+      {/* Scrollable content section */}
+      <div className="flex-1 overflow-y-auto">
+        <DocumentCompanies />
+        <div className="border-t border-gray-100 mx-4"></div>
+        <DocumentLabels />
+      </div>
 
       {/* User/Upload Area in Sidebar - Still uses SignedIn/Out */}
       <div className="mt-auto">
