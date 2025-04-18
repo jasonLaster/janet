@@ -15,17 +15,11 @@ import {
   Trash2,
   Building,
   Tag,
+  Calendar,
+  MenuIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +36,13 @@ import {
   metadataFilterAtom,
   PDF,
 } from "@/lib/store";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function PdfList() {
   const pdfs = useAtomValue(pdfsAtom);
@@ -104,6 +105,15 @@ export function PdfList() {
         false ||
         pdf.name.toLowerCase().includes(query) ||
         pdf.description?.toLowerCase().includes(query) ||
+        false ||
+        // Also search in metadata
+        (pdf as any).metadata?.descriptiveTitle
+          ?.toLowerCase()
+          .includes(query) ||
+        false ||
+        (pdf as any).metadata?.labels?.some((label: string) =>
+          label.toLowerCase().includes(query)
+        ) ||
         false;
 
       if (!matchesSearch) return false;
@@ -206,25 +216,94 @@ export function PdfList() {
   }
 
   return (
-    <div data-testid="pdf-list" className="w-full">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[60%]">
-              <div className="flex items-center gap-1">
-                Name <SortAscIcon className="h-3 w-3 ml-1" />
-              </div>
-            </TableHead>
-            <TableHead>Last modified</TableHead>
-            <TableHead className="w-[60px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <div data-testid="pdf-list" className="w-full h-full flex flex-col">
+      <div className="flex-1 flex flex-col border-b">
+        {/* Header */}
+        <div className="sticky top-0 flex items-center p-3 font-medium text-sm bg-background z-10 shadow-sm border-b">
+          <div className="flex-1">
+            <div className="flex items-center gap-1">
+              Document <SortAscIcon className="h-3 w-3 ml-1" />
+            </div>
+          </div>
+          <div className="w-28 text-right flex items-center justify-end">
+            Date
+          </div>
+          <div className="w-12 flex justify-center">
+            <MenuIcon className="h-3 w-3 text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* Scrollable container */}
+        <div className="flex-1 overflow-y-auto">
+          {/* PDF Items */}
           {filteredPdfs.map((pdf) => (
             <PdfListItem key={pdf.id} pdf={pdf} handleDelete={handleDelete} />
           ))}
-        </TableBody>
-      </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// New component for metadata display
+function DocumentMetadata({ metadata }: { metadata: any }) {
+  // Calculate visible labels dynamically, default is 3 but fewer if organization exists
+  const maxVisibleLabels = metadata.issuingOrganization ? 2 : 3;
+  const labels = metadata.labels || [];
+  const visibleLabels = labels.slice(0, maxVisibleLabels);
+  const hiddenCount = Math.max(0, labels.length - maxVisibleLabels);
+
+  return (
+    <div className="flex flex-nowrap overflow-hidden ml-2 max-w-full">
+      {metadata.issuingOrganization && (
+        <Badge
+          variant="secondary"
+          className="text-xs px-1.5 py-0.5 shrink-0 truncate"
+        >
+          <Building className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
+          <span className="truncate">{metadata.issuingOrganization}</span>
+        </Badge>
+      )}
+      <div className="flex overflow-hidden flex-nowrap">
+        {visibleLabels.map((label: string, index: number) => (
+          <Badge
+            key={index}
+            variant="secondary"
+            className="text-xs px-1.5 py-0.5 ml-1 shrink-0 truncate"
+          >
+            <Tag className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
+            <span className="truncate">{label}</span>
+          </Badge>
+        ))}
+        {hiddenCount > 0 && (
+          <TooltipProvider>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className="text-xs px-1.5 py-0.5 ml-1 shrink-0 cursor-pointer"
+                >
+                  +{hiddenCount}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="p-2 max-w-xs">
+                <div className="flex flex-col space-y-1">
+                  {labels.map((label: string, index: number) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="text-xs px-1.5 py-0.5 justify-start w-full"
+                    >
+                      <Tag className="h-3 w-3 mr-1 opacity-70" />
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
     </div>
   );
 }
@@ -237,8 +316,10 @@ function PdfListItem({
   handleDelete: (id: number) => void;
 }) {
   const router = useRouter();
+  const metadata = (pdf as any).metadata || {};
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
@@ -247,20 +328,42 @@ function PdfListItem({
     }).format(date);
   };
 
+  // Use descriptive title from metadata if available, otherwise fallback to title or filename
+  const displayTitle = metadata.descriptiveTitle || pdf.title || pdf.name;
+  // Use primary date from metadata if available, otherwise use uploaded date
+  const displayDate = metadata.primaryDate || formatDate(pdf.uploadedAt);
+
   return (
-    <TableRow key={pdf.id} className="hover:bg-muted/50 cursor-pointer">
-      <TableCell className="font-medium">
+    <div className="flex items-center px-3  py-3 border-b hover:bg-muted/50 transition-colors">
+      <div className="flex-1 min-w-0">
         <Link
           data-testid="pdf-list-item"
           href={`/pdfs/${pdf.id}`}
-          className="flex items-center gap-2"
+          className="block w-full"
         >
-          <FileIcon className="h-5 w-5 text-blue-500" />
-          <span className="truncate">{pdf.title || pdf.name}</span>
+          <div className="flex items-center w-full min-w-0">
+            <div className="min-w-0 flex-1 pr-4 overflow-hidden">
+              <div className="flex items-center overflow-hidden">
+                <div className="font-medium text-sm mr-2 whitespace-nowrap">
+                  {displayTitle}
+                </div>
+                <div className="overflow-hidden flex-shrink min-w-0">
+                  <DocumentMetadata metadata={metadata} />
+                </div>
+              </div>
+            </div>
+          </div>
         </Link>
-      </TableCell>
-      <TableCell>{formatDate(pdf.uploadedAt)}</TableCell>
-      <TableCell>
+      </div>
+
+      <div className="text-sm text-right whitespace-nowrap w-28">
+        <div className="flex items-center justify-end">
+          <Calendar className="h-3 w-3 mr-2 text-muted-foreground" />
+          <span>{displayDate}</span>
+        </div>
+      </div>
+
+      <div className="w-12 flex justify-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -299,7 +402,7 @@ function PdfListItem({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </TableCell>
-    </TableRow>
+      </div>
+    </div>
   );
 }
