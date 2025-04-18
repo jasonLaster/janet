@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     let pdfBuffer: ArrayBuffer | undefined;
     if (pdfUrl && !pdfUrl.includes("undefined")) {
       try {
-        console.log("Fetching PDF from:", pdfUrl);
+        console.log(":: chatting with PDF from", pdfUrl);
         const pdfResponse = await fetch(pdfUrl);
 
         if (!pdfResponse.ok) {
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
         console.log("PDF fetched successfully");
       } catch (error) {
         console.error("Error processing PDF:", error);
+        throw error;
         // Continue without PDF if there's an error
       }
     }

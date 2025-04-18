@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document, Page, pdfjs } from "react-pdf";
+import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
 // Initialize the PDF.js worker
 if (typeof window !== "undefined") {
@@ -131,6 +132,11 @@ export function PdfViewerWithTabs({
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("thumbnails");
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>({});
+  const [enhancedMetadata, setEnhancedMetadata] =
+    useState<EnhancedPdfMetadata | null>(null);
+  const [metadataError, setMetadataError] = useState<boolean>(false);
+  const [isLoadingAiMetadata, setIsLoadingAiMetadata] =
+    useState<boolean>(false);
   const resizablePanelGroupRef = useRef(null);
 
   // Manual resize observer implementation
@@ -243,6 +249,7 @@ export function PdfViewerWithTabs({
   }) {
     setNumPages(numPages);
     setDocumentLoaded(true);
+    fetchEnhancedMetadata();
 
     // Extract metadata if available
     if (metadata) {
@@ -367,12 +374,64 @@ export function PdfViewerWithTabs({
     setShowTextLayer((prev) => !prev);
   };
 
+  // Function to fetch enhanced metadata using OpenAI
+  const fetchEnhancedMetadata = useCallback(async () => {
+    if (!pdfUrl) return;
+
+    setIsLoadingAiMetadata(true);
+
+    try {
+      try {
+        const response = await fetch("/api/pdf-metadata", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pdfUrl }),
+        });
+
+        if (response.ok) {
+          // Server-side extraction succeeded
+          const data = await response.json();
+          console.log("Server-side metadata extraction succeeded:", data);
+          setEnhancedMetadata(data.metadata);
+          return;
+        }
+
+        // If we get here, the server-side extraction failed
+        const errorData = await response.json();
+        console.warn("Server-side metadata extraction failed:", errorData);
+        throw new Error(errorData.details || "Server-side extraction failed");
+      } catch (serverError) {
+        console.warn("Falling back to client-side approach:", serverError);
+        setMetadataError(true);
+        // For client-side fallback, we'll just provide some basic metadata
+        // In a real implementation, you could use a client-side ML model or other approach
+        console.log("Using client-side fallback for metadata");
+      }
+    } catch (error) {
+      console.error("Failed to extract PDF metadata:", error);
+      toast({
+        title: "Metadata Analysis Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not analyze the document.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingAiMetadata(false);
+    }
+  }, [pdfUrl, pdfTitle, toast, pdfMetadata, numPages]);
+
   // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
     return (
       <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b bg-muted/20">
-          <h2 className="font-medium">{pdfTitle}</h2>
+          <h2 className="font-medium">
+            {enhancedMetadata?.descriptiveTitle || pdfTitle}
+          </h2>
           <Button variant="outline" size="sm" onClick={handleDownload}>
             <ExternalLink className="h-4 w-4 mr-1" />
             Open in New Tab
@@ -429,7 +488,15 @@ export function PdfViewerWithTabs({
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">Back</span>
             </Button>
-            <h2 className="font-medium">{pdfTitle}</h2>
+            <h2 className="font-medium">
+              {enhancedMetadata?.descriptiveTitle || pdfTitle}
+              <span className="ml-2 text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5">
+                {enhancedMetadata?.issuingOrganization}
+              </span>
+              <span className="ml-2 text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5">
+                {enhancedMetadata?.primaryDate}
+              </span>
+            </h2>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -623,14 +690,49 @@ export function PdfViewerWithTabs({
                   >
                     <ScrollArea className="h-full">
                       <div className="p-3">
-                        <h3 className="font-medium text-sm mb-2">
-                          Document Information
-                        </h3>
-                        <dl className="space-y-2 text-sm">
-                          <div>
-                            <dt className="text-gray-500">Title</dt>
-                            <dd>{pdfMetadata.title || pdfTitle}</dd>
+                        {metadataError && (
+                          <div className="mb-4 p-2 bg-red-50 rounded-md shadow-sm">
+                            <p className="text-red-700">
+                              Failed to load metadata.
+                            </p>
                           </div>
+                        )}
+                        <dl className="space-y-2 text-sm">
+                          {enhancedMetadata?.summary && (
+                            <div>{enhancedMetadata.summary}</div>
+                          )}
+
+                          {enhancedMetadata?.labels &&
+                            enhancedMetadata.labels.length > 0 && (
+                              <div>
+                                <dd>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {enhancedMetadata.issuingOrganization && (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-violet-100 text-violet-800">
+                                        {enhancedMetadata.issuingOrganization}
+                                      </span>
+                                    )}
+
+                                    {enhancedMetadata.primaryDate && (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                        {enhancedMetadata.primaryDate}
+                                      </span>
+                                    )}
+
+                                    {enhancedMetadata.labels.map(
+                                      (label, index) => (
+                                        <span
+                                          key={index}
+                                          className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                                        >
+                                          {label}
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                </dd>
+                              </div>
+                            )}
 
                           {pdfMetadata.author && (
                             <div>
@@ -646,17 +748,78 @@ export function PdfViewerWithTabs({
                             </div>
                           )}
 
-                          <div>
-                            <dt className="text-gray-500">Pages</dt>
-                            <dd>{numPages}</dd>
-                          </div>
-
                           {pdfMetadata.creationDate && (
                             <div>
                               <dt className="text-gray-500">Created</dt>
                               <dd>{pdfMetadata.creationDate}</dd>
                             </div>
                           )}
+
+                          {enhancedMetadata?.documentType && (
+                            <div>
+                              <dt className="text-gray-500">Document Type</dt>
+                              <dd>{enhancedMetadata.documentType}</dd>
+                            </div>
+                          )}
+
+                          {enhancedMetadata?.accountHolder && (
+                            <div>
+                              <dt className="text-gray-500">Account Holder</dt>
+                              <dd>{enhancedMetadata.accountHolder}</dd>
+                            </div>
+                          )}
+
+                          {enhancedMetadata?.accountDetails && (
+                            <div>
+                              <dt className="text-gray-500">Account Details</dt>
+                              <dd>{enhancedMetadata.accountDetails}</dd>
+                            </div>
+                          )}
+
+                          {enhancedMetadata?.deadlines && (
+                            <div>
+                              <dt className="text-gray-500">
+                                Deadlines/Action Items
+                              </dt>
+                              <dd>{enhancedMetadata.deadlines}</dd>
+                            </div>
+                          )}
+
+                          {enhancedMetadata?.monetaryAmounts &&
+                            enhancedMetadata.monetaryAmounts.length > 0 && (
+                              <div>
+                                <dt className="text-gray-500">
+                                  Monetary Amounts
+                                </dt>
+                                <dd>
+                                  <ul className="list-disc list-inside">
+                                    {enhancedMetadata.monetaryAmounts.map(
+                                      (amount, index) => (
+                                        <li key={index}>{amount}</li>
+                                      )
+                                    )}
+                                  </ul>
+                                </dd>
+                              </div>
+                            )}
+
+                          {enhancedMetadata?.otherPeople &&
+                            enhancedMetadata.otherPeople.length > 0 && (
+                              <div>
+                                <dt className="text-gray-500">
+                                  Other People Mentioned
+                                </dt>
+                                <dd>
+                                  <ul className="list-disc list-inside">
+                                    {enhancedMetadata.otherPeople.map(
+                                      (person, index) => (
+                                        <li key={index}>{person}</li>
+                                      )
+                                    )}
+                                  </ul>
+                                </dd>
+                              </div>
+                            )}
 
                           {pdfMetadata.producer && (
                             <div>
@@ -669,6 +832,14 @@ export function PdfViewerWithTabs({
                             <div>
                               <dt className="text-gray-500">Creator</dt>
                               <dd>{pdfMetadata.creator}</dd>
+                            </div>
+                          )}
+
+                          {isLoadingAiMetadata && (
+                            <div className="mt-4 text-center text-sm text-gray-500">
+                              <div className="animate-pulse">
+                                Analyzing document with AI...
+                              </div>
                             </div>
                           )}
                         </dl>
@@ -697,6 +868,8 @@ export function PdfViewerWithTabs({
                 <Document
                   file={pdfUrl}
                   options={options}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
                   loading={
                     <div className="flex items-center justify-center h-full w-full">
                       <div className="animate-pulse text-gray-500">
