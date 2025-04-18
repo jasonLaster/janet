@@ -25,6 +25,7 @@ export async function GET() {
       title: pdf.title || pdf.filename,
       description: pdf.description || "",
       pageCount: pdf.page_count || 0,
+      metadata: pdf.metadata || null,
     }));
 
     return NextResponse.json({ pdfs: formattedPdfs });

@@ -25,7 +25,7 @@ export interface PdfViewerContentProps {
   rotation: number;
   showTextLayer: boolean;
   isManualPageChange: boolean;
-  mainContentRef: React.RefObject<HTMLDivElement>;
+  mainContentRef: React.RefObject<HTMLDivElement | null>;
   pageWidth: number;
   onDocumentLoadSuccess: ({
     numPages,

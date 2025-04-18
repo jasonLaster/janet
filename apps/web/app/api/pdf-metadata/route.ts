@@ -2,13 +2,14 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
 import { head } from "@vercel/blob";
+import { updatePdfEnhancedMetadata } from "@/lib/db";
 
 export const maxDuration = 60; // 60 seconds timeout
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { pdfUrl } = body;
+    const { pdfUrl, pdfId } = body;
 
     if (!pdfUrl) {
       return new Response(JSON.stringify({ error: "PDF URL is required" }), {
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
       });
     }
 
-    console.log("Analyzing PDF metadata:", pdfUrl);
+    console.log("Analyzing PDF metadata:", pdfUrl, "PDF ID:", pdfId);
 
     // Validate Anthropic API key
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -79,11 +80,15 @@ IMPORTANT: Provide ONLY the JSON object in your response with no additional text
                 type: "text" as const,
                 text: structuredPrompt,
               },
-              {
-                type: "file" as const,
-                data: new Uint8Array(pdfBuffer),
-                mimeType: "application/pdf",
-              },
+              ...(pdfBuffer
+                ? [
+                    {
+                      type: "file" as const,
+                      data: new Uint8Array(pdfBuffer),
+                      mimeType: "application/pdf",
+                    },
+                  ]
+                : []),
             ],
           },
         ],
@@ -101,6 +106,13 @@ IMPORTANT: Provide ONLY the JSON object in your response with no additional text
         // First, try to directly parse the entire response
         try {
           const metadata = JSON.parse(responseText);
+
+          // If pdfId is provided, store the metadata in the database
+          if (pdfId) {
+            console.log("Storing metadata in database for PDF ID:", pdfId);
+            await updatePdfEnhancedMetadata(pdfId, metadata);
+          }
+
           return new Response(JSON.stringify({ metadata }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
@@ -112,6 +124,12 @@ IMPORTANT: Provide ONLY the JSON object in your response with no additional text
           if (jsonMatch) {
             const jsonText = jsonMatch[0];
             const metadata = JSON.parse(jsonText);
+
+            // If pdfId is provided, store the metadata in the database
+            if (pdfId) {
+              console.log("Storing metadata in database for PDF ID:", pdfId);
+              await updatePdfEnhancedMetadata(pdfId, metadata);
+            }
 
             return new Response(JSON.stringify({ metadata }), {
               status: 200,

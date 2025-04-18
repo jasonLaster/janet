@@ -13,6 +13,7 @@ export interface PDF {
   description?: string;
   page_count?: number;
   uploaded_at: string;
+  metadata?: any; // Add metadata field to PDF interface
 }
 
 // Create a SQL client with the pooled connection
@@ -154,4 +155,28 @@ export async function updatePdfMetadata(
   // Adjust result handling: Neon's query might return rows directly or within a different structure
   // Assuming it returns an array of rows similar to the tagged template literal
   return result && result.length > 0 ? (result[0] as PDF) : null;
+}
+
+// Function to update PDF enhanced metadata
+export async function updatePdfEnhancedMetadata(
+  id: number,
+  metadata: any
+): Promise<PDF | null> {
+  if (!id || !metadata) {
+    return null;
+  }
+
+  try {
+    const result = await sql`
+      UPDATE pdfs 
+      SET metadata = ${JSON.stringify(metadata)}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return result && result.length > 0 ? (result[0] as PDF) : null;
+  } catch (error) {
+    console.error("Error updating PDF metadata:", error);
+    return null;
+  }
 }

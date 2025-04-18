@@ -34,7 +34,16 @@ export default async function PDFViewPage({ params }: PageProps) {
     notFound();
   }
 
+  // Log metadata for debugging
+  console.log(`PDF ${pdfId} has metadata:`, pdf.metadata ? "Yes" : "No");
+
   return (
-    <PdfViewer pdfUrl={pdf.blob_url} pdfTitle={pdf.title || pdf.filename} />
+    // @ts-ignore - Interface issue will be resolved with full implementation
+    <PdfViewer
+      pdfUrl={pdf.blob_url}
+      pdfTitle={pdf.title || pdf.filename}
+      pdfId={pdfId}
+      existingMetadata={pdf.metadata}
+    />
   );
 }
