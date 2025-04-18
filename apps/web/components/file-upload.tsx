@@ -20,6 +20,63 @@ interface FileUploadProps {
   className?: string;
 }
 
+type UploadingFile = {
+  id: string;
+  file: File;
+  progress: number;
+  uploading: boolean;
+  error?: string;
+};
+
+interface FileUploadListProps {
+  uploadingFiles: UploadingFile[];
+  removeFile: (id: string) => void;
+}
+
+function FileUploadList({ uploadingFiles, removeFile }: FileUploadListProps) {
+  // TODO: Add a list of uploading files
+  return null;
+  if (uploadingFiles.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {uploadingFiles.map(({ id, file, progress, uploading, error }) => (
+        <div key={id} className="p-3 border rounded-lg flex items-center gap-3">
+          <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{file.name}</p>
+            {!error && (uploading || progress > 0) && progress < 100 && (
+              <Progress value={progress} className="w-full h-2 mt-1" />
+            )}
+            {error && (
+              <p className="text-xs text-destructive mt-1">Error: {error}</p>
+            )}
+            {!error && progress === 100 && (
+              <p className="text-xs text-green-600 mt-1">Upload complete</p>
+            )}
+            {!error && !uploading && progress === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {(file.size / 1024 / 1024).toFixed(2)} MB - Pending...
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => removeFile(id)}
+              disabled={uploading}
+            >
+              <XIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function FileUpload({
   dropZoneOnly = false,
   className = "",
@@ -102,71 +159,9 @@ export function FileUpload({
 
   const isAnyFileUploading = uploadingFiles.some((f) => f.uploading);
 
-  const dropZoneText = isDragging
-    ? "Drop PDF(s) here"
-    : uploadingFiles.length > 0
-    ? "Add more PDFs..."
-    : dropZoneOnly
-    ? "Upload PDF"
-    : "Drag & Drop PDF(s) or Click to Upload";
-
-  const dropZoneContent = (
-    <div
-      className={`text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer border-2 border-dashed h-12 w-full text-sm ${
-        isDragging
-          ? "bg-blue-600 border-blue-300"
-          : "bg-blue-500 hover:bg-blue-600 border-blue-400"
-      }`}
-    >
-      <UploadCloudIcon className="h-5 w-5" />
-      <span>{dropZoneText}</span>
-    </div>
-  );
-
   return (
-    <div className="space-y-4 w-full">
-      {uploadingFiles.length > 0 && (
-        <div className="space-y-2">
-          {uploadingFiles.map(({ id, file, progress, uploading, error }) => (
-            <div
-              key={id}
-              className="p-3 border rounded-lg flex items-center gap-3"
-            >
-              <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{file.name}</p>
-                {!error && (uploading || progress > 0) && progress < 100 && (
-                  <Progress value={progress} className="w-full h-2 mt-1" />
-                )}
-                {error && (
-                  <p className="text-xs text-destructive mt-1">
-                    Error: {error}
-                  </p>
-                )}
-                {!error && progress === 100 && (
-                  <p className="text-xs text-green-600 mt-1">Upload complete</p>
-                )}
-                {!error && !uploading && progress === 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB - Pending...
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => removeFile(id)}
-                  disabled={uploading}
-                >
-                  <XIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="">
+      <FileUploadList uploadingFiles={uploadingFiles} removeFile={removeFile} />
 
       <div
         ref={dropZoneRef}
@@ -185,7 +180,15 @@ export function FileUpload({
           if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
         }}
       >
-        {dropZoneContent}
+        <div
+          className={`text-stone-600 rounded-lg py-1 px-1 flex items-center justify-center gap-2 transition-colors cursor-pointer h-6 w-6 text-lg  border-[1.5px] ${
+            isDragging
+              ? "border-stone-600 text-stone-600"
+              : "border-stone-600 hover:border-stone-700 hover:text-stone-700"
+          }`}
+        >
+          <UploadCloudIcon className="h-3 w-3 stroke-[3]" />
+        </div>
         <Input
           ref={fileInputRef}
           type="file"
