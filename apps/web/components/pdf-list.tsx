@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SearchContext } from "@/app/(app)/layout";
 import { useAtom, useAtomValue } from "jotai";
 import {
   pdfsAtom,
   pdfsLoadingAtom,
   pdfsErrorAtom,
   fetchPdfsAtom,
+  searchQueryAtom,
   PDF,
 } from "@/lib/store";
 
@@ -45,9 +45,9 @@ export function PdfList() {
   const loading = useAtomValue(pdfsLoadingAtom);
   const error = useAtomValue(pdfsErrorAtom);
   const [, fetchPdfs] = useAtom(fetchPdfsAtom);
+  const searchQuery = useAtomValue(searchQueryAtom);
   const { toast } = useToast();
   const router = useRouter();
-  const searchQuery = useContext(SearchContext);
   const { organization } = useOrganization();
 
   useEffect(() => {
