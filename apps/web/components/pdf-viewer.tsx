@@ -105,7 +105,7 @@ function DocumentLoadingFallback() {
   );
 }
 
-export function PdfViewerWithTabs({
+export function PdfViewer({
   pdfUrl,
   pdfTitle = "Document",
   onError,
