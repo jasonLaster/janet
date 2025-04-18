@@ -1,11 +1,8 @@
 "use client";
 
-import React, { useEffect, RefObject } from "react";
+import React, { RefObject } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 
 // Initialize the PDF.js worker
 if (typeof window !== "undefined") {
@@ -31,7 +28,13 @@ export interface PdfViewerContentProps {
   isManualPageChange: boolean;
   mainContentRef: RefObject<HTMLDivElement>;
   pageWidth: number;
-  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
+  onDocumentLoadSuccess: ({
+    numPages,
+    metadata,
+  }: {
+    numPages: number;
+    metadata?: any;
+  }) => void;
   onDocumentLoadError: (error: Error) => void;
   goToPage: (page: number) => void;
   changePage: (offset: number) => void;
@@ -44,15 +47,12 @@ export function PdfViewerContent({
   currentPage,
   scale,
   rotation,
-  showThumbnails,
   showTextLayer,
   isManualPageChange,
   mainContentRef,
   pageWidth,
   onDocumentLoadSuccess,
   onDocumentLoadError,
-  goToPage,
-  changePage,
   handleDownload,
 }: PdfViewerContentProps) {
   // Generate array of page numbers for rendering thumbnails
@@ -60,98 +60,6 @@ export function PdfViewerContent({
 
   return (
     <>
-      {/* Thumbnails sidebar */}
-      {showThumbnails && (
-        <div className="w-[180px] border-r border-gray-200 bg-gray-50 overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-gray-200 bg-gray-100 font-medium text-sm">
-            Pages
-          </div>
-          <ScrollArea className="flex-1 pdf-sidebar-scroll">
-            <div className="p-2 space-y-2">
-              <Document
-                file={pdfUrl}
-                options={options}
-                loading={
-                  <div className="p-4 text-center text-sm text-gray-500">
-                    Loading thumbnails...
-                  </div>
-                }
-              >
-                {pageNumbers.map((pageNum) => (
-                  <div
-                    key={`thumb-${pageNum}`}
-                    data-page-thumb={pageNum}
-                    className={`cursor-pointer p-1 rounded-md transition-colors mb-2 ${
-                      currentPage === pageNum
-                        ? "bg-blue-100 border border-blue-300"
-                        : "hover:bg-gray-100"
-                    }`}
-                    onClick={() => goToPage(pageNum)}
-                  >
-                    <div className="text-center text-xs text-gray-600 mb-1">
-                      {pageNum}
-                    </div>
-                    <Page
-                      pageNumber={pageNum}
-                      width={thumbnailWidth}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      className="thumbnail-page"
-                      loading={
-                        <div className="h-[150px] w-[120px] bg-gray-100 animate-pulse flex items-center justify-center">
-                          <span className="text-xs text-gray-400">
-                            Loading...
-                          </span>
-                        </div>
-                      }
-                    />
-                  </div>
-                ))}
-              </Document>
-            </div>
-          </ScrollArea>
-          {/* Page navigation footer */}
-          <div className="p-2 border-t border-gray-200 bg-gray-100 flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => changePage(-1)}
-              disabled={currentPage <= 1}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="sr-only">Previous page</span>
-            </Button>
-            <div className="flex items-center gap-1 text-sm">
-              <Input
-                type="number"
-                value={currentPage}
-                onChange={(e) => {
-                  const page = Number.parseInt(e.target.value);
-                  if (page >= 1 && page <= numPages) {
-                    goToPage(page);
-                  }
-                }}
-                className="w-12 h-8"
-                min={1}
-                max={numPages}
-              />
-              <span>/ {numPages}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => changePage(1)}
-              disabled={currentPage >= numPages}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-4 w-4" />
-              <span className="sr-only">Next page</span>
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Main PDF viewer */}
       <div
         className="flex-1 overflow-auto bg-gray-100 pdf-content-scroll w-full"
