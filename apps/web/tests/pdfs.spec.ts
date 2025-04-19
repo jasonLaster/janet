@@ -6,13 +6,11 @@ test("Viewing a PDF", async ({ page }) => {
 
   await page.waitForSelector("[data-testid='pdf-list']");
 
-  const medicareLink = await page
-    .getByRole("link", { name: /medicare/i })
-    .first();
+  const link = await page.getByRole("link", { name: /cobra/i }).first();
 
-  await medicareLink.click();
+  await link.click();
 
-  expect(await page.getByText(/medicare/i).isVisible()).toBe(true);
+  expect(await page.getByText(/cobra/i).isVisible()).toBe(true);
 });
 
 test("Chatting with a PDF", async ({ page }) => {
@@ -20,11 +18,9 @@ test("Chatting with a PDF", async ({ page }) => {
 
   await page.waitForSelector("[data-testid='pdf-list']");
 
-  const medicareLink = await page
-    .getByRole("link", { name: /medicare/i })
-    .first();
+  const link = await page.getByRole("link", { name: /cobra/i }).first();
 
-  await medicareLink.click();
+  await link.click();
 
   await page.waitForSelector("[data-document-loaded]");
 
