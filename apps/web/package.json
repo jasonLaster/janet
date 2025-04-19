@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "migrate": "bun migration/run-migration.js"
   },
   "dependencies": {
@@ -70,7 +72,6 @@
     "react-resizable-panels": "^2.1.7",
     "react-resize-detector": "^12.0.2",
     "recharts": "2.15.0",
-    "server": "link:@clerk/nextjs/server",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss": "^4",
@@ -86,7 +87,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.1.1"
   },
   "volta": {
     "node": "20.19.0"

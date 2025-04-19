@@ -16,6 +16,10 @@ export default clerkMiddleware(async (auth, req) => {
   // Middleware running for every matched route.
   console.log("Middleware running for:", req.url);
 
+  if (req.url.includes("/api")) {
+    return NextResponse.next();
+  }
+
   const { userId } = await auth();
   const url = new URL(req.url);
 

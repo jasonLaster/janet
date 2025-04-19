@@ -56,25 +56,34 @@ export function PdfSidebar({
 }: PdfSidebarProps) {
   return (
     <Tabs
-      defaultValue="thumbnails"
+      defaultValue="info"
       value={activeTab}
       onValueChange={setActiveTab}
       className="w-full h-full flex flex-col"
     >
       <TabsList className="w-full grid grid-cols-2">
-        <TabsTrigger value="thumbnails">
-          <Image className="h-4 w-4 mr-1" />
-          <span className="sr-only sm:not-sr-only sm:inline-block text-xs">
-            Pages
-          </span>
-        </TabsTrigger>
         <TabsTrigger value="info">
           <FileText className="h-4 w-4 mr-1" />
           <span className="sr-only sm:not-sr-only sm:inline-block text-xs">
             Info
           </span>
         </TabsTrigger>
+        <TabsTrigger value="thumbnails">
+          <Image className="h-4 w-4 mr-1" />
+          <span className="sr-only sm:not-sr-only sm:inline-block text-xs">
+            Pages
+          </span>
+        </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="info" className="flex-1 m-0 overflow-hidden">
+        <PdfInfoPanel
+          pdfMetadata={pdfMetadata}
+          enhancedMetadata={enhancedMetadata}
+          isLoadingAiMetadata={isLoadingAiMetadata}
+          metadataError={metadataError}
+        />
+      </TabsContent>
 
       <TabsContent
         value="thumbnails"
@@ -87,15 +96,6 @@ export function PdfSidebar({
           goToPage={goToPage}
           changePage={changePage}
           onLoadSuccess={onDocumentLoadSuccess}
-        />
-      </TabsContent>
-
-      <TabsContent value="info" className="flex-1 m-0 overflow-hidden">
-        <PdfInfoPanel
-          pdfMetadata={pdfMetadata}
-          enhancedMetadata={enhancedMetadata}
-          isLoadingAiMetadata={isLoadingAiMetadata}
-          metadataError={metadataError}
         />
       </TabsContent>
     </Tabs>
