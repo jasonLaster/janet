@@ -52,7 +52,7 @@ export function PdfViewer({
   const { toast } = useToast();
   const [searchText, setSearchText] = useState<string>("");
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>("thumbnails");
+  const [activeTab, setActiveTab] = useState<string>("info");
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>({});
   const [enhancedMetadata, setEnhancedMetadata] =
     useState<EnhancedPdfMetadata | null>(existingMetadata || null);
@@ -311,7 +311,7 @@ export function PdfViewer({
 
     try {
       try {
-        const response = await fetch("/api/pdf-metadata", {
+        const response = await fetch("/api/metadata", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
