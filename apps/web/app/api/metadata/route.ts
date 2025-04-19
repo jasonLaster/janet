@@ -1,6 +1,6 @@
 import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
 import { updatePdfEnhancedMetadata } from "@/lib/db";
-import { sendChatWithPDF } from "@/lib/anthropic";
+import { sendChatWithPDF } from "@/lib/ai";
 
 export const maxDuration = 60; // 60 seconds timeout
 
