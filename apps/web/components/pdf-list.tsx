@@ -1,31 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
-import {
-  FileIcon,
-  SearchIcon,
-  TrashIcon,
-  ExternalLinkIcon,
-  MoreHorizontalIcon,
-  SortAscIcon,
-  Trash2,
-  Building,
-  Tag,
-  Calendar,
-  MenuIcon,
-} from "lucide-react";
+import { FileIcon, SearchIcon, SortAscIcon, MenuIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAtom, useAtomValue } from "jotai";
 import {
   pdfsAtom,
@@ -34,15 +15,10 @@ import {
   fetchPdfsAtom,
   searchQueryAtom,
   metadataFilterAtom,
-  PDF,
 } from "@/lib/store";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { FixedSizeList as List } from "react-window";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { PdfListItem } from "./pdf-list-item";
 
 export function PdfList() {
   const pdfs = useAtomValue(pdfsAtom);
@@ -95,8 +71,22 @@ export function PdfList() {
     }
   };
 
+  // Sort PDFs by date (newest first)
+  const sortedPdfs = [...pdfs].sort((a, b) => {
+    // Use primary date from metadata if available, otherwise use uploadedAt
+    const dateA = (a as any).metadata?.primaryDate || a.uploadedAt;
+    const dateB = (b as any).metadata?.primaryDate || b.uploadedAt;
+
+    // Convert to Date objects for comparison
+    const dateObjA = new Date(dateA);
+    const dateObjB = new Date(dateB);
+
+    // Sort newest first (descending order)
+    return dateObjB.getTime() - dateObjA.getTime();
+  });
+
   // Filter PDFs based on both search query and metadata filter
-  const filteredPdfs = pdfs.filter((pdf) => {
+  const filteredPdfs = sortedPdfs.filter((pdf) => {
     // First apply text search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -141,6 +131,34 @@ export function PdfList() {
     // If no metadata filter or it passed the filter
     return true;
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log("PDFs:", pdfs.length);
+    console.log("Filtered PDFs:", filteredPdfs?.length || 0);
+  }, [pdfs, filteredPdfs]);
+
+  // Row renderer for react-window
+  const Row = ({
+    index,
+    style,
+  }: {
+    index: number;
+    style: React.CSSProperties;
+  }) => {
+    const pdf = filteredPdfs[index];
+    return (
+      <PdfListItem
+        key={pdf.id}
+        pdf={pdf}
+        handleDelete={handleDelete}
+        style={style}
+      />
+    );
+  };
+
+  // Calculate item size (height)
+  const ITEM_HEIGHT = 60; // Updated to match actual item height
 
   if (loading) {
     return (
@@ -187,9 +205,9 @@ export function PdfList() {
       const filterType = metadataFilter.type === "label" ? "label" : "company";
       const filterIcon =
         metadataFilter.type === "label" ? (
-          <Tag className="h-4 w-4 mx-1 inline" />
+          <span className="inline-block mx-1">🏷️</span>
         ) : (
-          <Building className="h-4 w-4 mx-1 inline" />
+          <span className="inline-block mx-1">🏢</span>
         );
 
       filterMessage = (
@@ -216,10 +234,14 @@ export function PdfList() {
   }
 
   return (
-    <div data-testid="pdf-list" className="w-full h-full flex flex-col">
-      <div className="flex-1 flex flex-col border-b">
+    <div
+      data-testid="pdf-list"
+      className="w-full h-full flex flex-col"
+      style={{ height: "calc(100vh - 10px)" }}
+    >
+      <div className="flex-1 flex flex-col border-b overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 flex items-center p-3 font-medium text-sm bg-background z-10 shadow-sm border-b">
+        <div className="flex items-center p-3 font-medium text-sm bg-background z-10 shadow-sm border-b">
           <div className="flex-1">
             <div className="flex items-center gap-1">
               Document <SortAscIcon className="h-3 w-3 ml-1" />
@@ -233,175 +255,21 @@ export function PdfList() {
           </div>
         </div>
 
-        {/* Scrollable container */}
-        <div className="flex-1 overflow-y-auto">
-          {/* PDF Items */}
-          {filteredPdfs.map((pdf) => (
-            <PdfListItem key={pdf.id} pdf={pdf} handleDelete={handleDelete} />
-          ))}
+        {/* Virtualized list container with AutoSizer */}
+        <div className="flex-1 overflow-hidden">
+          <AutoSizer>
+            {({ height, width }) => (
+              <List
+                height={height}
+                width={width}
+                itemCount={filteredPdfs.length}
+                itemSize={ITEM_HEIGHT}
+              >
+                {Row}
+              </List>
+            )}
+          </AutoSizer>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// New component for metadata display
-function DocumentMetadata({ metadata }: { metadata: any }) {
-  // Calculate visible labels dynamically, default is 3 but fewer if organization exists
-  const maxVisibleLabels = metadata.issuingOrganization ? 2 : 3;
-  const labels = metadata.labels || [];
-  const visibleLabels = labels.slice(0, maxVisibleLabels);
-  const hiddenCount = Math.max(0, labels.length - maxVisibleLabels);
-
-  return (
-    <div className="flex flex-nowrap overflow-hidden ml-2 max-w-full">
-      {metadata.issuingOrganization && (
-        <Badge
-          variant="secondary"
-          className="text-xs px-1.5 py-0.5 shrink-0 truncate"
-        >
-          <Building className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
-          <span className="truncate">{metadata.issuingOrganization}</span>
-        </Badge>
-      )}
-      <div className="flex overflow-hidden flex-nowrap">
-        {visibleLabels.map((label: string, index: number) => (
-          <Badge
-            key={index}
-            variant="secondary"
-            className="text-xs px-1.5 py-0.5 ml-1 shrink-0 truncate"
-          >
-            <Tag className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
-            <span className="truncate">{label}</span>
-          </Badge>
-        ))}
-        {hiddenCount > 0 && (
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className="text-xs px-1.5 py-0.5 ml-1 shrink-0 cursor-pointer"
-                >
-                  +{hiddenCount}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="p-2 max-w-xs">
-                <div className="flex flex-col space-y-1">
-                  {labels.map((label: string, index: number) => (
-                    <Badge
-                      key={index}
-                      variant="secondary"
-                      className="text-xs px-1.5 py-0.5 justify-start w-full"
-                    >
-                      <Tag className="h-3 w-3 mr-1 opacity-70" />
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PdfListItem({
-  pdf,
-  handleDelete,
-}: {
-  pdf: PDF;
-  handleDelete: (id: number) => void;
-}) {
-  const router = useRouter();
-  const metadata = (pdf as any).metadata || {};
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  };
-
-  // Use descriptive title from metadata if available, otherwise fallback to title or filename
-  const displayTitle = metadata.descriptiveTitle || pdf.title || pdf.name;
-  // Use primary date from metadata if available, otherwise use uploaded date
-  const displayDate = metadata.primaryDate || formatDate(pdf.uploadedAt);
-
-  return (
-    <div className="flex items-center px-3  py-3 border-b hover:bg-muted/50 transition-colors">
-      <div className="flex-1 min-w-0">
-        <Link
-          data-testid="pdf-list-item"
-          href={`/pdfs/${pdf.id}`}
-          className="block w-full"
-        >
-          <div className="flex items-center w-full min-w-0">
-            <div className="min-w-0 flex-1 pr-4 overflow-hidden">
-              <div className="flex items-center overflow-hidden">
-                <div className="font-medium text-sm mr-2 whitespace-nowrap">
-                  {displayTitle}
-                </div>
-                <div className="overflow-hidden flex-shrink min-w-0">
-                  <DocumentMetadata metadata={metadata} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      <div className="text-sm text-right whitespace-nowrap w-28">
-        <div className="flex items-center justify-end">
-          <Calendar className="h-3 w-3 mr-2 text-muted-foreground" />
-          <span>{displayDate}</span>
-        </div>
-      </div>
-
-      <div className="w-12 flex justify-center">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontalIcon className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => router.push(`/pdfs/${pdf.id}`)}>
-              <ExternalLinkIcon className="h-4 w-4 mr-2" />
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => router.push(`/chat?pdf=${pdf.id}`)}
-            >
-              <SearchIcon className="h-4 w-4 mr-2" />
-              Chat with PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => router.push(`/search?pdf=${pdf.id}`)}
-            >
-              <SearchIcon className="h-4 w-4 mr-2" />
-              Search Inside
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(pdf.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">
-                Delete &quot;{pdf.title || pdf.name}&quot;
-              </span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
