@@ -1,4 +1,4 @@
-import { sendChatWithPDF } from "../../../lib/anthropic";
+import { sendChatWithPDF } from "@/lib/ai";
 
 export const maxDuration = 60; // Increase duration for PDF processing
 
@@ -7,7 +7,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, pdfUrl } = body;
 
-    const text = await sendChatWithPDF({ messages, pdfUrl });
+    const text = await sendChatWithPDF({
+      messages,
+      pdfUrl,
+      systemPrompt:
+        "You are an AI assistant that analyzes PDF documents and answer's the user's question. Keep your answers concise and to the point. Ideally no more than a sentence or two.",
+    });
 
     return new Response(JSON.stringify({ text }), {
       headers: { "Content-Type": "application/json" },
