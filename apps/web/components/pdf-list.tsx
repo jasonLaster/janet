@@ -132,12 +132,6 @@ export function PdfList() {
     return true;
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log("PDFs:", pdfs.length);
-    console.log("Filtered PDFs:", filteredPdfs?.length || 0);
-  }, [pdfs, filteredPdfs]);
-
   // Row renderer for react-window
   const Row = ({
     index,

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-
+import { PDF_WORKER_URL } from "@/components/pdf-viewer/constants";
 // Loading component to show while redirecting
 function Loading() {
   return (
@@ -17,7 +17,11 @@ export function generateMetadata() {
     description: "View your PDFs",
     preloadLinks: [
       // Preload the PDF.js worker
-      { rel: "preload", href: "/pdf.worker.js", as: "script" },
+      {
+        rel: "preload",
+        href: PDF_WORKER_URL,
+        as: "script",
+      },
       // Preload the react-pdf module
       { rel: "modulepreload", href: "/chunks/react-pdf.js" },
     ],

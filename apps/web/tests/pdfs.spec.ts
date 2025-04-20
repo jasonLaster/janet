@@ -8,7 +8,11 @@ test("Viewing a PDF", async ({ page }) => {
 
   const link = await page.getByRole("link", { name: /cobra/i }).first();
 
+  const href = await link.getAttribute("href");
   await link.click();
+
+  // check the url
+  expect(page.url()).toContain(href);
 
   expect(await page.getByText(/cobra/i).isVisible()).toBe(true);
 });
