@@ -34,9 +34,6 @@ export default async function PDFViewPage({ params }: PageProps) {
     notFound();
   }
 
-  // Log metadata for debugging
-  console.log(`PDF ${pdfId} has metadata:`, pdf.metadata ? "Yes" : "No");
-
   return (
     // @ts-ignore - Interface issue will be resolved with full implementation
     <PdfViewer

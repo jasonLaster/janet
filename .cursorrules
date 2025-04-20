@@ -1,4 +1,4 @@
 
 use gpt-4o for all openai calls
 we're using vitest
-use bun instead of tsx
+use pnpm for installing packages, running the dev server and scripts

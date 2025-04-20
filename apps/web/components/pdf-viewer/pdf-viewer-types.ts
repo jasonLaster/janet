@@ -20,7 +20,7 @@ export interface PdfDocumentLoadSuccess {
 export interface PdfViewerProps {
   pdfUrl: string;
   pdfTitle?: string;
-  pdfId?: number;
+  pdfId: number;
   existingMetadata?: any;
   onError?: () => void;
 }

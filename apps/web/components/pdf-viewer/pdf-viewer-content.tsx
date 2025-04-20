@@ -1,21 +1,13 @@
 "use client";
 
-import React, { RefObject } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import { Button } from "@/components/ui/button";
-
-// Initialize the PDF.js worker
-if (typeof window !== "undefined") {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.js`;
-}
-
-// Configuration options
+import React, { useState, useEffect, useRef } from "react";
+import { Document, Page } from "react-pdf";
+import { DocumentLoader } from "../ui/document-loader";
+import { PDF_VERSION } from "./constants";
 const options = {
-  cMapUrl: "https://unpkg.com/pdfjs-dist@4.8.69/cmaps/",
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
   cMapPacked: true,
 };
-
-const thumbnailWidth = 150;
 
 export interface PdfViewerContentProps {
   pdfUrl: string;
@@ -27,17 +19,9 @@ export interface PdfViewerContentProps {
   isManualPageChange: boolean;
   mainContentRef: React.RefObject<HTMLDivElement | null>;
   pageWidth: number;
-  onDocumentLoadSuccess: ({
-    numPages,
-    metadata,
-  }: {
-    numPages: number;
-    metadata?: any;
-  }) => void;
-  onDocumentLoadError: (error: Error) => void;
-  goToPage: (page: number) => void;
-  changePage: (offset: number) => void;
-  handleDownload: () => void;
+  onDocumentSuccess: (pdf: any) => void;
+  onDocumentFailed: (error: Error) => void;
+  cachedDocumentUrl: string | null;
 }
 
 export function PdfViewerContent({
@@ -50,81 +34,118 @@ export function PdfViewerContent({
   isManualPageChange,
   mainContentRef,
   pageWidth,
-  onDocumentLoadSuccess,
-  onDocumentLoadError,
-  handleDownload,
+  onDocumentSuccess,
+  onDocumentFailed,
+  cachedDocumentUrl,
 }: PdfViewerContentProps) {
+  // Using cached URL if available, otherwise falling back to the direct URL
+  const documentSource = cachedDocumentUrl || pdfUrl;
+  const hasValidSource =
+    !!documentSource &&
+    (documentSource.startsWith("http") ||
+      documentSource.startsWith("blob:") ||
+      documentSource.startsWith("data:"));
+
+  // Track loading status of all pages
+  const loadedPages = useRef<Set<number>>(new Set());
+  const [allPagesLoaded, setAllPagesLoaded] = useState(false);
+
   // Generate array of page numbers for rendering
   const pageNumbers = Array.from({ length: numPages }, (_, index) => index + 1);
 
+  // Reset loaded pages when document source changes
+  useEffect(() => {
+    loadedPages.current = new Set();
+    setAllPagesLoaded(false);
+  }, [documentSource, numPages]);
+
+  // Handler for successful page load
+  const handlePageLoadSuccess = (pageNum: number) => {
+    loadedPages.current.add(pageNum);
+    if (numPages > 0 && loadedPages.current.size === numPages) {
+      setAllPagesLoaded(true);
+    }
+  };
+
+  if (!hasValidSource) {
+    return (
+      <div className="w-full h-full overflow-visible" ref={mainContentRef}>
+        <div className="pdf-container w-full">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-gray-500">No valid PDF source available</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="flex-1 overflow-auto bg-gray-100 pdf-content-scroll w-full h-full"
+      data-document-loaded={allPagesLoaded}
+      className="w-full h-full overflow-visible"
       ref={mainContentRef}
     >
-      <div className="pdf-container w-full h-full">
+      <div className="pdf-container w-full relative">
+        {/* Loading overlay that shows until all pages are loaded */}
+        {!allPagesLoaded && numPages > 0 && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
+            <DocumentLoader mode="large" />
+          </div>
+        )}
         <Document
-          file={pdfUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={
-            <div className="flex items-center justify-center h-full w-full">
-              <div className="animate-pulse text-gray-500">Loading PDF...</div>
-            </div>
-          }
-          error={
-            <div className="flex flex-col items-center justify-center h-full w-full text-center">
-              <div className="text-red-500 mb-4">Failed to load PDF</div>
-              <Button onClick={handleDownload}>Open PDF in New Tab</Button>
-            </div>
-          }
+          file={documentSource}
+          onLoadSuccess={(pdf) => {
+            onDocumentSuccess(pdf);
+          }}
+          loading={<DocumentLoader mode="large" />}
+          onLoadError={(error) => {
+            onDocumentFailed(error);
+          }}
+          error={null}
           options={options}
-          className="w-full"
+          className="flex flex-col items-center py-2"
         >
-          {numPages > 0 &&
-            pageNumbers.map((pageNum) => (
-              <div
-                key={`page_${pageNum}`}
-                className="mb-8 pdf-page-container w-full"
-                id={`page-${pageNum}`}
-              >
-                <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300">
-                  Page {pageNum} of {numPages}
-                </div>
-                <Page
-                  key={`page_${pageNum}`}
-                  pageNumber={pageNum}
-                  scale={scale}
-                  rotate={rotation}
-                  width={pageWidth}
-                  loading={
-                    <div className="flex items-center justify-center h-[400px] w-full">
-                      <div className="animate-pulse text-gray-500">
-                        Loading page {pageNum}...
-                      </div>
-                    </div>
-                  }
-                  renderTextLayer={showTextLayer}
-                  renderAnnotationLayer={showTextLayer}
-                  className="pdf-page shadow-md mx-auto"
-                  onRenderSuccess={() => {
-                    // If this is a manual page change and this is the target page,
-                    // ensure it's visible when rendered
-                    if (isManualPageChange && pageNum === currentPage) {
-                      const element = document.getElementById(
-                        `page-${pageNum}`
-                      );
-                      if (element && mainContentRef.current) {
-                        element.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        });
-                      }
-                    }
-                  }}
-                />
+          {pageNumbers.map((pageNum) => (
+            <div
+              key={`page_${pageNum}`}
+              className="mb-8 pdf-page-container w-full"
+              id={`page-${pageNum}`}
+              style={{ opacity: allPagesLoaded ? 1 : 0 }}
+            >
+              <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300 px-2 rounded mt-2">
+                Page {pageNum} of {numPages}
               </div>
-            ))}
+              <Page
+                key={`page_${pageNum}`}
+                pageNumber={pageNum}
+                scale={scale}
+                rotate={rotation}
+                width={pageWidth}
+                loading={null}
+                onLoadError={() => {}}
+                onLoadSuccess={() => {}}
+                renderTextLayer={showTextLayer}
+                renderAnnotationLayer={showTextLayer}
+                className="pdf-page shadow-md mx-auto"
+                onRenderSuccess={() => {
+                  handlePageLoadSuccess(pageNum);
+                  if (
+                    isManualPageChange &&
+                    pageNum === currentPage &&
+                    allPagesLoaded
+                  ) {
+                    const element = document.getElementById(`page-${pageNum}`);
+                    if (element && mainContentRef.current) {
+                      element.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
+          ))}
         </Document>
       </div>
     </div>
