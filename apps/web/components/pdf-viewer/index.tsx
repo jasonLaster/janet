@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -16,14 +17,17 @@ import { PdfSidebar } from "./pdf-sidebar";
 import { PdfMetadata, PdfViewerProps } from "./pdf-viewer-types";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 import { pdfjs } from "react-pdf";
-
+import { usePDFDocument } from "@/hooks/use-pdf-document";
+import useSWR, { preload } from "swr";
+import { PDF_WORKER_URL } from "./constants";
 // Initialize the PDF.js worker
 if (typeof window !== "undefined") {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.js`;
+  pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
 }
 
 const maxWidth = 800;
 const sidebarDefaultWidth = 250;
+const sidebarDefaultPercentage = 25;
 
 export function PdfViewer({
   pdfUrl,
@@ -32,6 +36,43 @@ export function PdfViewer({
   existingMetadata,
   onError,
 }: PdfViewerProps) {
+  // Updated to match the new hook API, only passing pdfId
+  const {
+    cachedDocument,
+    loading: cacheLoading,
+    error: cacheError,
+    isCached,
+    cachePDFDocument,
+  } = usePDFDocument(pdfId);
+
+  // Now cachedDocument is already a base64 string, no conversion needed
+  // We just need to format it as a data URL
+  const [cachedDocumentUrl, setCachedDocumentUrl] = useState<string | null>(
+    null
+  );
+
+  // Create a data URL from the cached document when it's available
+  useEffect(() => {
+    if (cachedDocument) {
+      try {
+        // Simply prefix the base64 string with the data URL format
+        const dataUrl = `data:application/pdf;base64,${cachedDocument}`;
+        setCachedDocumentUrl(dataUrl);
+      } catch (error) {
+        console.error("Error creating data URL from cached document:", error);
+        setCachedDocumentUrl(null);
+      }
+    } else {
+      setCachedDocumentUrl(null);
+    }
+  }, [cachedDocument, pdfId]);
+
+  // Determine if we should show loading state
+  const isLoading = cacheLoading;
+
+  // Use the cached document URL if available, otherwise fall back to the provided URL
+  const effectivePdfUrl = cachedDocumentUrl || pdfUrl;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const setContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
@@ -78,18 +119,36 @@ export function PdfViewer({
   useEffect(() => {
     if (!mainContentRef.current || numPages === 0) return;
 
+    // Track if we're currently processing a scroll event
+    let isProcessingScroll = false;
+
     const handleScroll = () => {
       // Skip scroll handling if we're in a manual page change
       if (!mainContentRef.current || isManualPageChange) return;
 
-      // Clear any existing timeout to debounce scroll events
+      // Avoid processing scroll events when already processing one
+      if (isProcessingScroll) return;
+
+      isProcessingScroll = true;
+
+      // Clear any existing timeout for debouncing scroll events
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
       }
 
       // Use a small timeout to avoid excessive updates while scrolling
       scrollTimeoutRef.current = setTimeout(() => {
-        if (!mainContentRef.current) return;
+        if (!mainContentRef.current) {
+          isProcessingScroll = false;
+          return;
+        }
+
+        // Skip the processing if a manual page change happened while we were waiting
+        if (isManualPageChange) {
+          isProcessingScroll = false;
+          return;
+        }
 
         const pageContainers = Array.from(
           document.querySelectorAll(".pdf-page-container")
@@ -125,7 +184,7 @@ export function PdfViewer({
         if (bestVisiblePage !== currentPage) {
           setCurrentPage(bestVisiblePage);
 
-          // Update sidebar scroll position to show current page
+          // Update sidebar scroll position to show current page, but don't trigger another page change
           const sidebarItem = document.querySelector(
             `[data-page-thumb="${bestVisiblePage}"]`
           );
@@ -136,14 +195,24 @@ export function PdfViewer({
             });
           }
         }
-      }, 100); // Short debounce time
+
+        isProcessingScroll = false;
+        scrollTimeoutRef.current = null;
+      }, 250); // Increased debounce time to reduce flickering
     };
 
-    const scrollContainer = mainContentRef.current;
-    scrollContainer.addEventListener("scroll", handleScroll);
+    const scrollContainer = mainContentRef.current.parentElement;
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", handleScroll);
+    }
 
-    // Initial check after a delay to ensure PDF has rendered
-    const initialCheckTimeout = setTimeout(handleScroll, 500);
+    // Initial check after a longer delay to ensure PDF has rendered completely
+    const initialCheckTimeout = setTimeout(() => {
+      // Only run initial check if not in manual page change mode
+      if (!isManualPageChange) {
+        handleScroll();
+      }
+    }, 800);
 
     return () => {
       if (scrollContainer) {
@@ -154,6 +223,7 @@ export function PdfViewer({
         clearTimeout(scrollTimeoutRef.current);
       }
       clearTimeout(initialCheckTimeout);
+      isProcessingScroll = false;
     };
   }, [mainContentRef, currentPage, numPages, isManualPageChange]);
 
@@ -225,6 +295,12 @@ export function PdfViewer({
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= numPages) {
+      // Clear any existing timeouts that would reset isManualPageChange
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+
       // Set flag to prevent scroll detection from overriding manual navigation
       setIsManualPageChange(true);
       setCurrentPage(page);
@@ -236,13 +312,14 @@ export function PdfViewer({
           // Use smooth scrolling for better UX
           targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
 
-          // Reset the manual page change flag after scrolling finishes
-          setTimeout(() => {
+          // Reset the manual page change flag after scrolling finishes with a clear reference
+          scrollTimeoutRef.current = setTimeout(() => {
             setIsManualPageChange(false);
-          }, 800); // Allow time for the scroll animation to complete
+            scrollTimeoutRef.current = null;
+          }, 1000); // Extend to allow time for the scroll animation to complete fully
         } else {
           // If we can't find the target element yet (still loading), wait and try again
-          setTimeout(() => {
+          scrollTimeoutRef.current = setTimeout(() => {
             const retryElement = document.getElementById(`page-${page}`);
             if (retryElement) {
               retryElement.scrollIntoView({
@@ -251,13 +328,15 @@ export function PdfViewer({
               });
             }
             setIsManualPageChange(false);
-          }, 500);
+            scrollTimeoutRef.current = null;
+          }, 800);
         }
       } else {
         // If no main content ref, just reset the flag
-        setTimeout(() => {
+        scrollTimeoutRef.current = setTimeout(() => {
           setIsManualPageChange(false);
-        }, 500);
+          scrollTimeoutRef.current = null;
+        }, 800);
       }
     }
   };
@@ -296,62 +375,191 @@ export function PdfViewer({
     setShowTextLayer((prev) => !prev);
   };
 
+  // SWR fetcher function with retry logic
+  const metadataFetcher = useCallback(
+    async (
+      url: string,
+      { pdfUrl, pdfId }: { pdfUrl: string; pdfId?: string | number }
+    ) => {
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000; // ms
+
+      const fetchWithRetry = async (attempt = 1) => {
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ pdfUrl, pdfId }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.details || "Server-side extraction failed"
+            );
+          }
+
+          return response.json();
+        } catch (error) {
+          // Only retry for network errors, not for server errors
+          if (
+            attempt < MAX_RETRIES &&
+            !(error instanceof Error && error.message.includes("Server-side"))
+          ) {
+            console.warn(
+              `Metadata fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+            return fetchWithRetry(attempt + 1);
+          }
+          throw error;
+        }
+      };
+
+      return fetchWithRetry();
+    },
+    []
+  );
+
+  // SWR hook for metadata with conditional fetching
+  const {
+    data: metadataResponse,
+    error: metadataFetchError,
+    isLoading: isMetadataLoading,
+  } = useSWR(
+    // Only fetch if we have a URL and don't have existing metadata
+    pdfUrl && pdfId && !existingMetadata
+      ? ["/api/metadata", { pdfUrl, pdfId }]
+      : null,
+    ([url, params]) => metadataFetcher(url, params),
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      dedupingInterval: 60000, // 1 minute
+      errorRetryCount: 3, // SWR's built-in retry mechanism
+      errorRetryInterval: 1000, // Start with 1s delay and increase exponentially
+      shouldRetryOnError: true, // Enables retry on error
+    }
+  );
+
+  // Prefetch helper function that can be used on the server
+  const prefetchMetadata = useCallback(() => {
+    if (pdfUrl && pdfId && !existingMetadata) {
+      preload(
+        ["/api/metadata", { pdfUrl, pdfId }],
+        ([url, params]) => metadataFetcher(url, params),
+        {
+          revalidateOnFocus: false,
+          revalidateIfStale: false,
+          dedupingInterval: 60000, // 1 minute
+          errorRetryCount: 3,
+          errorRetryInterval: 1000,
+          shouldRetryOnError: true,
+        }
+      );
+    }
+  }, [pdfUrl, pdfId, existingMetadata, metadataFetcher]);
+
+  // Handle all SWR metadata-related state updates in a single effect
+  useEffect(() => {
+    // Update metadata when response changes
+    if (metadataResponse?.metadata) {
+      setEnhancedMetadata(metadataResponse.metadata);
+    }
+
+    // Update loading state
+    setIsLoadingAiMetadata(isMetadataLoading);
+
+    // Handle errors
+    if (metadataFetchError) {
+      console.error("Failed to fetch metadata:", metadataFetchError);
+      setMetadataError(true);
+
+      toast({
+        title: "Metadata Analysis Failed",
+        description:
+          metadataFetchError.message || "Could not analyze the document.",
+        variant: "destructive",
+      });
+    }
+  }, [metadataResponse, metadataFetchError, isMetadataLoading, toast]);
+
   // Function to fetch enhanced metadata using OpenAI
   const fetchEnhancedMetadata = useCallback(async () => {
     if (!pdfUrl) return;
 
     // Skip fetching if we already have metadata
     if (existingMetadata) {
-      console.log("Using existing metadata from database");
       setEnhancedMetadata(existingMetadata);
       return;
     }
 
-    setIsLoadingAiMetadata(true);
+    // With useSWR, we don't need to manually fetch as it's handled by the hook
+    // We're just triggering the prefetch here in case it hasn't happened yet
+    prefetchMetadata();
+  }, [pdfUrl, existingMetadata, prefetchMetadata]);
 
-    try {
-      try {
-        const response = await fetch("/api/metadata", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ pdfUrl, pdfId }),
-        });
-
-        if (response.ok) {
-          // Server-side extraction succeeded
-          const data = await response.json();
-          console.log("Server-side metadata extraction succeeded:", data);
-          setEnhancedMetadata(data.metadata);
-          return;
-        }
-
-        // If we get here, the server-side extraction failed
-        const errorData = await response.json();
-        console.warn("Server-side metadata extraction failed:", errorData);
-        throw new Error(errorData.details || "Server-side extraction failed");
-      } catch (serverError) {
-        console.warn("Falling back to client-side approach:", serverError);
-        setMetadataError(true);
-        // For client-side fallback, we'll just provide some basic metadata
-        // In a real implementation, you could use a client-side ML model or other approach
-        console.log("Using client-side fallback for metadata");
-      }
-    } catch (error) {
-      console.error("Failed to extract PDF metadata:", error);
-      toast({
-        title: "Metadata Analysis Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Could not analyze the document.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingAiMetadata(false);
+  // Combined effect for cache loading and error handling
+  useEffect(() => {
+    // Update loading state
+    if (cacheLoading) {
+      setDocumentLoaded(false);
     }
-  }, [pdfUrl, pdfId, existingMetadata, toast]);
+
+    // Handle cache errors
+    if (cacheError) {
+      console.error("Error loading PDF from cache:", cacheError);
+      onDocumentLoadError(new Error(cacheError));
+    }
+  }, [cacheLoading, cacheError, onDocumentLoadError]);
+
+  // Add a new effect to fetch and cache the PDF if not already cached
+  useEffect(() => {
+    async function fetchAndCachePDF() {
+      if (!pdfUrl || !pdfId || isCached || cacheLoading) {
+        return;
+      }
+
+      // Retry logic for network flakiness
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000; // ms
+
+      const fetchWithRetry = async (attempt = 1): Promise<ArrayBuffer> => {
+        try {
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+          }
+          return await response.arrayBuffer();
+        } catch (error) {
+          if (attempt < MAX_RETRIES) {
+            console.warn(
+              `Fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
+            );
+            // Wait before retrying
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+            return fetchWithRetry(attempt + 1);
+          }
+          throw error;
+        }
+      };
+
+      try {
+        // Attempt fetch with retry logic
+        const pdfData = await fetchWithRetry();
+
+        // Cache the fetched PDF
+        await cachePDFDocument(pdfData);
+      } catch (err) {
+        console.error("Error fetching and caching PDF after retries:", err);
+        // Could add notification to user here that caching failed
+      }
+    }
+
+    fetchAndCachePDF();
+  }, [pdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
 
   // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
@@ -369,9 +577,8 @@ export function PdfViewer({
         <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center bg-gray-100">
           <div className="max-w-md p-6 bg-white rounded-lg shadow-md text-center">
             <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">PDF Viewer Issue</h3>
             <p className="mb-4 text-gray-600">
-              {`We couldn't load this PDF: ${pdfLoadError}`}
+              Apologies, we couldn't load this PDF.
             </p>
             <Button onClick={handleDownload}>Open PDF in New Tab</Button>
           </div>
@@ -390,102 +597,118 @@ export function PdfViewer({
 
   return (
     <div
-      data-document-loaded={documentLoaded}
-      className="flex flex-col h-full bg-white rounded-lg overflow-hidden"
+      ref={setContainerRef}
+      className="w-full h-full overflow-hidden flex flex-col"
     >
-      {/* Wrap everything in a div with the container ref */}
-      <div
-        ref={setContainerRef}
-        className="w-full h-full flex flex-col overflow-hidden"
-      >
-        {/* Header */}
-        <PdfViewerHeader
-          title={pdfTitle}
-          enhancedMetadata={enhancedMetadata}
-          searchText={searchText}
-          onSearchChange={setSearchText}
-          onToggleSidebar={toggleSidebar}
-          onToggleTextLayer={toggleTextLayer}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onRotate={handleRotate}
-          onDownload={handleDownload}
-          showSidebar={showSidebar}
-          showTextLayer={showTextLayer}
-          scale={scale}
-        />
-
-        {/* Main content area with optional sidebar */}
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="flex-1 overflow-hidden"
-          ref={resizablePanelGroupRef}
-        >
-          {showSidebar && (
-            <>
-              <ResizablePanel
-                defaultSize={25}
-                minSize={20}
-                maxSize={40}
-                className="bg-gray-50"
-              >
-                <PdfSidebar
-                  pdfUrl={pdfUrl}
-                  numPages={numPages}
-                  currentPage={currentPage}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  goToPage={goToPage}
-                  changePage={changePage}
-                  pdfMetadata={pdfMetadata}
-                  enhancedMetadata={enhancedMetadata}
-                  isLoadingAiMetadata={isLoadingAiMetadata}
-                  metadataError={metadataError}
-                  onDocumentLoadSuccess={onDocumentLoadSuccess}
-                />
-              </ResizablePanel>
-
-              <ResizableHandle
-                withHandle
-                className="opacity-0 hover:opacity-100 transition-opacity"
-              >
-                <GripVertical className="h-4 w-4 text-gray-400" />
-              </ResizableHandle>
-            </>
-          )}
-
-          <ResizablePanel defaultSize={showSidebar ? 80 : 100}>
-            <PdfViewerContent
-              pdfUrl={pdfUrl}
-              numPages={numPages}
-              currentPage={currentPage}
-              scale={scale}
-              rotation={rotation}
-              showTextLayer={showTextLayer}
-              isManualPageChange={isManualPageChange}
-              mainContentRef={mainContentRef}
-              pageWidth={pageWidth}
-              onDocumentLoadSuccess={onDocumentLoadSuccess}
-              onDocumentLoadError={onDocumentLoadError}
-              goToPage={goToPage}
-              changePage={changePage}
-              handleDownload={handleDownload}
-            />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-
-      <FloatingPdfChat
-        pdfId={parseInt(
-          typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search).get("id") || "0"
-            : "0",
-          10
-        )}
-        pdfTitle={pdfTitle}
-        pdfUrl={pdfUrl}
-        onClose={() => {}}
+      <PdfViewerHeader
+        title={pdfTitle}
+        enhancedMetadata={enhancedMetadata}
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        onToggleSidebar={toggleSidebar}
+        onToggleTextLayer={toggleTextLayer}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onRotate={handleRotate}
+        onDownload={handleDownload}
+        showSidebar={showSidebar}
+        showTextLayer={showTextLayer}
+        scale={scale}
       />
+
+      {/* Main content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Show loading state during cache loading */}
+
+        {!isLoading && (
+          <ResizablePanelGroup
+            ref={resizablePanelGroupRef}
+            direction="horizontal"
+            className="w-full h-full"
+          >
+            {/* Show sidebar only if enabled */}
+            {showSidebar && (
+              <>
+                <ResizablePanel
+                  defaultSize={sidebarDefaultPercentage}
+                  minSize={15}
+                  maxSize={40}
+                  className="h-full"
+                >
+                  <PdfSidebar
+                    pdfUrl={effectivePdfUrl}
+                    numPages={numPages}
+                    currentPage={currentPage}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    goToPage={goToPage}
+                    changePage={changePage}
+                    pdfMetadata={pdfMetadata}
+                    enhancedMetadata={enhancedMetadata}
+                    isLoadingAiMetadata={isLoadingAiMetadata}
+                    metadataError={metadataError}
+                    onDocumentLoadSuccess={onDocumentLoadSuccess}
+                  />
+                </ResizablePanel>
+                <ResizableHandle withHandle>
+                  <div className="w-3 h-full flex items-center justify-center">
+                    <GripVertical className="h-4 w-4 text-gray-400" />
+                  </div>
+                </ResizableHandle>
+              </>
+            )}
+
+            {/* Main PDF view */}
+            <ResizablePanel className="h-full overflow-hidden">
+              {pdfLoadError ? (
+                <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
+                  <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    Failed to load PDF
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {pdfLoadError || "There was an error loading the document."}
+                  </p>
+                  <Button onClick={handleDownload}>Open in New Tab</Button>
+                </div>
+              ) : (
+                <div className="relative h-full overflow-auto">
+                  <PdfViewerContent
+                    pdfUrl={effectivePdfUrl}
+                    numPages={numPages}
+                    currentPage={currentPage}
+                    scale={scale}
+                    rotation={rotation}
+                    showTextLayer={showTextLayer}
+                    isManualPageChange={isManualPageChange}
+                    mainContentRef={mainContentRef}
+                    pageWidth={
+                      containerWidth
+                        ? Math.min(containerWidth, maxWidth)
+                        : maxWidth
+                    }
+                    onDocumentSuccess={onDocumentLoadSuccess}
+                    onDocumentFailed={onDocumentLoadError}
+                    onPageChange={goToPage}
+                    cachedDocumentUrl={cachedDocumentUrl}
+                    isCached={isCached}
+                    loading={isLoading}
+                    handleDownload={handleDownload}
+                  />
+
+                  {pdfId && documentLoaded && (
+                    <FloatingPdfChat
+                      pdfId={pdfId}
+                      pdfTitle={pdfTitle}
+                      pdfUrl={effectivePdfUrl}
+                    />
+                  )}
+                </div>
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
+      </div>
     </div>
   );
 }

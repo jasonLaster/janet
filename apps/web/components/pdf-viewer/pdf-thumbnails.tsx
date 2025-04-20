@@ -4,6 +4,7 @@ import React from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PdfPageNavigation } from "./pdf-page-navigation";
+import { DocumentLoader } from "../ui/document-loader";
 
 // Configuration options
 const options = {
@@ -48,10 +49,12 @@ export function PdfThumbnails({
             onLoadSuccess={onLoadSuccess}
             loading={
               <div className="p-4 text-center text-sm text-gray-500">
-                Loading thumbnails...
+                <DocumentLoader
+                  mode="small"
+                  pulseWidth="w-10"
+                />
               </div>
             }
-            options={options}
           >
             {pageNumbers.map((pageNumber) => (
               <div

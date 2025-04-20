@@ -3,19 +3,7 @@
 import React, { RefObject } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
-
-// Initialize the PDF.js worker
-if (typeof window !== "undefined") {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.js`;
-}
-
-// Configuration options
-const options = {
-  cMapUrl: "https://unpkg.com/pdfjs-dist@4.8.69/cmaps/",
-  cMapPacked: true,
-};
-
-const thumbnailWidth = 150;
+import { DocumentLoader } from "@/components/ui/document-loader";
 
 export interface PdfViewerContentProps {
   pdfUrl: string;
@@ -70,20 +58,17 @@ export function PdfViewerContent({
             file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
-            loading={
-              <div className="flex items-center justify-center h-full w-full">
-                <div className="animate-pulse text-gray-500">
-                  Loading PDF...
-                </div>
-              </div>
-            }
+            loading={<DocumentLoader mode="large" />}
             error={
               <div className="flex flex-col items-center justify-center h-full w-full text-center">
                 <div className="text-red-500 mb-4">Failed to load PDF</div>
                 <Button onClick={handleDownload}>Open PDF in New Tab</Button>
               </div>
             }
-            options={options}
+            options={{
+              cMapUrl: "https://unpkg.com/pdfjs-dist@4.8.69/cmaps/",
+              cMapPacked: true,
+            }}
             className="w-full"
           >
             {numPages > 0 &&
@@ -93,7 +78,7 @@ export function PdfViewerContent({
                   className="mb-8 pdf-page-container w-full"
                   id={`page-${pageNum}`}
                 >
-                  <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300">
+                  <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300 px-2 rounded mt-2">
                     Page {pageNum} of {numPages}
                   </div>
                   <Page
@@ -103,11 +88,11 @@ export function PdfViewerContent({
                     rotate={rotation}
                     width={pageWidth}
                     loading={
-                      <div className="flex items-center justify-center h-[400px] w-full">
-                        <div className="animate-pulse text-gray-500">
-                          Loading page {pageNum}...
-                        </div>
-                      </div>
+                      <DocumentLoader
+                        mode="small"
+                        height="[400px]"
+                        className="rounded-md"
+                      />
                     }
                     renderTextLayer={showTextLayer}
                     renderAnnotationLayer={showTextLayer}
