@@ -80,7 +80,11 @@ export function PdfViewerContent({
   }
 
   return (
-    <div className="w-full h-full overflow-visible" ref={mainContentRef}>
+    <div
+      data-document-loaded={allPagesLoaded}
+      className="w-full h-full overflow-visible"
+      ref={mainContentRef}
+    >
       <div className="pdf-container w-full relative">
         {/* Loading overlay that shows until all pages are loaded */}
         {!allPagesLoaded && numPages > 0 && (
