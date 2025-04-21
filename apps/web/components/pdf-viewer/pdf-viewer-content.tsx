@@ -7,6 +7,10 @@ import { PDF_VERSION } from "./constants";
 const options = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
   cMapPacked: true,
+  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/standard_fonts/`,
+  disableRange: false,
+  disableStream: false,
+  disableAutoFetch: false,
 };
 
 export interface PdfViewerContentProps {
@@ -22,6 +26,10 @@ export interface PdfViewerContentProps {
   onDocumentSuccess: (pdf: any) => void;
   onDocumentFailed: (error: Error) => void;
   cachedDocumentUrl: string | null;
+  onPageChange?: (page: number) => void;
+  isCached?: boolean;
+  loading?: boolean;
+  handleDownload?: () => void;
 }
 
 export function PdfViewerContent({
@@ -37,6 +45,10 @@ export function PdfViewerContent({
   onDocumentSuccess,
   onDocumentFailed,
   cachedDocumentUrl,
+  onPageChange,
+  isCached,
+  loading,
+  handleDownload,
 }: PdfViewerContentProps) {
   // Using cached URL if available, otherwise falling back to the direct URL
   const documentSource = cachedDocumentUrl || pdfUrl;
@@ -70,7 +82,7 @@ export function PdfViewerContent({
   if (!hasValidSource) {
     return (
       <div className="w-full h-full overflow-visible" ref={mainContentRef}>
-        <div className="pdf-container w-full">
+        <div className="pdf-container w-full bg-stone-50">
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-500">No valid PDF source available</div>
           </div>
@@ -82,7 +94,7 @@ export function PdfViewerContent({
   return (
     <div
       data-document-loaded={allPagesLoaded}
-      className="w-full h-full overflow-visible"
+      className="w-full h-full overflow-visible bg-stone-50"
       ref={mainContentRef}
     >
       <div className="pdf-container w-full relative">
@@ -126,7 +138,16 @@ export function PdfViewerContent({
                 onLoadSuccess={() => {}}
                 renderTextLayer={showTextLayer}
                 renderAnnotationLayer={showTextLayer}
-                className="pdf-page shadow-md mx-auto"
+                customTextRenderer={({
+                  str,
+                  itemIndex,
+                }: {
+                  str: string;
+                  itemIndex: number;
+                }) => {
+                  return str;
+                }}
+                className="pdf-page shadow-md mx-auto bg-stone-50!"
                 onRenderSuccess={() => {
                   handlePageLoadSuccess(pageNum);
                   if (

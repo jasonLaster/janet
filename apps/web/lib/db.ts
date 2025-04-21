@@ -6,6 +6,7 @@ export interface PDF {
   id: number;
   filename: string;
   blob_url: string;
+  original_blob_url: string;
   size_bytes: number;
   user_id: string;
   organization_id?: string | null;
