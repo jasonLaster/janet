@@ -7,24 +7,14 @@ import { FileUpload } from "@/components/file-upload";
 import { FileIcon, SearchIcon, SortAscIcon, MenuIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useAtom, useAtomValue } from "jotai";
-import {
-  pdfsAtom,
-  pdfsLoadingAtom,
-  pdfsErrorAtom,
-  fetchPdfsAtom,
-  searchQueryAtom,
-  metadataFilterAtom,
-} from "@/lib/store";
+import { useAtomValue } from "jotai";
+import { usePdfs, searchQueryAtom, metadataFilterAtom } from "@/lib/store";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { PdfListItem } from "./pdf-list-item";
 
 export function PdfList() {
-  const pdfs = useAtomValue(pdfsAtom);
-  const loading = useAtomValue(pdfsLoadingAtom);
-  const error = useAtomValue(pdfsErrorAtom);
-  const [, fetchPdfs] = useAtom(fetchPdfsAtom);
+  const { pdfs, isLoading: loading, error, refetch: fetchPdfs } = usePdfs();
   const searchQuery = useAtomValue(searchQueryAtom);
   const metadataFilter = useAtomValue(metadataFilterAtom);
   const { toast } = useToast();
@@ -32,7 +22,10 @@ export function PdfList() {
   const { organization } = useOrganization();
 
   useEffect(() => {
-    fetchPdfs();
+    // SWR will fetch automatically, but we can manually trigger it too
+    if (typeof fetchPdfs === "function") {
+      fetchPdfs();
+    }
   }, [fetchPdfs, organization?.id]);
 
   useEffect(() => {

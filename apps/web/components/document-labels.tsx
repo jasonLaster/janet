@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAtom, useAtomValue } from "jotai";
-import { pdfsAtom, metadataFilterAtom } from "@/lib/store";
+import { useAtomValue, useSetAtom } from "jotai";
+import { usePdfs, metadataFilterAtom } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
 interface Label {
@@ -13,8 +13,9 @@ interface Label {
 }
 
 export function DocumentLabels() {
-  const pdfs = useAtomValue(pdfsAtom);
-  const [metadataFilter, setMetadataFilter] = useAtom(metadataFilterAtom);
+  const { pdfs } = usePdfs();
+  const metadataFilter = useAtomValue(metadataFilterAtom);
+  const setMetadataFilter = useSetAtom(metadataFilterAtom);
   const [showAll, setShowAll] = useState(false);
 
   // Debug: Log PDFs metadata to understand the structure
