@@ -9,7 +9,7 @@ export function Search() {
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
 
   return (
-    <div className="relative  mx-4 my-2">
+    <div className="relative  mx-2 my-2">
       <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
         type="search"

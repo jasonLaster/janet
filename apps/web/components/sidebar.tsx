@@ -13,11 +13,13 @@ import { Button } from "@/components/ui/button";
 export function Sidebar() {
   return (
     <div className="w-64 border-r flex flex-col h-full bg-stone-50">
-      <div className="p-4 border-b flex justify-between items-center w-full">
-        <div className="grow-1">
-          <OrganizationSwitcher />
-        </div>
-        <FileUpload className="grow-0" dropZoneOnly={true}></FileUpload>
+      <div className="px-4 py-2 h-[47px] border-b flex justify-between items-center w-full">
+        <SignedIn>
+          <div className="grow-1">
+            <OrganizationSwitcher />
+          </div>
+          <FileUpload className="grow-0" dropZoneOnly={true}></FileUpload>
+        </SignedIn>
       </div>
 
       <Search />
@@ -41,9 +43,6 @@ export function Sidebar() {
             </SignInButton>
           </div>
         </SignedOut>
-        <SignedIn>
-          <div className="p-2"></div>
-        </SignedIn>
       </div>
     </div>
   );
