@@ -2,11 +2,14 @@ node_modules
 dist
 rename-mappings.json
 .env
+.env.local
 eng.traineddata
 output.log
 output
   
+.next
 .vercel
 out
 scripts
 proposal.md
+.DS_Store

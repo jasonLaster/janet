@@ -86,7 +86,7 @@ export function PdfViewer({
   const [rotation, setRotation] = useState<number>(0);
   const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
-  const [showTextLayer, setShowTextLayer] = useState<boolean>(false);
+  const [showTextLayer, setShowTextLayer] = useState<boolean>(true);
   const [isManualPageChange, setIsManualPageChange] = useState<boolean>(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);

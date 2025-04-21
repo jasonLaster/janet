@@ -10,6 +10,7 @@ export interface PDF {
   title?: string | null;
   description?: string | null;
   uploadedAt: string; // Assuming string based on formatDate usage
+  url?: string; // URL to the original PDF
   // Add other fields if necessary based on your API response
 }
 

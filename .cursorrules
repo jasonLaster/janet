@@ -2,3 +2,6 @@
 use gpt-4o for all openai calls
 we're using vitest
 use pnpm for installing packages, running the dev server and scripts
+
+Don't write new vitest unit tests
+Don't run the dev server yourself. I'm already running it.
