@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { PdfStoreProvider } from "@/components/pdf-store-provider";
