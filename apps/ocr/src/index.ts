@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import { processPdf } from "./controllers/ocr-controller.js";
 import { debug } from "./lib/ocr-utils.js";
+import "./lib/instrument";
 
 // Load environment variables
 dotenv.config({ path: ".env.local" });
@@ -52,6 +53,10 @@ app.post("/api/ocr", async (req: Request, res: Response) => {
       message,
     });
   }
+});
+
+app.get("/", (req: Request, res: Response) => {
+  res.status(200).json({ status: "ok" });
 });
 
 // Start the server

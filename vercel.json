@@ -1,7 +1,0 @@
-{
-  "framework": "nextjs",
-  "outputDirectory": "apps/web/.next",
-  "buildCommand": "cd apps/web && pnpm build",
-  "installCommand": "cd apps/web && pnpm install",
-  "ignoreCommand": "exit 0"
-}
