@@ -1,7 +1,2 @@
 packages:
   - apps/*
-
-onlyBuiltDependencies:
-  - '@clerk/shared'
-  - canvas
-  - sharp

@@ -13,9 +13,9 @@
   },
   "include": [
     "src/**/*",
-    "tests/**/*",
+    "apps/legacy/tests/**/*",
     "*.ts"
-, "scripts/migrate-mappings.ts", "scripts/test-pdf.ts"  ],
+, "scripts/migrate-mappings.ts", "scripts/test-pdf.ts", "apps/legacy/rename.ts"  ],
   "exclude": [
     "node_modules",
     "dist"
