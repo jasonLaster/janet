@@ -109,6 +109,9 @@ importers:
       iconv-lite:
         specifier: ^0.6.3
         version: 0.6.3
+      image-size:
+        specifier: ^2.0.2
+        version: 2.0.2
       pdf-img-convert:
         specifier: ^2.0.0
         version: 2.0.0
@@ -131,6 +134,9 @@ importers:
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.21
+      '@types/image-size':
+        specifier: ^0.8.0
+        version: 0.8.0
       '@types/node':
         specifier: ^22.10.0
         version: 22.14.1
