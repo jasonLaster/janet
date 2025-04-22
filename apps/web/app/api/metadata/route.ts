@@ -1,6 +1,6 @@
-import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
 import { updatePdfEnhancedMetadata } from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
+import { enhancePdfMetadata } from "@/lib/server/pdf";
 
 export const maxDuration = 60; // 60 seconds timeout
 
@@ -19,84 +19,44 @@ export async function POST(request: Request) {
     }
 
     try {
-      const responseText = await sendChatWithPDF({
-        messages: [
-          {
-            role: "user",
-            content: pdfMetadataPrompt,
-          },
-        ],
-        pdfUrl,
-        maxTokens: 2000,
-        systemPrompt:
-          "You are an AI assistant that analyzes PDF documents and extracts structured metadata. Your task is to thoroughly analyze the provided document and identify key information. Be comprehensive and accurate in your analysis. ALWAYS respond with properly formatted JSON when asked to.",
+      // Call the new function to enhance metadata
+      const { metadata, rawResponse } = await enhancePdfMetadata(pdfUrl, pdfId);
+
+      // Return the extracted metadata
+      return new Response(JSON.stringify({ metadata }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       });
+    } catch (error: any) {
+      // Handle errors from enhancePdfMetadata (AI processing or parsing)
+      console.error("Error during metadata enhancement:", error);
 
-      try {
-        // Try to parse the response as JSON
-        const trimmedResponse = responseText.trim();
+      // Check if the error message contains the raw response (parsing failure case)
+      const match = error.message.match(/Raw response: (.*)/);
+      const rawResponse = match ? match[1] : undefined;
 
-        // First, try to directly parse the entire response
-        try {
-          const metadata = JSON.parse(trimmedResponse);
-
-          // If pdfId is provided, store the metadata in the database
-          if (pdfId) {
-            await updatePdfEnhancedMetadata(pdfId, metadata);
-          }
-
-          return new Response(JSON.stringify({ metadata }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        } catch (directParseError) {
-          // If direct parsing fails, try to extract JSON from the response
-          const jsonMatch = trimmedResponse.match(/\{[\s\S]*\}/);
-
-          if (jsonMatch) {
-            const jsonText = jsonMatch[0];
-            const metadata = JSON.parse(jsonText);
-
-            // If pdfId is provided, store the metadata in the database
-            if (pdfId) {
-              console.log("Storing metadata in database for PDF ID:", pdfId);
-              await updatePdfEnhancedMetadata(pdfId, metadata);
-            }
-
-            return new Response(JSON.stringify({ metadata }), {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            });
-          } else {
-            throw new Error("Could not extract JSON from response");
-          }
-        }
-      } catch (parseError) {
-        console.error("Error parsing AI response:", parseError);
-        console.log("Raw response:", responseText);
-
-        // Return the raw text if JSON parsing fails
+      if (rawResponse) {
         return new Response(
           JSON.stringify({
             error: "Failed to parse AI response",
-            rawResponse: responseText,
+            rawResponse: rawResponse,
+          }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      } else {
+        // Handle other errors (e.g., AI processing failure)
+        return new Response(
+          JSON.stringify({
+            error: "Metadata enhancement failed",
+            details: error.message || String(error),
           }),
           { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
-    } catch (aiError) {
-      console.error("AI processing error:", aiError);
-
-      return new Response(
-        JSON.stringify({
-          error: "AI processing failed",
-          details: aiError instanceof Error ? aiError.message : String(aiError),
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
     }
   } catch (error: any) {
-    console.error("Error extracting PDF metadata:", error);
+    // Handle errors from request parsing or other unexpected issues
+    console.error("Error in metadata route handler:", error);
 
     return new Response(
       JSON.stringify({

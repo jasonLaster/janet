@@ -175,7 +175,7 @@ export const uploadFileAtom = atom(
       const formData = new FormData();
       formData.append("pdf", fileToUpload);
 
-      const response = await fetch("/api/upload", {
+      const response = await fetch("/api/pdfs/upload", {
         method: "POST",
         body: formData,
       });

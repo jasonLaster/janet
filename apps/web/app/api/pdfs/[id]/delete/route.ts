@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { deletePdf, getPdfById } from "@/lib/db";
 import { del } from "@vercel/blob";
+import { auth } from "@clerk/nextjs/server";
 
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+
     const id = Number.parseInt(params.id, 10);
 
     if (isNaN(id)) {
