@@ -1,50 +1,67 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import { join } from "path";
+import { insertPdf } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
+import { inngest } from "@/lib/inngest/client";
 
 export async function POST(request: Request) {
   try {
+    const { userId, orgId } = await auth();
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
     const formData = await request.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("pdf") as File;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
+    if (file.type !== "application/pdf") {
       return NextResponse.json(
-        { error: "Only PDF files are allowed" },
+        { error: "File must be a PDF" },
         { status: 400 }
       );
     }
 
-    // Get file details
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Upload to Vercel Blob Storage
-    const blob = await put(join("pdfs", file.name), buffer, {
-      contentType: "application/pdf",
+    // Upload to Vercel Blob with explicit token from environment variable
+    const blob = await put(`pdfs/${userId}/${Date.now()}-${file.name}`, file, {
       access: "public",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    // In a real app, you would save metadata to database as well
-    // Including the blob URL for later retrieval
+    // Store metadata in the database, including the user ID and orgId
+    const pdfRecord = await insertPdf({
+      filename: file.name,
+      blob_url: blob.url,
+      size_bytes: file.size,
+      user_id: userId,
+      organization_id: orgId,
+      original_blob_url: blob.url,
+    });
 
+    inngest.send({
+      name: "pdf/enrich-document",
+      data: {
+        pdfId: pdfRecord.id,
+      },
+    });
+
+    // Return the blob URL and metadata
     return NextResponse.json({
-      id: Math.floor(Math.random() * 1000), // Replace with actual DB ID
-      name: file.name,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
+      success: true,
+      message: "File uploaded successfully",
+      id: pdfRecord.id,
+      fileName: file.name,
+      fileSize: file.size,
       url: blob.url,
-      title: file.name.replace(".pdf", ""),
-      pageCount: 0, // This would be determined after processing
+      uploadedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error uploading PDF:", error);
+    console.error("Error uploading file:", error);
     return NextResponse.json(
-      { error: "Failed to upload PDF" },
+      { error: "Failed to upload file" },
       { status: 500 }
     );
   }

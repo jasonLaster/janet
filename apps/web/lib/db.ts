@@ -28,10 +28,6 @@ export async function getPdfById(id: number): Promise<PDF | null> {
     `Executing database query for PDF ID: ${id}, User ID: ${userId}, Org ID: ${orgId}`
   );
 
-  if (!userId) {
-    throw new Error("Unauthorized");
-  }
-
   let query;
   if (orgId) {
     // If orgId is provided, check user and organization
@@ -39,11 +35,16 @@ export async function getPdfById(id: number): Promise<PDF | null> {
       SELECT * FROM pdfs 
       WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${orgId}
     `;
-  } else {
+  } else if (userId) {
     // If orgId is null, check user and that organization_id IS NULL (personal workspace)
     query = sql`
       SELECT * FROM pdfs 
       WHERE id = ${id} AND user_id = ${userId} AND organization_id IS NULL
+    `;
+  } else {
+    query = sql`
+    SELECT * FROM pdfs 
+    WHERE id = ${id}
     `;
   }
 
@@ -87,17 +88,9 @@ export async function getAllPdfs(
   return result as PDF[];
 }
 
-// Helper function to insert PDF metadata
-export async function insertPdf(pdfData: {
-  filename: string;
-  blob_url: string;
-  size_bytes: number;
-  user_id: string;
-  organization_id?: string | null; // Allow optional orgId
-  title?: string;
-  description?: string;
-  page_count?: number;
-}): Promise<{ id: number }> {
+export async function insertPdf(
+  pdfData: Omit<PDF, "id" | "uploaded_at">
+): Promise<{ id: number }> {
   const result = await sql`
     INSERT INTO pdfs (
       filename, 
@@ -107,7 +100,8 @@ export async function insertPdf(pdfData: {
       organization_id, 
       title, 
       description, 
-      page_count
+      page_count,
+      original_blob_url
     ) VALUES (
       ${pdfData.filename}, 
       ${pdfData.blob_url}, 
@@ -116,7 +110,8 @@ export async function insertPdf(pdfData: {
       ${pdfData.organization_id ?? null}, -- Use ?? null to handle undefined
       ${pdfData.title ?? null}, 
       ${pdfData.description ?? null}, 
-      ${pdfData.page_count ?? null}
+      ${pdfData.page_count ?? null},
+      ${pdfData.original_blob_url}
     )
     RETURNING id
   `;

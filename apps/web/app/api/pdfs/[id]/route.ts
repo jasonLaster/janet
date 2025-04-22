@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { getPdfById } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+
     const id = Number.parseInt(params.id, 10);
 
     if (isNaN(id)) {
