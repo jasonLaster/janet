@@ -46,8 +46,8 @@ export async function enhancePdfMetadata(
     // Attempt to parse the response using the helper function
     const metadata = parseOrExtractJson(responseText);
 
-    if (!metadata) {
-      return null;
+    if (!metadata || metadata.descriptiveTitle === "") {
+      throw new Error("Failed to parse metadata");
     }
 
     // If pdfId is provided and metadata was parsed successfully, store it

@@ -197,6 +197,10 @@ export async function processPage(imagePath: string, pageNumber: number) {
   const width = dimensions.width;
   const height = dimensions.height;
 
+  debug(
+    `Image dimensions calculated for page ${pageNumber}: width=${width}, height=${height}`
+  );
+
   if (!width || !height) {
     console.error(`Could not get dimensions for image: ${imagePath}`);
     return null; // Or throw an error
@@ -296,7 +300,14 @@ export async function createPdfWithTextLayers(
       margin: 0,
     });
 
-    // Add debug log for imageBuffer
+    // Add detailed debug log before embedding the image
+    debug(
+      `[PDFKit Pre-Embed] Page ${i + 1}: Image buffer length=${
+        imageBuffer?.length
+      }, type=${typeof imageBuffer}, width=${width}, height=${height}`
+    );
+
+    // Add debug log for imageBuffer - This log was already present, keeping it for context
     debug(
       `Adding image to PDF page ${
         i + 1

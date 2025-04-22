@@ -120,7 +120,7 @@ export function PdfViewerContent({
           {pageNumbers.map((pageNum) => (
             <div
               key={`page_${pageNum}`}
-              className="mb-8 pdf-page-container w-full"
+              className="mb-8 pdf-page-container w-full bg-stone-50"
               id={`page-${pageNum}`}
               style={{ opacity: allPagesLoaded ? 1 : 0 }}
             >
