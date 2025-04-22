@@ -31,14 +31,17 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
+      - name: Install system dependencies for canvas
+        run: sudo apt-get update && sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
+
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install:web
 
       - name: Install Vercel CLI
         run: pnpm install -g vercel@latest
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install chromium
+        run: pnpm --filter web exec playwright install chromium
 
       - name: Get Vercel Preview URL
         if: ${{ github.event_name == 'deployment_status' }}

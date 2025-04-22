@@ -4,11 +4,15 @@ import path from "path";
 import { exec, execSync } from "child_process";
 import util from "util";
 import PDFDocument from "pdfkit";
-import { Image } from "canvas";
 import vision from "@google-cloud/vision";
+import { imageSize } from "image-size"; // Correct import
 
 const execPromise = util.promisify(exec);
+
 const CLEANUP_TEMP_FILES = true;
+if (CLEANUP_TEMP_FILES) {
+  console.warn("Temporary files are not being cleaned up!");
+}
 
 // Add a debug logger
 export const debug = (message: string, data?: any) => {
@@ -188,10 +192,17 @@ export async function processPage(imagePath: string, pageNumber: number) {
   }
 
   const imageBuffer = await fs.readFile(imagePath);
-  const img = new Image();
-  img.src = imageBuffer;
-  const width = img.width;
-  const height = img.height;
+  // Use imageSize to get dimensions
+  const dimensions = imageSize(imageBuffer);
+  const width = dimensions.width;
+  const height = dimensions.height;
+
+  if (!width || !height) {
+    console.error(`Could not get dimensions for image: ${imagePath}`);
+    return null; // Or throw an error
+  }
+
+  debug(`Image dimensions for page ${pageNumber}: ${width}x${height}`);
 
   const ocrData = await runGoogleVisionOCR(imagePath);
 
@@ -284,6 +295,15 @@ export async function createPdfWithTextLayers(
       size: [width, height],
       margin: 0,
     });
+
+    // Add debug log for imageBuffer
+    debug(
+      `Adding image to PDF page ${
+        i + 1
+      }: buffer type=${typeof imageBuffer}, length=${
+        imageBuffer?.length
+      }, width=${width}, height=${height}`
+    );
 
     doc.image(imageBuffer, 0, 0, {
       width: width,

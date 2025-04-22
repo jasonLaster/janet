@@ -19,6 +19,7 @@ interface OCRResponse {
   success: boolean;
   message?: string;
   searchableUrl?: string;
+  blobUrl?: string;
   processingTimeMs?: number;
   pageCount?: number;
   error?: string;
@@ -52,13 +53,14 @@ export async function processPdf(pdfId: number): Promise<OCRResponse> {
     debug(`Created temp directory: ${tempDir}`);
 
     // Download the PDF from the blob URL
-    debug(`Downloading PDF from: ${pdfRecord.blob_url}`);
-    const pdfResponse = await fetch(pdfRecord.blob_url);
+    const blobUrl = pdfRecord.original_blob_url;
+    debug(`Downloading PDF from: ${blobUrl}`);
+    const pdfResponse = await fetch(blobUrl);
     if (!pdfResponse.ok) {
       debug(
-        `Failed to download PDF from ${pdfRecord.blob_url}, status: ${pdfResponse.status}`
+        `Failed to download PDF from ${blobUrl}, status: ${pdfResponse.status}`
       );
-      throw new Error(`Failed to download PDF from ${pdfRecord.blob_url}`);
+      throw new Error(`Failed to download PDF from ${blobUrl}`);
     }
     debug(
       `PDF downloaded successfully, size: ${
@@ -94,21 +96,33 @@ export async function processPdf(pdfId: number): Promise<OCRResponse> {
     // Process each page
     debug(`Starting OCR processing for ${pageCount} pages`);
     const pageData = [];
-    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-      debug(`Processing page ${pageNum}/${pageCount}`);
-      const pageResult = await processPage(imagePaths[pageNum - 1], pageNum);
-      if (pageResult) {
-        pageData.push(pageResult);
-        debug(`Successfully processed page ${pageNum}`);
-      } else {
-        debug(`Failed to process page ${pageNum}`);
-      }
-    }
+    const results = await Promise.all(
+      Array.from({ length: pageCount }, async (_, i) => {
+        const pageNum = i + 1;
+        debug(`Starting processing of page ${pageNum}/${pageCount}`);
+        return processPage(imagePaths[i], pageNum).then((result) => {
+          if (result) {
+            debug(`Successfully processed page ${pageNum}`);
+            return result;
+          } else {
+            debug(`Failed to process page ${pageNum}`);
+            return null;
+          }
+        });
+      })
+    );
 
-    // Check if we have any pages to process
-    if (pageData.length === 0) {
-      debug(`No pages were successfully processed`);
-      throw new Error("No pages were successfully processed");
+    pageData.push(...results.filter((result) => result !== null));
+
+    const failedPages = pageCount - pageData.length;
+    if (failedPages > 0) {
+      debug(`${failedPages} pages failed to process`);
+      console.warn(
+        `Warning: ${failedPages} out of ${pageCount} pages failed OCR processing`
+      );
+      throw new Error(
+        `Failed to process ${failedPages} out of ${pageCount} pages`
+      );
     }
     debug(`Processed ${pageData.length}/${pageCount} pages successfully`);
 
@@ -157,6 +171,7 @@ export async function processPdf(pdfId: number): Promise<OCRResponse> {
       success: true,
       message: "PDF processed successfully",
       searchableUrl,
+      blobUrl,
       processingTimeMs,
       pageCount: pageData.length,
     };

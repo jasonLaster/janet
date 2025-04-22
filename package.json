@@ -3,6 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
+    "@types/image-size": "^0.8.0",
+    "image-size": "^2.0.2",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
   },
@@ -17,7 +19,8 @@
     "test:watch": "vitest watch",
     "test:e2e": "pnpm --filter web test:e2e",
     "dev:web": "pnpm --filter web dev",
-    "build": "pnpm --filter web build"
+    "build:web": "pnpm --filter web build",
+    "install:web": "pnpm --filter web install"
   },
   "author": "",
   "license": "ISC",
