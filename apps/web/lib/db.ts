@@ -8,8 +8,8 @@ export interface PDF {
   blob_url: string;
   original_blob_url: string;
   size_bytes: number;
-  user_id: string;
-  organization_id?: string | null;
+  user_id?: string;
+  organization_id?: string;
   title?: string;
   description?: string;
   page_count?: number;

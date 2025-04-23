@@ -150,7 +150,7 @@ export const uploadingFilesAtom = atom<UploadingFileState[]>([]);
 // Atom to handle uploading a single file
 export const uploadFileAtom = atom(
   null,
-  async (get, set, fileToUpload: File) => {
+  async (get, set, fileToUpload: File, userId: string, orgId: string) => {
     // Generate a temporary unique ID for this upload
     const uploadId = `${fileToUpload.name}-${Date.now()}`;
 
@@ -174,8 +174,10 @@ export const uploadFileAtom = atom(
     try {
       const formData = new FormData();
       formData.append("pdf", fileToUpload);
+      formData.append("userId", userId);
+      formData.append("orgId", orgId);
 
-      const response = await fetch("/api/pdfs/upload", {
+      const response = await fetch("/api/pdfs/form-upload", {
         method: "POST",
         body: formData,
       });
