@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { FileIcon, UploadCloudIcon, XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
+import { useUser } from "@clerk/nextjs";
 import {
   uploadingFilesAtom,
   uploadFileAtom,
@@ -81,7 +80,7 @@ export function FileUpload({
   dropZoneOnly = false,
   className = "",
 }: FileUploadProps) {
-  const [uploadingFiles, setUploadingFiles] = useAtom(uploadingFilesAtom);
+  const [uploadingFiles] = useAtom(uploadingFilesAtom);
   const [, uploadFile] = useAtom(uploadFileAtom);
   const [, removeFile] = useAtom(removeUploadingFileAtom);
 
@@ -89,7 +88,8 @@ export function FileUpload({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const { userId, orgId } = useUser();
+
   const { toast } = useToast();
 
   const processFiles = (selectedFiles: FileList | File[]) => {
@@ -114,7 +114,7 @@ export function FileUpload({
           (f) => f.file.name === file.name && (f.uploading || f.progress === 0)
         )
       ) {
-        uploadFile(file);
+        uploadFile(file, userId, orgId);
       }
     });
   };
