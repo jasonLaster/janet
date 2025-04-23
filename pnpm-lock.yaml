@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  pdf-parse@1.1.1:
+    hash: e85b5a25f2f1421b5220747fe2e2342f6c5215dc0ca22d7797b4b4e9eab78af2
+    path: patches/pdf-parse@1.1.1.patch
+
 importers:
 
   .:
@@ -11,9 +16,18 @@ importers:
       '@types/image-size':
         specifier: ^0.8.0
         version: 0.8.0
+      '@types/node-fetch':
+        specifier: ^2.6.12
+        version: 2.6.12
+      '@types/pdf-parse':
+        specifier: ^1.1.4
+        version: 1.1.5
       image-size:
         specifier: ^2.0.2
         version: 2.0.2
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.1(patch_hash=e85b5a25f2f1421b5220747fe2e2342f6c5215dc0ca22d7797b4b4e9eab78af2)
       ts-node:
         specifier: ^10.9.0
         version: 10.9.2(@types/node@22.14.1)(typescript@5.8.3)
@@ -33,6 +47,9 @@ importers:
       node-fetch:
         specifier: ^3.3.2
         version: 3.3.2
+      tsx:
+        specifier: ^4.7.1
+        version: 4.19.3
 
   apps/legacy:
     dependencies:
@@ -4648,6 +4665,9 @@ packages:
     engines: {node: '>=10.5.0'}
     deprecated: Use your platform's native DOMException instead
 
+  node-ensure@0.0.0:
+    resolution: {integrity: sha512-DRI60hzo2oKN1ma0ckc6nQWlHU69RH6xN0sjQTjMpChPfTYvKZdcQFfdYK2RWbJcKyUizSIy/l8OTGxMAM1QDw==}
+
   node-fetch@2.7.0:
     resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
     engines: {node: 4.x || >=6.0.0}
@@ -4820,6 +4840,10 @@ packages:
 
   pdf-lib@1.17.1:
     resolution: {integrity: sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==}
+
+  pdf-parse@1.1.1:
+    resolution: {integrity: sha512-v6ZJ/efsBpGrGGknjtq9J/oC8tZWq0KWL5vQrk2GlzLEQPUDB1ex+13Rmidl1neNN358Jn9EHZw5y07FFtaC7A==}
+    engines: {node: '>=6.8.1'}
 
   pdfjs-dist@4.8.69:
     resolution: {integrity: sha512-IHZsA4T7YElCKNNXtiLgqScw4zPd3pG9do8UrznC757gMd7UPeHSL2qwNNMJo4r79fl8oj1Xx+1nh2YkzdMpLQ==}
@@ -10610,6 +10634,8 @@ snapshots:
 
   node-domexception@1.0.0: {}
 
+  node-ensure@0.0.0: {}
+
   node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
@@ -10794,6 +10820,13 @@ snapshots:
       '@pdf-lib/upng': 1.0.1
       pako: 1.0.11
       tslib: 1.14.1
+
+  pdf-parse@1.1.1(patch_hash=e85b5a25f2f1421b5220747fe2e2342f6c5215dc0ca22d7797b4b4e9eab78af2):
+    dependencies:
+      debug: 3.2.7
+      node-ensure: 0.0.0
+    transitivePeerDependencies:
+      - supports-color
 
   pdfjs-dist@4.8.69:
     optionalDependencies:

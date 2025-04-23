@@ -1,2 +1,5 @@
 packages:
   - apps/*
+
+patchedDependencies:
+  pdf-parse@1.1.1: patches/pdf-parse@1.1.1.patch
