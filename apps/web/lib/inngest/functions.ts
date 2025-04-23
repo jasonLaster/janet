@@ -10,19 +10,14 @@ export const helloWorld = inngest.createFunction(
   }
 );
 
-// fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/metadata`, {
-//     method: "POST",
-//     body: JSON.stringify({ pdfId: pdfRecord.id }),
-//   });
-
-//   fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ocr`, {
-//     method: "POST",
-//     body: JSON.stringify({ pdfId: pdfRecord.id }),
-//   });
-
 export const enrichDocument = inngest.createFunction(
   { id: "enrich-document" },
-  { event: "pdf/enrich-document" },
+  {
+    event: "pdf/enrich-document",
+    concurrency: {
+      limit: 4,
+    },
+  },
   async ({ event, step }) => {
     const { pdfId } = event.data;
 
