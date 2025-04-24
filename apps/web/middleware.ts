@@ -22,9 +22,11 @@ export default clerkMiddleware(
     console.log("Middleware running for:", req.url);
 
     if (req.url.includes("/api")) {
+      console.log("API route detected:", req.url);
       return NextResponse.next();
     }
 
+    console.log("Checking authentication status");
     const { userId } = await auth();
     const url = new URL(req.url);
 
@@ -45,14 +47,17 @@ export default clerkMiddleware(
 
     // For other public routes, allow access without authentication
     if (isPublicRoute(req)) {
+      console.log("Public route detected:", req.url);
       return NextResponse.next();
     }
 
     // For all other protected routes, check if user is authenticated
     if (!userId) {
+      console.log("User is not authenticated, redirecting to sign-in");
       return NextResponse.redirect(new URL("/sign-in", url.origin));
     }
 
+    console.log("User is authenticated, allowing access");
     return NextResponse.next();
   }
 );
