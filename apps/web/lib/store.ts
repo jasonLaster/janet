@@ -23,8 +23,9 @@ export interface UploadingFileState {
   error?: string;
 }
 
-// --- Search State Atom ---
+// --- Search State Atoms ---
 export const searchQueryAtom = atom<string>("");
+export const searchResultsAtom = atom<Array<{ id: number; title: string }>>([]);
 
 // Metadata filter for filtering by specific metadata values
 export interface MetadataFilter {
@@ -272,3 +273,44 @@ export const setUploadingFilesAtom = atom(
 export const fetchPdfsAtom = atom(null, async (get, set) => {
   await refetchPdfs();
 });
+
+// Helper function to get filtered PDFs based on all active filters
+export function getFilteredPdfs(
+  pdfs: PDF[],
+  searchQuery: string,
+  searchResults: Array<{ id: number; title: string }>,
+  metadataFilter: MetadataFilter
+) {
+  // Start with all PDFs
+  let filteredPdfs = pdfs;
+
+  // Apply search filter if active
+  if (searchQuery && searchResults.length > 0) {
+    filteredPdfs = filteredPdfs.filter((pdf) =>
+      searchResults.some((result) => result.id === pdf.id)
+    );
+  }
+
+  // Apply metadata filter if active
+  if (metadataFilter.type && metadataFilter.value) {
+    filteredPdfs = filteredPdfs.filter((pdf) => {
+      const metadata = (pdf as any).metadata;
+
+      if (metadataFilter.type === "label") {
+        return (
+          metadata?.labels &&
+          Array.isArray(metadata.labels) &&
+          metadata.labels.includes(metadataFilter.value)
+        );
+      }
+
+      if (metadataFilter.type === "company") {
+        return metadata?.issuingOrganization === metadataFilter.value;
+      }
+
+      return false;
+    });
+  }
+
+  return filteredPdfs;
+}

@@ -4,9 +4,12 @@
   "version": "1.0.0",
   "dependencies": {
     "@types/image-size": "^0.8.0",
+    "@types/lodash": "^4.17.16",
     "@types/node-fetch": "^2.6.12",
     "@types/pdf-parse": "^1.1.4",
     "image-size": "^2.0.2",
+    "lodash": "^4.17.21",
+    "meilisearch": "^0.50.0",
     "pdf-parse": "^1.1.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
