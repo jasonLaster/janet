@@ -23,6 +23,24 @@ export interface PdfInfoPanelProps {
   metadataError: boolean;
 }
 
+function PdfInfoPanelItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col mt-4">
+      <dt className="text-gray-500 mb-1">{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
 export function PdfInfoPanel({
   pdfMetadata,
   enhancedMetadata,
@@ -31,106 +49,54 @@ export function PdfInfoPanel({
 }: PdfInfoPanelProps) {
   return (
     <ScrollArea className="h-full">
-      <div className="p-3">
+      <div className="py-3 px-4">
         {metadataError && (
           <div className="mb-4 p-2 bg-red-50 rounded-md shadow-sm">
             <p className="text-red-700">Failed to load metadata.</p>
           </div>
         )}
+
+        {isLoadingAiMetadata && (
+          <div className="mt-4 text-center text-sm text-gray-500">
+            <div className="animate-pulse">Analyzing document with AI...</div>
+          </div>
+        )}
+
         <dl className="space-y-2 text-sm">
-          {enhancedMetadata?.summary && <div>{enhancedMetadata.summary}</div>}
+          <div>
+            <dt className="text-gray-500 mb-2">Summary</dt>
+            <dd>{enhancedMetadata?.summary}</dd>
+          </div>
 
-          {enhancedMetadata?.labels && enhancedMetadata.labels.length > 0 && (
-            <div>
-              <dd>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {enhancedMetadata.issuingOrganization && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-violet-100 text-violet-800">
-                      {enhancedMetadata.issuingOrganization}
-                    </span>
-                  )}
+          <PdfInfoPanelItem label="Author" value={pdfMetadata.author || ""} />
+          <PdfInfoPanelItem label="Subject" value={pdfMetadata.subject || ""} />
 
-                  {enhancedMetadata.primaryDate && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                      {enhancedMetadata.primaryDate}
-                    </span>
-                  )}
+          <PdfInfoPanelItem label="Created" value={pdfMetadata.creationDate} />
 
-                  {enhancedMetadata.labels.map((label, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </dd>
-            </div>
-          )}
+          <PdfInfoPanelItem
+            label="Document Type"
+            value={enhancedMetadata?.documentType}
+          />
 
-          {pdfMetadata.author && (
-            <div>
-              <dt className="text-gray-500">Author</dt>
-              <dd>{pdfMetadata.author}</dd>
-            </div>
-          )}
+          <PdfInfoPanelItem
+            label="Account Holder"
+            value={enhancedMetadata?.accountHolder}
+          />
 
-          {pdfMetadata.subject && (
-            <div>
-              <dt className="text-gray-500">Subject</dt>
-              <dd>{pdfMetadata.subject}</dd>
-            </div>
-          )}
+          <PdfInfoPanelItem
+            label="Account Details"
+            value={enhancedMetadata?.accountDetails}
+          />
 
-          {pdfMetadata.creationDate && (
-            <div>
-              <dt className="text-gray-500">Created</dt>
-              <dd>{pdfMetadata.creationDate}</dd>
-            </div>
-          )}
+          <PdfInfoPanelItem
+            label="Deadlines/Action Items"
+            value={enhancedMetadata?.deadlines}
+          />
 
-          {enhancedMetadata?.documentType && (
-            <div>
-              <dt className="text-gray-500">Document Type</dt>
-              <dd>{enhancedMetadata.documentType}</dd>
-            </div>
-          )}
-
-          {enhancedMetadata?.accountHolder && (
-            <div>
-              <dt className="text-gray-500">Account Holder</dt>
-              <dd>{enhancedMetadata.accountHolder}</dd>
-            </div>
-          )}
-
-          {enhancedMetadata?.accountDetails && (
-            <div>
-              <dt className="text-gray-500">Account Details</dt>
-              <dd>{enhancedMetadata.accountDetails}</dd>
-            </div>
-          )}
-
-          {enhancedMetadata?.deadlines && (
-            <div>
-              <dt className="text-gray-500">Deadlines/Action Items</dt>
-              <dd>{enhancedMetadata.deadlines}</dd>
-            </div>
-          )}
-
-          {enhancedMetadata?.monetaryAmounts &&
-            enhancedMetadata.monetaryAmounts.length > 0 && (
-              <div>
-                <dt className="text-gray-500">Monetary Amounts</dt>
-                <dd>
-                  <ul className="list-disc list-inside">
-                    {enhancedMetadata.monetaryAmounts.map((amount, index) => (
-                      <li key={index}>{amount}</li>
-                    ))}
-                  </ul>
-                </dd>
-              </div>
-            )}
+          <PdfInfoPanelItem
+            label="Deadlines/Action Items"
+            value={enhancedMetadata?.deadlines}
+          />
 
           {enhancedMetadata?.otherPeople &&
             enhancedMetadata.otherPeople.length > 0 && (
@@ -139,32 +105,14 @@ export function PdfInfoPanel({
                 <dd>
                   <ul className="list-disc list-inside">
                     {enhancedMetadata.otherPeople.map((person, index) => (
-                      <li key={index}>{person}</li>
+                      <li className="text-sm  list-none" key={index}>
+                        {person}
+                      </li>
                     ))}
                   </ul>
                 </dd>
               </div>
             )}
-
-          {pdfMetadata.producer && (
-            <div>
-              <dt className="text-gray-500">Producer</dt>
-              <dd>{pdfMetadata.producer}</dd>
-            </div>
-          )}
-
-          {pdfMetadata.creator && (
-            <div>
-              <dt className="text-gray-500">Creator</dt>
-              <dd>{pdfMetadata.creator}</dd>
-            </div>
-          )}
-
-          {isLoadingAiMetadata && (
-            <div className="mt-4 text-center text-sm text-gray-500">
-              <div className="animate-pulse">Analyzing document with AI...</div>
-            </div>
-          )}
         </dl>
       </div>
     </ScrollArea>

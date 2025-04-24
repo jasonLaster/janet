@@ -6,7 +6,6 @@ import {
   Calendar,
   ExternalLinkIcon,
   MoreHorizontalIcon,
-  SearchIcon,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PDF } from "@/lib/store";
 import { DocumentMetadata } from "@/components/document-metadata";
+import { useRef } from "react";
+import { useState } from "react";
 
 interface PdfListItemProps {
   pdf: PDF;
@@ -28,6 +29,9 @@ interface PdfListItemProps {
 export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const router = useRouter();
   const metadata = (pdf as any).metadata || {};
+  const [mouseX, setMouseX] = useState<number | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
     if (!dateString) {
@@ -61,11 +65,27 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   // Use primary date from metadata if available, otherwise use uploaded date
   const displayDate = formatDate(pdf.uploadedAt) || "";
 
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (rowRef.current) {
+      const rect = rowRef.current.getBoundingClientRect();
+      // Calculate mouse position relative to the row's left edge
+      const relativeX = e.clientX - rect.left;
+      setMouseX(relativeX);
+    }
+  };
+
   return (
     <div
-      className="flex items-center px-3 py-3 border-b hover:bg-muted/50 transition-colors"
+      ref={rowRef}
+      className="flex items-center px-3 py-1 border-b-slate-100 border-b hover:bg-muted/50 transition-colors relative"
       style={style}
       data-id={pdf.id}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setMouseX(null);
+      }}
     >
       <div className="flex-1 min-w-0">
         <Link
@@ -121,6 +141,21 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {isHovering && metadata.summary && mouseX !== null && (
+        <div
+          className="absolute z-50 max-w-sm rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md transition-opacity duration-200"
+          style={{
+            left: mouseX,
+            top: "100%",
+            marginTop: "0.5rem",
+            transform: "translateX(-50%)",
+            opacity: isHovering ? 1 : 0,
+          }}
+        >
+          <p className="text-sm">{metadata.summary}</p>
+        </div>
+      )}
     </div>
   );
 }

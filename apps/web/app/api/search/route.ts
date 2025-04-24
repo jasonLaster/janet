@@ -1,9 +1,12 @@
+import { auth } from "@clerk/nextjs/server";
 import { MeiliSearch } from "meilisearch";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
     const { query } = await request.json();
+
+    const { userId, orgId } = await auth();
 
     if (!query) {
       return NextResponse.json(
@@ -17,9 +20,20 @@ export async function POST(request: Request) {
       apiKey: process.env.MEILISEARCH_API_KEY || "",
     });
 
+    const filters = [];
+
+    if (userId) {
+      filters.push(`userId = ${userId}`);
+    }
+
+    if (orgId) {
+      filters.push(`organizationId = ${orgId}`);
+    }
+
     const index = client.index("pdfs");
     const { hits } = await index.search(query, {
       limit: 10,
+      filter: [],
       attributesToRetrieve: ["id", "title"],
     });
 

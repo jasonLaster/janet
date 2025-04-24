@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
+import { DocumentMetadata } from "../document-metadata";
 
 export interface PdfViewerHeaderProps {
   title: string;
@@ -65,31 +66,25 @@ export function PdfViewerHeader({
           <ArrowLeft className="h-4 w-4" />
           <span className="sr-only">Back</span>
         </Button>
-        <h2 className="font-medium">
+        <h2 className="font-medium flex items-center gap-2">
           {enhancedMetadata?.descriptiveTitle || title}
-          {enhancedMetadata?.issuingOrganization && (
-            <span className="ml-2 text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5">
-              {enhancedMetadata.issuingOrganization}
-            </span>
-          )}
-          {enhancedMetadata?.primaryDate && (
-            <span className="ml-2 text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5">
-              {enhancedMetadata.primaryDate}
-            </span>
-          )}
+          <DocumentMetadata metadata={enhancedMetadata} />
         </h2>
       </div>
 
       <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Search..."
-          value={searchText}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="h-8"
-        />
-
+        {false && (
+          <>
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search..."
+              value={searchText}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="h-8"
+            />
+          </>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon">

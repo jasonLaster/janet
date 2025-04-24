@@ -61,7 +61,7 @@ export function PdfSidebar({
       onValueChange={setActiveTab}
       className="w-full h-full flex flex-col"
     >
-      <TabsList className="w-full grid grid-cols-2">
+      <TabsList className="w-full grid grid-cols-2 px-2">
         <TabsTrigger value="info">
           <FileText className="h-4 w-4 mr-1" />
           <span className="sr-only sm:not-sr-only sm:inline-block text-xs">

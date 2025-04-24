@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 export function Sidebar() {
   return (
     <div className="w-64 border-r flex flex-col h-full bg-stone-50">
-      <div className="px-4 py-2 h-[47px] border-b flex justify-between items-center w-full">
+      <div className="px-4 h-[45px] border-b flex justify-between items-center w-full">
         <SignedIn>
           <div className="grow-1">
             <OrganizationSwitcher />
