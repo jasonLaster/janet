@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
-import { usePdfs, metadataFilterAtom } from "@/lib/store";
+import {
+  usePdfs,
+  metadataFilterAtom,
+  searchQueryAtom,
+  searchResultsAtom,
+  getFilteredPdfs,
+} from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
 interface Label {
@@ -14,54 +20,56 @@ interface Label {
 
 export function DocumentLabels() {
   const { pdfs } = usePdfs();
+  const searchQuery = useAtomValue(searchQueryAtom);
+  const searchResults = useAtomValue(searchResultsAtom);
   const metadataFilter = useAtomValue(metadataFilterAtom);
   const setMetadataFilter = useSetAtom(metadataFilterAtom);
   const [showAll, setShowAll] = useState(false);
 
-  // Debug: Log PDFs metadata to understand the structure
-  useEffect(() => {
-    // Count PDFs with labels
-    const pdfsWithLabels = pdfs.filter(
-      (pdf) =>
-        (pdf as any).metadata?.labels &&
-        Array.isArray((pdf as any).metadata.labels) &&
-        (pdf as any).metadata.labels.length > 0
-    );
-  }, [pdfs]);
+  // Get filtered PDFs based on current filters
+  const filteredPdfs = useMemo(
+    () =>
+      getFilteredPdfs(pdfs, searchQuery, searchResults, {
+        ...metadataFilter,
+        type: metadataFilter.type === "label" ? null : metadataFilter.type,
+        value: metadataFilter.type === "label" ? null : metadataFilter.value,
+      }),
+    [pdfs, searchQuery, searchResults, metadataFilter]
+  );
 
-  // Extract and count labels from PDF metadata
+  // Extract and count labels from filtered PDF metadata
   const labels = useMemo(() => {
     // Create a frequency map for each label
     const labelDocuments = new Map<string, Set<number>>();
 
     // Process each PDF
-    pdfs.forEach((pdf) => {
+    filteredPdfs.forEach((pdf) => {
       const metadata = (pdf as any).metadata;
       // Skip if no metadata or labels
-      if (!metadata?.labels || !Array.isArray(metadata.labels)) {
-        return;
-      }
+      if (!metadata?.labels || !Array.isArray(metadata.labels)) return;
 
-      // Process each label in this document
       metadata.labels.forEach((label: string) => {
-        if (!labelDocuments.has(label)) {
-          labelDocuments.set(label, new Set());
+        const trimmedLabel = label.trim();
+        if (!trimmedLabel) return;
+
+        // Add to tracking map
+        if (!labelDocuments.has(trimmedLabel)) {
+          labelDocuments.set(trimmedLabel, new Set());
         }
-        // Add this document ID to the set of documents containing this label
-        labelDocuments.get(label)?.add(pdf.id);
+
+        // Add this document ID to the set of documents with this label
+        labelDocuments.get(trimmedLabel)?.add(pdf.id);
       });
     });
 
     // Convert to the Label[] format with counts
-    const result = Array.from(labelDocuments.entries())
+    return Array.from(labelDocuments.entries())
       .map(([label, documentIds]) => ({
         label,
-        count: documentIds.size, // Count of unique documents with this label
+        count: documentIds.size,
       }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-
-    return result;
-  }, [pdfs]);
+  }, [filteredPdfs]);
 
   const handleLabelClick = (label: string) => {
     // Check if already selected
@@ -105,10 +113,10 @@ export function DocumentLabels() {
               onClick={() => handleLabelClick(label.label)}
               className={cn(
                 "w-full flex justify-between items-center px-2 py-1 rounded-md text-sm",
-                "transition-colors hover:bg-muted",
+                "transition-colors hover:bg-stone-200",
                 metadataFilter.type === "label" &&
                   metadataFilter.value === label.label
-                  ? "bg-muted font-medium"
+                  ? "bg-stone-200 font-medium"
                   : ""
               )}
             >

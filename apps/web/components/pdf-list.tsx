@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
@@ -8,7 +8,13 @@ import { FileIcon, SearchIcon, SortAscIcon, MenuIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAtomValue } from "jotai";
-import { usePdfs, searchQueryAtom, metadataFilterAtom } from "@/lib/store";
+import {
+  usePdfs,
+  searchQueryAtom,
+  metadataFilterAtom,
+  searchResultsAtom,
+  getFilteredPdfs,
+} from "@/lib/store";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { PdfListItem } from "./pdf-list-item";
@@ -16,6 +22,7 @@ import { PdfListItem } from "./pdf-list-item";
 export function PdfList() {
   const { pdfs, isLoading: loading, error, refetch: fetchPdfs } = usePdfs();
   const searchQuery = useAtomValue(searchQueryAtom);
+  const searchResults = useAtomValue(searchResultsAtom);
   const metadataFilter = useAtomValue(metadataFilterAtom);
   const { toast } = useToast();
   const router = useRouter();
@@ -64,69 +71,25 @@ export function PdfList() {
     }
   };
 
-  // Sort PDFs by date (newest first)
-  const sortedPdfs = [...pdfs].sort((a, b) => {
-    // Use primary date from metadata if available, otherwise use uploadedAt
-    // const dateA = (a as any).metadata?.primaryDate || a.uploadedAt;
-    // const dateB = (b as any).metadata?.primaryDate || b.uploadedAt;
+  // Get filtered PDFs based on all active filters
+  const filteredPdfs = useMemo(() => {
+    // First apply all filters
+    const filtered = getFilteredPdfs(
+      pdfs,
+      searchQuery,
+      searchResults,
+      metadataFilter
+    );
 
-    const dateA = a.uploadedAt;
-    const dateB = b.uploadedAt;
-
-    // Convert to Date objects for comparison
-    const dateObjA = new Date(dateA);
-    const dateObjB = new Date(dateB);
-
-    // Sort newest first (descending order)
-    return dateObjB.getTime() - dateObjA.getTime();
-  });
-
-  // Filter PDFs based on both search query and metadata filter
-  const filteredPdfs = sortedPdfs.filter((pdf) => {
-    // First apply text search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        pdf.title?.toLowerCase().includes(query) ||
-        false ||
-        pdf.name.toLowerCase().includes(query) ||
-        pdf.description?.toLowerCase().includes(query) ||
-        false ||
-        // Also search in metadata
-        (pdf as any).metadata?.descriptiveTitle
-          ?.toLowerCase()
-          .includes(query) ||
-        false ||
-        (pdf as any).metadata?.labels?.some((label: string) =>
-          label.toLowerCase().includes(query)
-        ) ||
-        false;
-
-      if (!matchesSearch) return false;
-    }
-
-    // Then apply metadata filter if active
-    if (metadataFilter.type && metadataFilter.value) {
-      const metadata = (pdf as any).metadata;
-
-      if (metadataFilter.type === "label") {
-        // Check if the PDF has this label
-        return (
-          metadata?.labels &&
-          Array.isArray(metadata.labels) &&
-          metadata.labels.includes(metadataFilter.value)
-        );
-      }
-
-      if (metadataFilter.type === "company") {
-        // Check if the PDF is from this company
-        return metadata?.issuingOrganization === metadataFilter.value;
-      }
-    }
-
-    // If no metadata filter or it passed the filter
-    return true;
-  });
+    // Then sort by date
+    return [...filtered].sort((a, b) => {
+      const dateA = a.uploadedAt;
+      const dateB = b.uploadedAt;
+      const dateObjA = new Date(dateA);
+      const dateObjB = new Date(dateB);
+      return dateObjB.getTime() - dateObjA.getTime();
+    });
+  }, [pdfs, searchQuery, searchResults, metadataFilter]);
 
   // Row renderer for react-window
   const Row = ({

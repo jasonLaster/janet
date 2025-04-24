@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
-import { usePdfs, metadataFilterAtom } from "@/lib/store";
+import {
+  usePdfs,
+  metadataFilterAtom,
+  searchQueryAtom,
+  searchResultsAtom,
+  getFilteredPdfs,
+} from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
 interface Company {
@@ -14,17 +20,30 @@ interface Company {
 
 export function DocumentCompanies() {
   const { pdfs } = usePdfs();
+  const searchQuery = useAtomValue(searchQueryAtom);
+  const searchResults = useAtomValue(searchResultsAtom);
   const metadataFilter = useAtomValue(metadataFilterAtom);
   const setMetadataFilter = useSetAtom(metadataFilterAtom);
   const [showAll, setShowAll] = useState(false);
 
-  // Extract and count companies from PDF metadata
+  // Get filtered PDFs based on current filters
+  const filteredPdfs = useMemo(
+    () =>
+      getFilteredPdfs(pdfs, searchQuery, searchResults, {
+        ...metadataFilter,
+        type: metadataFilter.type === "company" ? null : metadataFilter.type,
+        value: metadataFilter.type === "company" ? null : metadataFilter.value,
+      }),
+    [pdfs, searchQuery, searchResults, metadataFilter]
+  );
+
+  // Extract and count companies from filtered PDF metadata
   const companies = useMemo(() => {
     // Create a frequency map for each company
     const companyDocuments = new Map<string, Set<number>>();
 
     // Process each PDF
-    pdfs.forEach((pdf) => {
+    filteredPdfs.forEach((pdf) => {
       const metadata = (pdf as any).metadata;
       // Skip if no metadata or issuing organization
       if (!metadata?.issuingOrganization) return;
@@ -48,7 +67,7 @@ export function DocumentCompanies() {
         count: documentIds.size,
       }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  }, [pdfs]);
+  }, [filteredPdfs]);
 
   const handleCompanyClick = (company: string) => {
     // Check if already selected
@@ -92,10 +111,10 @@ export function DocumentCompanies() {
               onClick={() => handleCompanyClick(company.name)}
               className={cn(
                 "w-full flex justify-between items-center px-2 py-1 rounded-md text-sm",
-                "transition-colors hover:bg-muted",
+                "transition-colors hover:bg-stone-200",
                 metadataFilter.type === "company" &&
                   metadataFilter.value === company.name
-                  ? "bg-muted font-medium"
+                  ? "bg-stone-200 font-medium"
                   : ""
               )}
             >

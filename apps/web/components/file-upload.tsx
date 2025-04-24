@@ -181,10 +181,8 @@ export function FileUpload({
         }}
       >
         <div
-          className={`text-stone-600 rounded-lg py-1 px-1 flex items-center justify-center gap-2 transition-colors cursor-pointer h-6 w-6 text-lg  border-[1.5px] ${
-            isDragging
-              ? "border-stone-600 text-stone-600"
-              : "border-stone-600 hover:border-stone-700 hover:text-stone-700"
+          className={`rounded-lg py-1 px-1 flex items-center justify-center gap-2 transition-colors cursor-pointer h-6 w-6 text-lg text-white  ${
+            isDragging ? "bg-slate-500 " : "bg-slate-400  hover:bg-slate-500  "
           }`}
         >
           <UploadCloudIcon className="h-3 w-3 stroke-[3]" />
