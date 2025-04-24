@@ -66,13 +66,15 @@ export async function getAllPdfs(
 
   let query;
   if (organizationId) {
+    console.log("Getting PDFs for organization ID: ", organizationId);
     // If organizationId is provided, filter by it
     query = sql`
       SELECT * FROM pdfs 
-      WHERE user_id = ${userId} AND organization_id = ${organizationId}
+      WHERE organization_id = ${organizationId}
       ORDER BY uploaded_at DESC
     `;
   } else {
+    console.log("Getting PDFs for user ID: ", userId);
     // If organizationId is null or undefined, filter for personal PDFs (organization_id is NULL)
     query = sql`
       SELECT * FROM pdfs 
@@ -82,9 +84,8 @@ export async function getAllPdfs(
   }
 
   const result = await query;
-  console.log(
-    `Query result for user ${userId}, Org ID: ${organizationId}: ${result.length} rows` // Use result.length for Neon
-  );
+  console.log("Number of PDFs: ", result.length);
+
   return result as PDF[];
 }
 
