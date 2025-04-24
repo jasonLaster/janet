@@ -22,8 +22,8 @@ export async function GET() {
       size: pdf.size_bytes,
       uploadedAt: pdf.uploaded_at,
       url: pdf.blob_url,
-      title: pdf.title || pdf.filename,
-      description: pdf.description || "",
+      title: pdf.metadata?.title || pdf.title || pdf.filename,
+      description: pdf.metadata?.summary || pdf.description || "",
       pageCount: pdf.page_count || 0,
       metadata: pdf.metadata || null,
     }));

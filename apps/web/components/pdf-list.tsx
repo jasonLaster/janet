@@ -111,7 +111,7 @@ export function PdfList() {
   };
 
   // Calculate item size (height)
-  const ITEM_HEIGHT = 60; // Updated to match actual item height
+  const ITEM_HEIGHT = 40; // Updated to match actual item height
 
   if (loading) {
     return (
@@ -194,7 +194,7 @@ export function PdfList() {
     >
       <div className="flex-1 flex flex-col border-b overflow-hidden">
         {/* Header */}
-        <div className="flex items-center p-3 font-medium text-sm bg-background z-10 shadow-sm border-b">
+        <div className="flex items-center p-3 font-medium text-sm bg-background z-10 border-b">
           <div className="flex-1">
             <div className="flex items-center gap-1">Document</div>
           </div>
