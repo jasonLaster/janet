@@ -9,24 +9,43 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSetAtom } from "jotai";
+import { metadataFilterAtom } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 interface DocumentMetadataProps {
   metadata: any;
+  isListView?: boolean;
 }
 
-export function DocumentMetadata({ metadata }: DocumentMetadataProps) {
+export function DocumentMetadata({
+  metadata,
+  isListView = false,
+}: DocumentMetadataProps) {
   // Calculate visible labels dynamically, default is 3 but fewer if organization exists
   const maxVisibleLabels = metadata.issuingOrganization ? 2 : 3;
   const labels = metadata.labels || [];
   const visibleLabels = labels.slice(0, maxVisibleLabels);
   const hiddenCount = Math.max(0, labels.length - maxVisibleLabels);
+  const setMetadataFilter = useSetAtom(metadataFilterAtom);
+
+  const handleBadgeClick =
+    (type: "company" | "label", value: string) => (e: React.MouseEvent) => {
+      if (!isListView) return;
+      e.preventDefault(); // Prevent link navigation when clicking badge
+      setMetadataFilter({ type, value });
+    };
 
   return (
     <div className="flex flex-nowrap overflow-hidden ml-2 max-w-full">
       {metadata.issuingOrganization && (
         <Badge
           variant="secondary"
-          className="text-xs px-1.5 py-0.5 shrink-0 truncate"
+          className={cn(
+            "text-xs px-1.5 py-0.5 shrink-0 truncate",
+            isListView && "cursor-pointer hover:bg-secondary/80"
+          )}
+          onClick={handleBadgeClick("company", metadata.issuingOrganization)}
         >
           <Building className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
           <span className="truncate">{metadata.issuingOrganization}</span>
@@ -37,7 +56,11 @@ export function DocumentMetadata({ metadata }: DocumentMetadataProps) {
           <Badge
             key={index}
             variant="secondary"
-            className="text-xs px-1.5 py-0.5 ml-1 shrink-0 truncate"
+            className={cn(
+              "text-xs px-1.5 py-0.5 ml-1 shrink-0 truncate",
+              isListView && "cursor-pointer hover:bg-secondary/80"
+            )}
+            onClick={handleBadgeClick("label", label)}
           >
             <Tag className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
             <span className="truncate">{label}</span>
@@ -60,7 +83,15 @@ export function DocumentMetadata({ metadata }: DocumentMetadataProps) {
                     <Badge
                       key={index}
                       variant="secondary"
-                      className="text-xs px-1.5 py-0.5 justify-start w-full"
+                      className={cn(
+                        "text-xs px-1.5 py-0.5 justify-start w-full",
+                        isListView && "cursor-pointer hover:bg-secondary/80"
+                      )}
+                      onClick={
+                        isListView
+                          ? handleBadgeClick("label", label)
+                          : undefined
+                      }
                     >
                       <Tag className="h-3 w-3 mr-1 opacity-70" />
                       {label}

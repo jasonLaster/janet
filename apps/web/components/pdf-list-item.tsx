@@ -146,7 +146,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                   {displayTitle}
                 </div>
                 <div className="overflow-hidden flex-shrink min-w-0">
-                  <DocumentMetadata metadata={metadata} />
+                  <DocumentMetadata metadata={metadata} isListView={true} />
                 </div>
               </div>
             </div>
