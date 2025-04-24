@@ -17,8 +17,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PDF } from "@/lib/store";
 import { DocumentMetadata } from "@/components/document-metadata";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import ReactMarkdown from "react-markdown";
+
+const TOOLTIP_WIDTH = 384; // max-w-sm = 24rem = 384px
 
 interface PdfListItemProps {
   pdf: PDF;
@@ -30,7 +34,9 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const router = useRouter();
   const metadata = (pdf as any).metadata || {};
   const [mouseX, setMouseX] = useState<number | null>(null);
+  const [rowBottom, setRowBottom] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<number | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
@@ -68,10 +74,48 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const handleMouseMove = (e: React.MouseEvent) => {
     if (rowRef.current) {
       const rect = rowRef.current.getBoundingClientRect();
-      // Calculate mouse position relative to the row's left edge
-      const relativeX = e.clientX - rect.left;
-      setMouseX(relativeX);
+      setMouseX(e.clientX);
+      setRowBottom(rect.bottom);
+
+      // Calculate absolute position for tooltip
+      const halfTooltip = TOOLTIP_WIDTH / 2;
+      const viewportWidth = window.innerWidth;
+
+      // Only hide tooltip if it would extend beyond right viewport edge
+      if (e.clientX + halfTooltip > viewportWidth) {
+        setTooltipPosition(null);
+      } else {
+        // Center the tooltip on the mouse
+        setTooltipPosition(e.clientX);
+      }
     }
+  };
+
+  const renderTooltip = () => {
+    if (
+      !isHovering ||
+      !metadata.summary ||
+      mouseX === null ||
+      rowBottom === null ||
+      tooltipPosition === null
+    ) {
+      return null;
+    }
+
+    return createPortal(
+      <div
+        className="fixed w-96 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md transition-opacity duration-200"
+        style={{
+          left: tooltipPosition,
+          top: rowBottom + 8, // Small gap between row and tooltip
+          transform: "translateX(-50%)",
+          opacity: isHovering ? 1 : 0,
+        }}
+      >
+        <ReactMarkdown>{metadata.summary}</ReactMarkdown>
+      </div>,
+      document.body
+    );
   };
 
   return (
@@ -85,6 +129,8 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
       onMouseLeave={() => {
         setIsHovering(false);
         setMouseX(null);
+        setRowBottom(null);
+        setTooltipPosition(null);
       }}
     >
       <div className="flex-1 min-w-0">
@@ -142,20 +188,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
         </DropdownMenu>
       </div>
 
-      {isHovering && metadata.summary && mouseX !== null && (
-        <div
-          className="absolute z-50 max-w-sm rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md transition-opacity duration-200"
-          style={{
-            left: mouseX,
-            top: "100%",
-            marginTop: "0.5rem",
-            transform: "translateX(-50%)",
-            opacity: isHovering ? 1 : 0,
-          }}
-        >
-          <p className="text-sm">{metadata.summary}</p>
-        </div>
-      )}
+      {renderTooltip()}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
+import ReactMarkdown from "react-markdown";
 
 // Define a type for PDF metadata
 interface PdfMetadata {
@@ -37,7 +38,9 @@ function PdfInfoPanelItem({
   return (
     <div className="flex flex-col mt-4">
       <dt className="text-gray-500 mb-1">{label}</dt>
-      <dd>{value}</dd>
+      <dd>
+        <ReactMarkdown>{value}</ReactMarkdown>
+      </dd>
     </div>
   );
 }
@@ -63,11 +66,7 @@ export function PdfInfoPanel({
         )}
 
         <dl className="space-y-2 text-sm">
-          <div>
-            <dt className="text-gray-500 mb-2">Summary</dt>
-            <dd>{enhancedMetadata?.summary}</dd>
-          </div>
-
+          <PdfInfoPanelItem label="Summary" value={enhancedMetadata?.summary} />
           <PdfInfoPanelItem label="Author" value={pdfMetadata.author || ""} />
           <PdfInfoPanelItem label="Subject" value={pdfMetadata.subject || ""} />
 
