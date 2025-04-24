@@ -15,6 +15,7 @@ export interface PDF {
   page_count?: number;
   uploaded_at: string;
   metadata?: any; // Add metadata field to PDF interface
+  text?: string; // Add text field to PDF interface
 }
 
 // Create a SQL client with the pooled connection
@@ -22,36 +23,26 @@ export const sql = neon(process.env.DATABASE_URL!);
 
 // Helper function to get a PDF by ID, checking ownership and organization context
 export async function getPdfById(id: number): Promise<PDF | null> {
-  const { userId, orgId } = await auth();
-
-  console.log(
-    `Executing database query for PDF ID: ${id}, User ID: ${userId}, Org ID: ${orgId}`
-  );
-
-  let query;
-  if (orgId) {
-    // If orgId is provided, check user and organization
-    query = sql`
-      SELECT * FROM pdfs 
-      WHERE id = ${id} AND user_id = ${userId} AND organization_id = ${orgId}
-    `;
-  } else if (userId) {
-    // If orgId is null, check user and that organization_id IS NULL (personal workspace)
-    query = sql`
-      SELECT * FROM pdfs 
-      WHERE id = ${id} AND user_id = ${userId} AND organization_id IS NULL
-    `;
-  } else {
-    query = sql`
-    SELECT * FROM pdfs 
+  const query = sql`
+    SELECT 
+      id,
+      filename,
+      blob_url,
+      original_blob_url,
+      size_bytes,
+      user_id,
+      organization_id,
+      title,
+      description,
+      page_count,
+      uploaded_at,
+      metadata,
+     FROM pdfs 
     WHERE id = ${id}
     `;
-  }
 
   const result = await query;
-  console.log(
-    `Query result for PDF ID ${id}, user ${userId}, Org ID: ${orgId}: ${result.length} row(s)`
-  );
+  console.log(`Query result for PDF ID ${id}: ${result.length} row(s)`);
   return result[0] as PDF | null;
 }
 
@@ -69,7 +60,20 @@ export async function getAllPdfs(
     console.log("Getting PDFs for organization ID: ", organizationId);
     // If organizationId is provided, filter by it
     query = sql`
-      SELECT * FROM pdfs 
+      SELECT       
+        id,
+        filename,
+        blob_url,
+        original_blob_url,
+        size_bytes,
+        user_id,
+        organization_id,
+        title,
+        description,
+        page_count,
+        uploaded_at,
+        metadata
+      FROM pdfs 
       WHERE organization_id = ${organizationId}
       ORDER BY uploaded_at DESC
     `;
@@ -77,7 +81,20 @@ export async function getAllPdfs(
     console.log("Getting PDFs for user ID: ", userId);
     // If organizationId is null or undefined, filter for personal PDFs (organization_id is NULL)
     query = sql`
-      SELECT * FROM pdfs 
+      SELECT 
+        id,
+        filename,
+        blob_url,
+        original_blob_url,
+        size_bytes,
+        user_id,
+        organization_id,
+        title,
+        description,
+        page_count,
+        uploaded_at,
+        metadata
+      FROM pdfs 
       WHERE user_id = ${userId} AND organization_id IS NULL
       ORDER BY uploaded_at DESC
     `;
@@ -177,3 +194,5 @@ export async function updatePdfEnhancedMetadata(
     return null;
   }
 }
+
+// Function to update PDF text content

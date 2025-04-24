@@ -15,6 +15,7 @@ export interface PDF {
   page_count?: number;
   uploaded_at: string;
   metadata?: any;
+  text?: string;
 }
 
 dotenv.config({ path: ".env.local" });

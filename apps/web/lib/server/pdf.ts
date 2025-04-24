@@ -1,6 +1,7 @@
 import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
-import { updatePdfEnhancedMetadata } from "@/lib/db";
+import { getPdfById, updatePdfEnhancedMetadata } from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
+import pdfParse from "pdf-parse";
 
 function parseOrExtractJson(responseText: string): any {
   const trimmedResponse = responseText.trim();
@@ -83,4 +84,48 @@ export async function ocrPdf(pdfId: number): Promise<{ data: any }> {
   const result = await ocrResponse.json();
 
   return { data: result };
+}
+
+export async function getPdfText(
+  pdfId: number
+): Promise<{ text?: string; error?: string }> {
+  const pdfRecord = await getPdfById(pdfId);
+
+  if (!pdfRecord) {
+    console.error(`PDF record not found for ID: ${pdfId}`);
+    return { error: "PDF record not found" };
+  }
+
+  if (pdfRecord.text) {
+    return { error: "PDF text already exists" };
+  }
+
+  const urlToFetch = pdfRecord.original_blob_url || pdfRecord.blob_url;
+
+  if (!urlToFetch) {
+    console.error(
+      `PDF record found, but blob_url/original_blob_url is missing for ID: ${pdfId}`
+    );
+    return { error: "Blob URL is missing" };
+  }
+
+  console.log(`Downloading PDF from: ${urlToFetch}`);
+  // Removed @ts-ignore - let TypeScript check compatibility
+  const response = await fetch(urlToFetch);
+
+  if (!response.ok) {
+    console.error(
+      `Failed to download PDF. Status: ${response.status} ${response.statusText}`
+    );
+    return { error: "Failed to download PDF" };
+  }
+
+  // Removed @ts-ignore - let TypeScript check compatibility
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const parsedPdf = await pdfParse(buffer);
+  const text = parsedPdf.text;
+
+  return { text };
 }
