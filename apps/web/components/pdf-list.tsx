@@ -67,8 +67,11 @@ export function PdfList() {
   // Sort PDFs by date (newest first)
   const sortedPdfs = [...pdfs].sort((a, b) => {
     // Use primary date from metadata if available, otherwise use uploadedAt
-    const dateA = (a as any).metadata?.primaryDate || a.uploadedAt;
-    const dateB = (b as any).metadata?.primaryDate || b.uploadedAt;
+    // const dateA = (a as any).metadata?.primaryDate || a.uploadedAt;
+    // const dateB = (b as any).metadata?.primaryDate || b.uploadedAt;
+
+    const dateA = a.uploadedAt;
+    const dateB = b.uploadedAt;
 
     // Convert to Date objects for comparison
     const dateObjA = new Date(dateA);
@@ -230,14 +233,12 @@ export function PdfList() {
         {/* Header */}
         <div className="flex items-center p-3 font-medium text-sm bg-background z-10 shadow-sm border-b">
           <div className="flex-1">
-            <div className="flex items-center gap-1">
-              Document <SortAscIcon className="h-3 w-3 ml-1" />
-            </div>
+            <div className="flex items-center gap-1">Document</div>
           </div>
-          <div className="w-28 text-right flex items-center justify-end">
-            Date
+          <div className="w-32 text-right flex items-center justify-end">
+            Uploaded Date <SortAscIcon className="h-3 w-3 ml-1" />
           </div>
-          <div className="w-12 flex justify-center">
+          <div className="w-12 mr-[15px] flex justify-center">
             <MenuIcon className="h-3 w-3 text-muted-foreground" />
           </div>
         </div>

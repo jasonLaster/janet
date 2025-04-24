@@ -59,8 +59,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   // Use descriptive title from metadata if available, otherwise fallback to title or filename
   const displayTitle = metadata.descriptiveTitle || pdf.title || pdf.name;
   // Use primary date from metadata if available, otherwise use uploaded date
-  const displayDate =
-    formatDate(metadata.primaryDate) || formatDate(pdf.uploadedAt) || "";
+  const displayDate = formatDate(pdf.uploadedAt) || "";
 
   return (
     <div
