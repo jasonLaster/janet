@@ -30,6 +30,14 @@ export interface PdfViewerContentProps {
   isCached?: boolean;
   loading?: boolean;
   handleDownload?: () => void;
+  searchText?: string;
+  onSearchResultsChange?: (total: number) => void;
+  onCurrentMatchChange?: (current: number) => void;
+}
+
+interface SearchMatch {
+  pageNumber: number;
+  element: HTMLElement;
 }
 
 export function PdfViewerContent({
@@ -49,7 +57,14 @@ export function PdfViewerContent({
   isCached,
   loading,
   handleDownload,
+  searchText = "",
+  onSearchResultsChange,
+  onCurrentMatchChange,
 }: PdfViewerContentProps) {
+  const [searchMatches, setSearchMatches] = useState<SearchMatch[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+  const previousSearchText = useRef(searchText);
+
   // Using cached URL if available, otherwise falling back to the direct URL
   const documentSource = cachedDocumentUrl || pdfUrl;
   const hasValidSource =
@@ -78,6 +93,121 @@ export function PdfViewerContent({
       setAllPagesLoaded(true);
     }
   };
+
+  // Function to highlight matches in a text layer
+  const highlightMatches = (pageNumber: number) => {
+    const textLayer = document.querySelector(
+      `#page-${pageNumber} .react-pdf__Page__textContent`
+    );
+    if (!textLayer || !searchText) return [];
+
+    // Remove existing highlights
+    const existingHighlights = textLayer.querySelectorAll(".search-highlight");
+    existingHighlights.forEach((el) => {
+      if (el.parentElement) {
+        el.replaceWith(el.textContent || "");
+      }
+    });
+
+    if (!searchText.trim()) return [];
+
+    const matches: SearchMatch[] = [];
+    const spans = textLayer.querySelectorAll('span[role="presentation"]');
+
+    spans.forEach((span) => {
+      const text = span.textContent || "";
+      if (!text.toLowerCase().includes(searchText.toLowerCase())) return;
+
+      const regex = new RegExp(
+        searchText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        "gi"
+      );
+      let match;
+      let lastIndex = 0;
+      let newHtml = "";
+
+      while ((match = regex.exec(text)) !== null) {
+        newHtml += text.slice(lastIndex, match.index);
+        newHtml += `<mark class="search-highlight bg-yellow-200">${match[0]}</mark>`;
+        lastIndex = regex.lastIndex;
+      }
+      newHtml += text.slice(lastIndex);
+
+      span.innerHTML = newHtml;
+
+      const highlights = span.querySelectorAll(".search-highlight");
+      highlights.forEach((highlight) => {
+        matches.push({
+          pageNumber,
+          element: highlight as HTMLElement,
+        });
+      });
+    });
+
+    return matches;
+  };
+
+  // Update search results when text changes or pages load
+  useEffect(() => {
+    if (searchText !== previousSearchText.current || allPagesLoaded) {
+      previousSearchText.current = searchText;
+      const allMatches: SearchMatch[] = [];
+
+      for (let i = 1; i <= numPages; i++) {
+        const pageMatches = highlightMatches(i);
+        allMatches.push(...pageMatches);
+      }
+
+      setSearchMatches(allMatches);
+      setCurrentMatchIndex(-1);
+      onSearchResultsChange?.(allMatches.length);
+      onCurrentMatchChange?.(-1);
+    }
+  }, [searchText, numPages, allPagesLoaded]);
+
+  // Navigate to next/previous match
+  useEffect(() => {
+    if (currentMatchIndex >= 0 && searchMatches.length > 0) {
+      const match = searchMatches[currentMatchIndex];
+      match.element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      // Add visual indicator for current match
+      searchMatches.forEach((m, i) => {
+        m.element.classList.toggle("ring-2", i === currentMatchIndex);
+        m.element.classList.toggle("ring-blue-500", i === currentMatchIndex);
+      });
+
+      onCurrentMatchChange?.(currentMatchIndex);
+    }
+  }, [currentMatchIndex, searchMatches]);
+
+  // Expose search navigation methods
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (searchMatches.length === 0) return;
+
+        if (e.shiftKey) {
+          // Previous match
+          setCurrentMatchIndex((prev) =>
+            prev <= 0 ? searchMatches.length - 1 : prev - 1
+          );
+        } else {
+          // Next match
+          setCurrentMatchIndex((prev) =>
+            prev >= searchMatches.length - 1 ? 0 : prev + 1
+          );
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [searchMatches.length]);
 
   if (!hasValidSource) {
     return (
@@ -135,20 +265,7 @@ export function PdfViewerContent({
                 width={pageWidth}
                 loading={null}
                 onLoadError={() => {}}
-                onLoadSuccess={() => {}}
-                renderTextLayer={showTextLayer}
-                renderAnnotationLayer={showTextLayer}
-                customTextRenderer={({
-                  str,
-                  itemIndex,
-                }: {
-                  str: string;
-                  itemIndex: number;
-                }) => {
-                  return str;
-                }}
-                className="pdf-page shadow-md mx-auto bg-stone-50!"
-                onRenderSuccess={() => {
+                onLoadSuccess={() => {
                   handlePageLoadSuccess(pageNum);
                   if (
                     isManualPageChange &&
@@ -164,6 +281,18 @@ export function PdfViewerContent({
                     }
                   }
                 }}
+                renderTextLayer={showTextLayer}
+                renderAnnotationLayer={showTextLayer}
+                customTextRenderer={({
+                  str,
+                  itemIndex,
+                }: {
+                  str: string;
+                  itemIndex: number;
+                }) => {
+                  return str;
+                }}
+                className="pdf-page shadow-md mx-auto bg-stone-50!"
               />
             </div>
           ))}

@@ -92,6 +92,8 @@ export function PdfViewer({
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const [searchText, setSearchText] = useState<string>("");
+  const [searchResultCount, setSearchResultCount] = useState(0);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("info");
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>({});
@@ -447,17 +449,8 @@ export function PdfViewer({
   // Prefetch helper function that can be used on the server
   const prefetchMetadata = useCallback(() => {
     if (pdfUrl && pdfId && !existingMetadata) {
-      preload(
-        ["/api/metadata", { pdfUrl, pdfId }],
-        ([url, params]) => metadataFetcher(url, params),
-        {
-          revalidateOnFocus: false,
-          revalidateIfStale: false,
-          dedupingInterval: 60000, // 1 minute
-          errorRetryCount: 3,
-          errorRetryInterval: 1000,
-          shouldRetryOnError: true,
-        }
+      preload(["/api/metadata", { pdfUrl, pdfId }], ([url, params]) =>
+        metadataFetcher(url, params)
       );
     }
   }, [pdfUrl, pdfId, existingMetadata, metadataFetcher]);
@@ -561,6 +554,19 @@ export function PdfViewer({
     fetchAndCachePDF();
   }, [pdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
 
+  // Handle search navigation
+  const handleNextMatch = () => {
+    setCurrentMatchIndex((prev) =>
+      prev >= searchResultCount - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handlePreviousMatch = () => {
+    setCurrentMatchIndex((prev) =>
+      prev <= 0 ? searchResultCount - 1 : prev - 1
+    );
+  };
+
   // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
     return (
@@ -614,6 +620,10 @@ export function PdfViewer({
         showSidebar={showSidebar}
         showTextLayer={showTextLayer}
         scale={scale}
+        searchResultCount={searchResultCount}
+        currentMatchIndex={currentMatchIndex}
+        onNextMatch={handleNextMatch}
+        onPreviousMatch={handlePreviousMatch}
       />
 
       {/* Main content */}
@@ -694,6 +704,9 @@ export function PdfViewer({
                     isCached={isCached}
                     loading={isLoading}
                     handleDownload={handleDownload}
+                    searchText={searchText}
+                    onSearchResultsChange={setSearchResultCount}
+                    onCurrentMatchChange={setCurrentMatchIndex}
                   />
 
                   {pdfId && documentLoaded && (
