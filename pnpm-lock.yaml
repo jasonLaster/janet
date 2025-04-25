@@ -25,6 +25,9 @@ importers:
       '@react-pdf-viewer/thumbnail':
         specifier: 3.12.0
         version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@react-pdf-viewer/toolbar':
+        specifier: 3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@types/image-size':
         specifier: ^0.8.0
         version: 0.8.0

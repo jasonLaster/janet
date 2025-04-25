@@ -2,11 +2,16 @@
 
 PDF OCR is an app that lets users upload PDFs and view them as they would in Google Drive or Apple Preview.
 
-## Today
+## Roadmap 2.0
 
-- [ ] PDF Search
-- [ ] Group by date
-- [ ] Sheet view
+- [ ] MVP
+  - [ ] Secure and shareable URLs
+  - [ ] In PDF search
+- [ ] Nice to haves
+  - [ ] PDFs show up as a sheet on the right
+  - [ ] Rows are grouped by date
+  - [ ] Everything is faster
+  - [ ] Revisit search so that it is closer to Notion Mail
 
 ## Roadmap
 
@@ -39,24 +44,22 @@ PDF OCR is an app that lets users upload PDFs and view them as they would in Goo
   - [x] clickable labels
   - [ ] Drag and drop should support multiple docs
   - [ ] Progress circle for uploads
-- [ ] Document metadata
+- [x] Document metadata
 
   - [x] Get the metadata for a document
   - [x] Store it in a normalized state in the db
   - [x] Show the metadata in the sidebar
 
-- [ ] PDF features
-
+- [x] PDF features
   - [x] Improve the OCR for text layers
   - [x] Improve text selection so that it's similar to Apple Preview
-
-- [ ] LRU Cache
-- [ ] Use SWR
-- [ ] Full text search
-- [ ] Mistral OCR
-- [ ] Neon Text search
-- [ ] make tags clickable
-- [ ] drag and drop multiple docs
+- [x] LRU Cache
+- [x] Use SWR
+- [x] Full text search
+- [x] Mistral OCR
+- [x] Neon Text search
+- [x] make tags clickable
+- [] drag and drop multiple docs
 
 ## Features
 

@@ -5,58 +5,66 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export interface PdfPageNavigationProps {
+interface PdfPageNavigationProps {
   currentPage: number;
   numPages: number;
-  changePage: (offset: number) => void;
+  // Function to go to a specific page (1-indexed)
   goToPage: (page: number) => void;
+  // Optional: Function to change page by offset (+1 or -1)
+  // If not provided, we'll calculate based on goToPage
+  changePage?: (offset: number) => void;
 }
 
 export function PdfPageNavigation({
   currentPage,
   numPages,
-  changePage,
   goToPage,
+  changePage, // Destructure optional prop
 }: PdfPageNavigationProps) {
+  const handlePrevious = () => {
+    if (changePage) {
+      changePage(-1);
+    } else if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (changePage) {
+      changePage(1);
+    } else if (currentPage < numPages) {
+      goToPage(currentPage + 1);
+    }
+  };
+
+  if (numPages <= 0) {
+    return null; // Don't render if no pages
+  }
+
   return (
-    <div className="p-2 border-t border-gray-200 bg-gray-100 flex items-center justify-between">
+    <div className="flex items-center justify-between p-2 border-t bg-background text-sm text-muted-foreground sticky bottom-0 z-10">
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
-        onClick={() => changePage(-1)}
+        onClick={handlePrevious}
         disabled={currentPage <= 1}
-        className="h-8 w-8"
+        className="h-7 w-7"
       >
         <ChevronLeft className="h-4 w-4" />
-        <span className="sr-only">Previous page</span>
+        <span className="sr-only">Previous Page</span>
       </Button>
-
-      <div className="flex items-center gap-1 text-sm">
-        <Input
-          type="number"
-          value={currentPage}
-          onChange={(e) => {
-            const page = Number.parseInt(e.target.value);
-            if (page >= 1 && page <= numPages) {
-              goToPage(page);
-            }
-          }}
-          className="w-12 h-8"
-          min={1}
-          max={numPages}
-        />
-        <span>/ {numPages}</span>
-      </div>
-
+      <span>
+        Page {currentPage} of {numPages}
+      </span>
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
-        onClick={() => changePage(1)}
+        onClick={handleNext}
         disabled={currentPage >= numPages}
-        className="h-8 w-8"
+        className="h-7 w-7"
       >
         <ChevronRight className="h-4 w-4" />
-        <span className="sr-only">Next page</span>
+        <span className="sr-only">Next Page</span>
       </Button>
     </div>
   );

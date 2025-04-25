@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 import { DocumentMetadata } from "../document-metadata";
+import debounce from "lodash/debounce";
 
 export interface PdfViewerHeaderProps {
   title: string;
@@ -37,6 +38,8 @@ export interface PdfViewerHeaderProps {
   scale: number;
 }
 
+const DEBOUNCE_DELAY = 500; // ms
+
 export function PdfViewerHeader({
   title,
   enhancedMetadata,
@@ -50,9 +53,16 @@ export function PdfViewerHeader({
   showTextLayer,
   scale,
 }: PdfViewerHeaderProps) {
+  const debouncedOnSearchChange = React.useCallback(
+    debounce((value: string) => {
+      onSearchChange(value);
+    }, DEBOUNCE_DELAY),
+    [onSearchChange]
+  );
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b bg-muted/20">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink min-w-0 mr-4">
         <Button
           variant="ghost"
           size="icon"
@@ -69,18 +79,17 @@ export function PdfViewerHeader({
       </div>
 
       <div className="flex items-center space-x-2">
-        {false && (
-          <>
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchText}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="h-8"
-            />
-          </>
-        )}
+        <div className="relative flex items-center">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search..."
+            defaultValue={searchText}
+            onChange={(e) => debouncedOnSearchChange(e.target.value)}
+            className="h-8 pl-8 w-48 md:w-64"
+          />
+        </div>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon">
@@ -89,14 +98,6 @@ export function PdfViewerHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onToggleTextLayer}>
-              <EyeOff
-                className={`h-4 w-4 mr-2 ${
-                  !showTextLayer ? "text-blue-500" : ""
-                }`}
-              />
-              {showTextLayer ? "Hide text layer" : "Show text layer"}
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={onZoomOut} disabled={scale <= 0.5}>
               <ZoomOut className="h-4 w-4 mr-2" />
               Zoom out
@@ -112,6 +113,14 @@ export function PdfViewerHeader({
             <DropdownMenuItem onClick={onDownload}>
               <Download className="h-4 w-4 mr-2" />
               Download
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onToggleTextLayer}>
+              <EyeOff
+                className={`h-4 w-4 mr-2 ${
+                  !showTextLayer ? "text-blue-500" : ""
+                }`}
+              />
+              {showTextLayer ? "Hide text layer" : "Show text layer"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -12,8 +12,13 @@ import {
   type DefaultLayoutPlugin,
   ThumbnailIcon,
 } from "@react-pdf-viewer/default-layout";
+import {
+  toolbarPlugin,
+  type ToolbarProps,
+  type ToolbarSlot,
+} from "@react-pdf-viewer/toolbar";
 import { searchPlugin, type SearchPlugin } from "@react-pdf-viewer/search";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
 import { FileText } from "lucide-react";
 
@@ -22,6 +27,9 @@ import {
   PdfInfoPanel,
   type PdfInfoPanelProps,
 } from "../pdf-viewer/pdf-info-panel";
+
+// Import the new page navigation
+import { PdfPageNavigation } from "../pdf-viewer/pdf-page-navigation";
 
 // Define the internal component to handle page rendering logic
 const PageRenderer: React.FC<RenderPageProps & { showTextLayer: boolean }> = ({
@@ -57,6 +65,7 @@ const PageRenderer: React.FC<RenderPageProps & { showTextLayer: boolean }> = ({
 interface ReactPdfViewerWrapperProps {
   pdfUrl: string;
   currentPage: number;
+  numPages: number;
   showTextLayer: boolean;
   scale: number;
   rotation: number;
@@ -74,6 +83,7 @@ interface ReactPdfViewerWrapperProps {
 export const ReactPdfViewerWrapper = ({
   pdfUrl,
   currentPage,
+  numPages,
   showTextLayer,
   scale,
   rotation,
@@ -87,27 +97,84 @@ export const ReactPdfViewerWrapper = ({
   isLoadingAiMetadata,
   metadataError,
 }: ReactPdfViewerWrapperProps) => {
-  // Use type assertion for plugins to help with ref typing later
-  const defaultLayout = defaultLayoutPlugin({
+  // Wrapper for onPageChange to ensure goToPage receives the correct type
+  const handleInternalPageChange = (event: PageChangeEvent) => {
+    const newPage = event.currentPage + 1; // Convert 0-indexed to 1-indexed
+    onPageChange?.(newPage);
+  };
+
+  // Ensure goToPage is available for PdfPageNavigation
+  const goToPageHandler = (page: number) => {
+    onPageChange?.(page);
+  };
+
+  // Custom toolbar rendering function - Define it before using it in the plugin config
+  const renderToolbar = (
+    Toolbar: (props: ToolbarProps) => React.ReactElement
+  ) => (
+    <Toolbar>
+      {(slots: ToolbarSlot) => {
+        // Add type to slots
+        const { EnterFullScreen } = slots;
+        return (
+          <div
+            style={{ display: "flex", alignItems: "center", padding: "4px" }}
+          >
+            <div style={{ marginLeft: "auto" }}>
+              {EnterFullScreen && <EnterFullScreen />}
+            </div>
+          </div>
+        );
+      }}
+    </Toolbar>
+  );
+
+  // Configure the default layout plugin WITH the custom toolbar
+  const defaultLayoutPluginInstance = defaultLayoutPlugin({
+    renderToolbar,
     // Configure sidebar tabs
-    sidebarTabs: (defaultTabs) => [
-      {
-        content: (
-          <PdfInfoPanel
-            pdfMetadata={pdfMetadata}
-            enhancedMetadata={enhancedMetadata}
-            isLoadingAiMetadata={isLoadingAiMetadata}
-            metadataError={metadataError}
-          />
-        ),
-        icon: <FileText className="h-4 w-4" />,
-        title: "Info",
-      },
-      defaultTabs[0], // Assuming the default thumbnail tab is the first one
-      // Add other default tabs if needed (like attachments, bookmarks)
-      // ...defaultTabs.slice(1),
-    ],
-  }) as DefaultLayoutPlugin;
+    sidebarTabs: (defaultTabs) => {
+      // Get the original Thumbnails component creator from the plugin instance
+      const thumbnailPluginInstance =
+        defaultLayoutPluginInstance.thumbnailPluginInstance;
+      const { Thumbnails } = thumbnailPluginInstance;
+
+      return [
+        {
+          content: (
+            <PdfInfoPanel
+              pdfMetadata={pdfMetadata}
+              enhancedMetadata={enhancedMetadata}
+              isLoadingAiMetadata={isLoadingAiMetadata}
+              metadataError={metadataError}
+            />
+          ),
+          icon: <FileText className="h-4 w-4" />,
+          title: "Info",
+        },
+        {
+          content: (
+            // Custom content wrapper for thumbnails + navigation
+            <div className="flex flex-col h-full">
+              <div className="flex-1 overflow-y-auto">
+                <Thumbnails />
+              </div>
+              <PdfPageNavigation
+                currentPage={currentPage}
+                numPages={numPages}
+                goToPage={goToPageHandler}
+              />
+            </div>
+          ),
+          icon: <ThumbnailIcon />,
+          title: "Pages",
+        },
+        // Add other default tabs if needed (like attachments, bookmarks)
+        // ...defaultTabs.slice(1),
+      ];
+    },
+  });
+
   const searchPluginInstance = searchPlugin();
   const { highlight, jumpToNextMatch, jumpToPreviousMatch } =
     searchPluginInstance;
@@ -165,12 +232,10 @@ export const ReactPdfViewerWrapper = ({
       >
         <Viewer
           fileUrl={pdfUrl}
-          plugins={[defaultLayout, searchPluginInstance]}
+          plugins={[defaultLayoutPluginInstance, searchPluginInstance]}
           initialPage={currentPage - 1} // Set initial page (0-indexed)
-          onPageChange={(e: PageChangeEvent) =>
-            onPageChange?.(e.currentPage + 1)
-          } // Convert back to 1-indexed
-          onDocumentLoad={onDocumentLoad} // Pass the callback directly
+          onPageChange={handleInternalPageChange} // Use wrapper
+          onDocumentLoad={onDocumentLoad} // Pass parent handler directly
           // Use the internal component for rendering, passing necessary props
           renderPage={(props: RenderPageProps) => (
             <PageRenderer {...props} showTextLayer={showTextLayer} />

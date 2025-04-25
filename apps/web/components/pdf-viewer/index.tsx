@@ -428,6 +428,7 @@ export function PdfViewer({
             <ReactPdfViewerWrapper
               pdfUrl={effectivePdfUrl}
               currentPage={currentPage}
+              numPages={numPages}
               scale={scale}
               rotation={rotation}
               showTextLayer={showTextLayer}
