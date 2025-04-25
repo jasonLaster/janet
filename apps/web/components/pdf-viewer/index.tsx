@@ -18,9 +18,11 @@ import { PdfViewerProps } from "./pdf-viewer-types";
 import { pdfjs } from "react-pdf";
 import { usePDFDocument } from "@/hooks/use-pdf-document";
 import { PDF_WORKER_URL } from "./constants";
+import { usePdfSearch } from "./hooks/use-pdf-search";
 
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+
 // Initialize the PDF.js worker
 if (typeof window !== "undefined") {
   pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
@@ -91,11 +93,90 @@ export function PdfViewer({
   const mainContentRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
-  const [searchText, setSearchText] = useState<string>("");
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("info");
 
   const resizablePanelGroupRef = useRef(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Add the search hook
+  const {
+    keyword: searchKeyword,
+    setKeyword: setSearchKeyword,
+    matches,
+    currentMatchIndex,
+    jumpToNextMatch,
+    jumpToPreviousMatch,
+    clearSearch,
+  } = usePdfSearch(mainContentRef, numPages);
+
+  // Calculate header height dynamically
+  const [headerHeight, setHeaderHeight] = useState<number>(0);
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderHeight(headerRef.current.offsetHeight);
+    }
+  }, [headerRef.current?.offsetHeight]); // Re-run if header height changes
+
+  // Add keyboard listener for Enter/Shift+Enter to the main container
+  useEffect(() => {
+    const mainEl = mainContentRef.current;
+    if (!mainEl) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if the event originates from the search input itself
+      // (handled by the input's onKeyDown)
+      if ((event.target as HTMLElement)?.closest("#pdf-search-input")) {
+        return;
+      }
+      // Ignore if modifier keys are pressed (except Shift for Shift+Enter)
+      if (event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        event.stopPropagation(); // Stop it bubbling further
+
+        if (event.shiftKey) {
+          console.log(
+            "[Keyboard] Shift+Enter pressed in container, going to previous match"
+          );
+          jumpToPreviousMatch(headerHeight);
+        } else {
+          console.log(
+            "[Keyboard] Enter pressed in container, going to next match"
+          );
+          jumpToNextMatch(headerHeight);
+        }
+      }
+    };
+
+    // Use capture phase to potentially intercept before other handlers if needed,
+    // but regular bubbling phase is likely fine here.
+    mainEl.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      mainEl.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mainContentRef, jumpToNextMatch, jumpToPreviousMatch, headerHeight]);
+
+  // Add global listener for Cmd/Ctrl+F to focus search input
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []); // Empty dependency array ensures this runs once on mount
 
   // Manual resize observer implementation
   useEffect(() => {
@@ -109,6 +190,13 @@ export function PdfViewer({
     window.addEventListener("resize", updateWidth);
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
+
+  // Re-run search if the document changes (e.g., cached doc loads later)
+  useEffect(() => {
+    if (documentLoaded) {
+      clearSearch();
+    }
+  }, [documentLoaded, clearSearch]);
 
   // Track visible page based on scroll position
   useEffect(() => {
@@ -193,34 +281,17 @@ export function PdfViewer({
 
         isProcessingScroll = false;
         scrollTimeoutRef.current = null;
-      }, 250); // Increased debounce time to reduce flickering
+      }, 150);
     };
 
-    const scrollContainer = mainContentRef.current.parentElement;
-    if (scrollContainer) {
-      scrollContainer.addEventListener("scroll", handleScroll);
-    }
-
-    // Initial check after a longer delay to ensure PDF has rendered completely
-    const initialCheckTimeout = setTimeout(() => {
-      // Only run initial check if not in manual page change mode
-      if (!isManualPageChange) {
-        handleScroll();
-      }
-    }, 800);
-
+    mainContentRef.current?.addEventListener("scroll", handleScroll);
     return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("scroll", handleScroll);
-      }
-      // Clean up timeouts
+      mainContentRef.current?.removeEventListener("scroll", handleScroll);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
-      clearTimeout(initialCheckTimeout);
-      isProcessingScroll = false;
     };
-  }, [mainContentRef, currentPage, numPages, isManualPageChange]);
+  }, [numPages, isManualPageChange]); // Removed currentPage dependency
 
   useEffect(() => {
     // Reset page number when PDF URL changes
@@ -446,21 +517,30 @@ export function PdfViewer({
       ref={setContainerRef}
       className="w-full h-full overflow-hidden flex flex-col"
     >
-      <PdfViewerHeader
-        title={pdfTitle}
-        searchText={searchText}
-        metadata={pdfMetadata}
-        onSearchChange={setSearchText}
-        onToggleSidebar={toggleSidebar}
-        onToggleTextLayer={toggleTextLayer}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onRotate={handleRotate}
-        onDownload={handleDownload}
-        showSidebar={showSidebar}
-        showTextLayer={showTextLayer}
-        scale={scale}
-      />
+      <div ref={headerRef}>
+        <PdfViewerHeader
+          title={pdfTitle}
+          pdfMetadata={pdfMetadata}
+          searchText={searchKeyword}
+          onSearchChange={setSearchKeyword}
+          onJumpToNextMatch={() => jumpToNextMatch(headerHeight)}
+          onJumpToPreviousMatch={() => jumpToPreviousMatch(headerHeight)}
+          numMatches={matches.length}
+          currentMatchIndex={currentMatchIndex}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onRotate={handleRotate}
+          onDownload={handleDownload}
+          onToggleSidebar={toggleSidebar}
+          showSidebar={showSidebar}
+          onToggleTextLayer={toggleTextLayer}
+          showTextLayer={showTextLayer}
+          scale={scale}
+          ref={headerRef}
+          headerHeight={headerHeight}
+          searchInputRef={searchInputRef}
+        />
+      </div>
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
@@ -530,6 +610,8 @@ export function PdfViewer({
                     onDocumentFailed={onDocumentLoadError}
                     onPageChange={goToPage}
                     handleDownload={handleDownload}
+                    searchKeyword={searchKeyword}
+                    matches={matches}
                   />
 
                   {pdfId && documentLoaded && (

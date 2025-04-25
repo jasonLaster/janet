@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
 interface DocumentMetadataProps {
-  metadata?: EnhancedPdfMetadata;
+  metadata?: EnhancedPdfMetadata | null;
   isListView?: boolean;
 }
 

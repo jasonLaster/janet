@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
 
 body {
   font-family: Arial, Helvetica, sans-serif;
@@ -91,4 +90,8 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Ensure react-pdf text layer aligns with rendered canvas */
+.react-pdf__Page__canvas {
 }

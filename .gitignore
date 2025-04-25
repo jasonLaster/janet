@@ -13,3 +13,5 @@ out
 scripts
 proposal.md
 .DS_Store
+
+apps/search

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Document, Page } from "react-pdf";
 import { DocumentLoader } from "../ui/document-loader";
 import { PDF_VERSION } from "./constants";
+import { SearchMatch } from "./hooks/use-pdf-search";
+
 const options = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
   cMapPacked: true,
@@ -27,6 +29,8 @@ export interface PdfViewerContentProps {
   onDocumentFailed: (error: Error) => void;
   onPageChange?: (page: number) => void;
   handleDownload?: () => void;
+  searchKeyword: string;
+  matches: SearchMatch[];
 }
 
 export function PdfViewerContent({
@@ -69,9 +73,11 @@ export function PdfViewerContent({
     <div
       data-document-loaded={allPagesLoaded}
       className="w-full h-full overflow-visible bg-stone-50"
-      ref={mainContentRef}
     >
-      <div className="pdf-container w-full relative">
+      <div
+        className="pdf-container w-full relative h-full overflow-y-auto"
+        ref={mainContentRef}
+      >
         {/* Loading overlay that shows until all pages are loaded */}
         {!allPagesLoaded && numPages > 0 && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
@@ -108,19 +114,14 @@ export function PdfViewerContent({
                 rotate={rotation}
                 width={pageWidth}
                 loading={null}
-                onLoadError={() => {}}
-                onLoadSuccess={() => {}}
+                onLoadError={() => {
+                  console.error(`Error loading page ${pageNum}`);
+                }}
+                onLoadSuccess={() => {
+                  // Optional: Can be used if specific per-page actions needed on load
+                }}
                 renderTextLayer={showTextLayer}
                 renderAnnotationLayer={showTextLayer}
-                customTextRenderer={({
-                  str,
-                  itemIndex,
-                }: {
-                  str: string;
-                  itemIndex: number;
-                }) => {
-                  return str;
-                }}
                 className="pdf-page shadow-md mx-auto bg-stone-50!"
                 onRenderSuccess={() => {
                   handlePageLoadSuccess(pageNum);
