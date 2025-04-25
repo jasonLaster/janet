@@ -73,18 +73,36 @@ export function PdfViewerHeader({
       </div>
 
       <div className="flex items-center space-x-2">
-        {false && (
-          <>
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchText}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="h-8"
-            />
-          </>
-        )}
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="h-8"
+          />
+          {searchText && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onSearchChange("prev")}
+                className="h-8 px-2"
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onSearchChange("next")}
+                className="h-8 px-2"
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon">

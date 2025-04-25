@@ -4,6 +4,21 @@ import React, { useState, useEffect, useRef } from "react";
 import { Document, Page } from "react-pdf";
 import { DocumentLoader } from "../ui/document-loader";
 import { PDF_VERSION } from "./constants";
+
+interface TextMatch {
+  pageIndex: number;
+  itemIndex: number;
+  start: number;
+  end: number;
+  id: string;
+}
+
+interface TextChunk {
+  text: string;
+  isMatch: boolean;
+  id?: string;
+}
+
 const options = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
   cMapPacked: true,
@@ -30,6 +45,8 @@ export interface PdfViewerContentProps {
   isCached?: boolean;
   loading?: boolean;
   handleDownload?: () => void;
+  searchText: string;
+  onSearchChange: (action: string) => void;
 }
 
 export function PdfViewerContent({
@@ -49,7 +66,15 @@ export function PdfViewerContent({
   isCached,
   loading,
   handleDownload,
+  searchText,
+  onSearchChange,
 }: PdfViewerContentProps) {
+  const [textItems, setTextItems] = useState<
+    Array<{ pageIndex: number; items: Array<{ str: string }> }>
+  >([]);
+  const [allMatches, setAllMatches] = useState<TextMatch[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+
   // Using cached URL if available, otherwise falling back to the direct URL
   const documentSource = cachedDocumentUrl || pdfUrl;
   const hasValidSource =
@@ -79,6 +104,141 @@ export function PdfViewerContent({
     }
   };
 
+  // Extract text content when document loads
+  const handleDocumentSuccess = async (pdf: any) => {
+    onDocumentSuccess(pdf);
+    const totalPages = pdf.numPages;
+    const promises = [];
+    for (let i = 1; i <= totalPages; i++) {
+      promises.push(pdf.getPage(i).then((page: any) => page.getTextContent()));
+    }
+    const textContents = await Promise.all(promises);
+    const items = textContents.map((tc, index) => ({
+      pageIndex: index,
+      items: tc.items,
+    }));
+    setTextItems(items);
+  };
+
+  // Find matches when search text changes
+  useEffect(() => {
+    if (searchText && textItems.length > 0) {
+      const matches: TextMatch[] = [];
+      let matchId = 0;
+      textItems.forEach((pageItems, pageIndex) => {
+        pageItems.items.forEach((item, itemIndex) => {
+          let start = 0;
+          while (true) {
+            const pos = item.str
+              .toLowerCase()
+              .indexOf(searchText.toLowerCase(), start);
+            if (pos === -1) break;
+            const end = pos + searchText.length;
+            matches.push({
+              pageIndex,
+              itemIndex,
+              start: pos,
+              end,
+              id: `match-${matchId}`,
+            });
+            matchId++;
+            start = end;
+          }
+        });
+      });
+      setAllMatches(matches);
+      if (matches.length > 0) {
+        setCurrentMatchIndex(0);
+        if (onPageChange) {
+          onPageChange(matches[0].pageIndex + 1);
+        }
+      } else {
+        setCurrentMatchIndex(-1);
+      }
+    } else {
+      setAllMatches([]);
+      setCurrentMatchIndex(-1);
+    }
+  }, [searchText, textItems]);
+
+  // Handle search navigation
+  useEffect(() => {
+    if (searchText === "next" && currentMatchIndex < allMatches.length - 1) {
+      const nextIndex = currentMatchIndex + 1;
+      setCurrentMatchIndex(nextIndex);
+      if (onPageChange) {
+        onPageChange(allMatches[nextIndex].pageIndex + 1);
+      }
+    } else if (searchText === "prev" && currentMatchIndex > 0) {
+      const prevIndex = currentMatchIndex - 1;
+      setCurrentMatchIndex(prevIndex);
+      if (onPageChange) {
+        onPageChange(allMatches[prevIndex].pageIndex + 1);
+      }
+    }
+  }, [searchText]);
+
+  // Custom text renderer that returns string but adds data attributes for highlighting
+  const customTextRenderer = ({
+    str,
+    itemIndex,
+  }: {
+    str: string;
+    itemIndex: number;
+  }): string => {
+    const matchesForThisItem = allMatches
+      .filter(
+        (m) => m.pageIndex === currentPage - 1 && m.itemIndex === itemIndex
+      )
+      .sort((a, b) => a.start - b.start);
+
+    if (matchesForThisItem.length === 0) {
+      return str;
+    }
+
+    // Add a special class to the text container
+    const container = document.querySelector(`.textLayer`);
+    if (container) {
+      container.classList.add("search-enabled");
+    }
+
+    // Return the original string - highlighting will be handled by CSS
+    matchesForThisItem.forEach((match) => {
+      const textElement = document.querySelector(
+        `[data-item-index="${itemIndex}"]`
+      );
+      if (textElement) {
+        textElement.setAttribute("data-match-id", match.id);
+        textElement.setAttribute(
+          "data-is-current",
+          (
+            currentMatchIndex >= 0 &&
+            allMatches[currentMatchIndex].id === match.id
+          ).toString()
+        );
+      }
+    });
+
+    return str;
+  };
+
+  // Add styles for search highlighting
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      .textLayer.search-enabled [data-match-id] {
+        background-color: #FEF9C3;
+      }
+      .textLayer.search-enabled [data-is-current="true"] {
+        background-color: #FCD34D;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   if (!hasValidSource) {
     return (
       <div className="w-full h-full overflow-visible" ref={mainContentRef}>
@@ -106,9 +266,7 @@ export function PdfViewerContent({
         )}
         <Document
           file={documentSource}
-          onLoadSuccess={(pdf) => {
-            onDocumentSuccess(pdf);
-          }}
+          onLoadSuccess={handleDocumentSuccess}
           loading={<DocumentLoader mode="large" />}
           onLoadError={(error) => {
             onDocumentFailed(error);
@@ -138,20 +296,12 @@ export function PdfViewerContent({
                 onLoadSuccess={() => {}}
                 renderTextLayer={showTextLayer}
                 renderAnnotationLayer={showTextLayer}
-                customTextRenderer={({
-                  str,
-                  itemIndex,
-                }: {
-                  str: string;
-                  itemIndex: number;
-                }) => {
-                  return str;
-                }}
+                customTextRenderer={customTextRenderer}
                 className="pdf-page shadow-md mx-auto bg-stone-50!"
                 onRenderSuccess={() => {
                   handlePageLoadSuccess(pageNum);
                   if (
-                    isManualPageChange &&
+                    (isManualPageChange || currentMatchIndex >= 0) &&
                     pageNum === currentPage &&
                     allPagesLoaded
                   ) {
@@ -161,6 +311,22 @@ export function PdfViewerContent({
                         behavior: "smooth",
                         block: "start",
                       });
+
+                      // Scroll to current match if exists
+                      if (currentMatchIndex >= 0) {
+                        const match = allMatches[currentMatchIndex];
+                        if (match.pageIndex === pageNum - 1) {
+                          const matchElement = document.getElementById(
+                            match.id
+                          );
+                          if (matchElement) {
+                            matchElement.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                          }
+                        }
+                      }
                     }
                   }
                 }}
