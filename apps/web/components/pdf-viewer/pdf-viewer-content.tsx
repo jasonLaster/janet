@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Document, Page } from "react-pdf";
 import { DocumentLoader } from "../ui/document-loader";
 import { PDF_VERSION } from "./constants";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 
 interface TextMatch {
   pageIndex: number;
@@ -106,6 +108,7 @@ export function PdfViewerContent({
 
   // Extract text content when document loads
   const handleDocumentSuccess = async (pdf: any) => {
+    console.log("[PdfContent] Document loaded, extracting text");
     onDocumentSuccess(pdf);
     const totalPages = pdf.numPages;
     const promises = [];
@@ -117,66 +120,112 @@ export function PdfViewerContent({
       pageIndex: index,
       items: tc.items,
     }));
+    console.log("[PdfContent] Text extracted:", {
+      pageCount: items.length,
+      itemsPerPage: items.map((p) => p.items.length),
+    });
     setTextItems(items);
   };
 
   // Find matches when search text changes
   useEffect(() => {
-    if (searchText && textItems.length > 0) {
-      const matches: TextMatch[] = [];
-      let matchId = 0;
-      textItems.forEach((pageItems, pageIndex) => {
-        pageItems.items.forEach((item, itemIndex) => {
-          let start = 0;
-          while (true) {
-            const pos = item.str
-              .toLowerCase()
-              .indexOf(searchText.toLowerCase(), start);
-            if (pos === -1) break;
-            const end = pos + searchText.length;
-            matches.push({
-              pageIndex,
-              itemIndex,
-              start: pos,
-              end,
-              id: `match-${matchId}`,
-            });
-            matchId++;
-            start = end;
-          }
-        });
-      });
-      setAllMatches(matches);
-      if (matches.length > 0) {
-        setCurrentMatchIndex(0);
-        if (onPageChange) {
-          onPageChange(matches[0].pageIndex + 1);
+    console.log("[PdfContent] Search text changed:", {
+      searchText,
+      textItemsCount: textItems.length,
+      hasSearchText: Boolean(searchText),
+      hasTextItems: textItems.length > 0,
+      searchTextType: typeof searchText,
+    });
+
+    // Skip if we don't have text content yet or no search text
+    if (!textItems.length || !searchText?.trim()) {
+      console.log("[PdfContent] Skipping search - no content or search text");
+      setAllMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
+    }
+
+    // Skip navigation commands
+    if (searchText === "next" || searchText === "prev") {
+      console.log("[PdfContent] Skipping search - navigation command");
+      return;
+    }
+
+    const searchTerm = searchText.toLowerCase().trim();
+    console.log("[PdfContent] Starting search for:", { searchTerm });
+
+    const matches: TextMatch[] = [];
+    let matchId = 0;
+    textItems.forEach((pageItems, pageIndex) => {
+      pageItems.items.forEach((item, itemIndex) => {
+        if (!item.str) return; // Skip empty strings
+
+        let start = 0;
+        const text = item.str.toLowerCase();
+        while (true) {
+          const pos = text.indexOf(searchTerm, start);
+          if (pos === -1) break;
+          const end = pos + searchTerm.length;
+          matches.push({
+            pageIndex,
+            itemIndex,
+            start: pos,
+            end,
+            id: `match-${matchId}`,
+          });
+          matchId++;
+          start = end;
         }
-      } else {
-        setCurrentMatchIndex(-1);
+      });
+    });
+
+    console.log("[PdfContent] Found matches:", {
+      searchTerm,
+      count: matches.length,
+      matchesByPage: matches.reduce((acc, m) => {
+        acc[m.pageIndex] = (acc[m.pageIndex] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>),
+    });
+
+    setAllMatches(matches);
+    if (matches.length > 0) {
+      console.log("[PdfContent] Setting initial match");
+      setCurrentMatchIndex(0);
+      if (onPageChange) {
+        onPageChange(matches[0].pageIndex + 1);
       }
     } else {
-      setAllMatches([]);
       setCurrentMatchIndex(-1);
     }
   }, [searchText, textItems]);
 
   // Handle search navigation
   useEffect(() => {
+    console.log("[PdfContent] Navigation effect:", {
+      searchText,
+      currentMatchIndex,
+      totalMatches: allMatches.length,
+    });
+
+    if (!searchText || !allMatches.length) return;
+
     if (searchText === "next" && currentMatchIndex < allMatches.length - 1) {
       const nextIndex = currentMatchIndex + 1;
+      console.log("[PdfContent] Moving to next match:", { nextIndex });
       setCurrentMatchIndex(nextIndex);
       if (onPageChange) {
         onPageChange(allMatches[nextIndex].pageIndex + 1);
       }
     } else if (searchText === "prev" && currentMatchIndex > 0) {
       const prevIndex = currentMatchIndex - 1;
+      console.log("[PdfContent] Moving to previous match:", { prevIndex });
       setCurrentMatchIndex(prevIndex);
       if (onPageChange) {
         onPageChange(allMatches[prevIndex].pageIndex + 1);
       }
     }
-  }, [searchText]);
+  }, [searchText, allMatches, currentMatchIndex]);
 
   // Custom text renderer that returns string but adds data attributes for highlighting
   const customTextRenderer = ({
@@ -196,27 +245,47 @@ export function PdfViewerContent({
       return str;
     }
 
-    // Add a special class to the text container
-    const container = document.querySelector(`.textLayer`);
-    if (container) {
-      container.classList.add("search-enabled");
-    }
+    console.log("[PdfContent] Rendering matches for item:", {
+      itemIndex,
+      matchCount: matchesForThisItem.length,
+      text: str,
+    });
 
-    // Return the original string - highlighting will be handled by CSS
-    matchesForThisItem.forEach((match) => {
-      const textElement = document.querySelector(
-        `[data-item-index="${itemIndex}"]`
-      );
-      if (textElement) {
-        textElement.setAttribute("data-match-id", match.id);
-        textElement.setAttribute(
-          "data-is-current",
-          (
-            currentMatchIndex >= 0 &&
-            allMatches[currentMatchIndex].id === match.id
-          ).toString()
-        );
+    // Use requestAnimationFrame to avoid text layer cancellation
+    requestAnimationFrame(() => {
+      // Add a special class to the text container
+      const container = document.querySelector(`.textLayer`);
+      if (container) {
+        container.classList.add("search-enabled");
       }
+
+      // Return the original string - highlighting will be handled by CSS
+      matchesForThisItem.forEach((match) => {
+        const textElement = document.querySelector(
+          `[data-item-index="${itemIndex}"]`
+        );
+        if (textElement) {
+          textElement.setAttribute("data-match-id", match.id);
+          textElement.setAttribute(
+            "data-is-current",
+            (
+              currentMatchIndex >= 0 &&
+              allMatches[currentMatchIndex].id === match.id
+            ).toString()
+          );
+          console.log("[PdfContent] Applied highlight:", {
+            matchId: match.id,
+            isCurrent:
+              currentMatchIndex >= 0 &&
+              allMatches[currentMatchIndex].id === match.id,
+          });
+        } else {
+          console.log(
+            "[PdfContent] Warning: Could not find text element for highlighting:",
+            { itemIndex }
+          );
+        }
+      });
     });
 
     return str;
@@ -224,8 +293,49 @@ export function PdfViewerContent({
 
   // Add styles for search highlighting
   useEffect(() => {
+    console.log("[PdfContent] Setting up search highlighting styles");
     const style = document.createElement("style");
     style.textContent = `
+      .react-pdf__Page {
+        position: relative;
+        display: flex;
+        justify-content: center;
+      }
+      .react-pdf__Page__textContent {
+        position: absolute;
+        height: 100% !important;
+        top: 0;
+        left: 0;
+        -webkit-transform-origin: 0% 0%;
+        transform-origin: 0% 0%;
+        z-index: 2;
+        pointer-events: none;
+      }
+      .textLayer {
+        position: absolute;
+        text-align: initial;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        opacity: 0.2;
+        line-height: 1;
+        text-size-adjust: none;
+        forced-color-adjust: none;
+        transform-origin: 0 0;
+        z-index: 2;
+      }
+      .textLayer > span {
+        color: transparent;
+        position: absolute;
+        white-space: pre;
+        cursor: text;
+        transform-origin: 0% 0%;
+      }
+      .textLayer .endOfContent {
+        display: none;
+      }
       .textLayer.search-enabled [data-match-id] {
         background-color: #FEF9C3;
       }
@@ -234,8 +344,22 @@ export function PdfViewerContent({
       }
     `;
     document.head.appendChild(style);
+
+    // Clean up function to remove styles and search-enabled class
     return () => {
       document.head.removeChild(style);
+      const container = document.querySelector(".textLayer");
+      if (container) {
+        container.classList.remove("search-enabled");
+      }
+    };
+  }, []);
+
+  // Reset search state when unmounting
+  useEffect(() => {
+    return () => {
+      setAllMatches([]);
+      setCurrentMatchIndex(-1);
     };
   }, []);
 
@@ -293,12 +417,11 @@ export function PdfViewerContent({
                 width={pageWidth}
                 loading={null}
                 onLoadError={() => {}}
-                onLoadSuccess={() => {}}
-                renderTextLayer={showTextLayer}
-                renderAnnotationLayer={showTextLayer}
-                customTextRenderer={customTextRenderer}
-                className="pdf-page shadow-md mx-auto bg-stone-50!"
-                onRenderSuccess={() => {
+                onLoadSuccess={() => {
+                  console.log("[PdfContent] Page loaded:", {
+                    pageNum,
+                    hasTextLayer: document.querySelector(".textLayer") !== null,
+                  });
                   handlePageLoadSuccess(pageNum);
                   if (
                     (isManualPageChange || currentMatchIndex >= 0) &&
@@ -330,6 +453,10 @@ export function PdfViewerContent({
                     }
                   }
                 }}
+                renderTextLayer={showTextLayer}
+                renderAnnotationLayer={showTextLayer}
+                customTextRenderer={customTextRenderer}
+                className="pdf-page shadow-md mx-auto bg-stone-50!"
               />
             </div>
           ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 import { DocumentMetadata } from "../document-metadata";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 export interface PdfViewerHeaderProps {
   title: string;
@@ -54,6 +55,20 @@ export function PdfViewerHeader({
   showTextLayer,
   scale,
 }: PdfViewerHeaderProps) {
+  const debouncedOnSearchChange = useDebounce((value: string) => {
+    console.log("[PdfHeader] Debounced search change:", { value });
+    onSearchChange(value);
+  }, 1000);
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      console.log("[PdfHeader] Search input change:", { value });
+      debouncedOnSearchChange(value);
+    },
+    [debouncedOnSearchChange]
+  );
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-b bg-muted/20">
       <div className="flex items-center gap-2">
@@ -78,8 +93,8 @@ export function PdfViewerHeader({
           <Input
             type="text"
             placeholder="Search..."
-            value={searchText}
-            onChange={(e) => onSearchChange(e.target.value)}
+            defaultValue={searchText || ""}
+            onChange={handleSearchChange}
             className="h-8"
           />
           {searchText && (

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { PdfViewerHeader } from "./pdf-viewer-header";
 import { PdfViewerContent } from "./pdf-viewer-content";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
@@ -22,25 +22,41 @@ export function PdfViewer({ pdfUrl, title, enhancedMetadata }: PdfViewerProps) {
   const [isManualPageChange, setIsManualPageChange] = useState(false);
   const mainContentRef = useRef<HTMLDivElement | null>(null);
   const [pageWidth, setPageWidth] = useState(800);
+  const searchRef = useRef<{ currentText: string }>({ currentText: "" });
 
   const handleDocumentSuccess = (pdf: any) => {
+    console.log("[PdfViewer] Document loaded");
     setNumPages(pdf.numPages);
   };
 
   const handleDocumentFailed = (error: Error) => {
-    console.error("Failed to load PDF:", error);
+    console.error("[PdfViewer] Failed to load PDF:", error);
   };
 
   const handleSearchChange = (value: string) => {
+    console.log("[PdfViewer] Search change called with:", {
+      value,
+      type: typeof value,
+      currentSearchText: searchText,
+      currentRef: searchRef.current.currentText,
+    });
+
     if (value === "next" || value === "prev") {
-      // Handle navigation
+      // For navigation, we want to keep the current search text
       setSearchText(value);
-      // Reset after navigation
-      setTimeout(() => setSearchText(searchText), 0);
     } else {
       setSearchText(value);
+      searchRef.current.currentText = value;
     }
   };
+
+  // Add debug effect to track search text changes
+  useEffect(() => {
+    console.log("[PdfViewer] Search text state changed:", {
+      searchText,
+      refText: searchRef.current.currentText,
+    });
+  }, [searchText]);
 
   const handleToggleSidebar = () => {
     setShowSidebar(!showSidebar);
