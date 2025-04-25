@@ -9,18 +9,14 @@ import {
 } from "@react-pdf-viewer/core";
 import {
   defaultLayoutPlugin,
-  type DefaultLayoutPlugin,
   ThumbnailIcon,
+  type DefaultLayoutPlugin,
 } from "@react-pdf-viewer/default-layout";
-import {
-  toolbarPlugin,
-  type ToolbarProps,
-  type ToolbarSlot,
-} from "@react-pdf-viewer/toolbar";
 import { searchPlugin, type SearchPlugin } from "@react-pdf-viewer/search";
 import { useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
-import { FileText } from "lucide-react";
+import { FileText, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Import the custom info panel
 import {
@@ -28,10 +24,7 @@ import {
   type PdfInfoPanelProps,
 } from "../pdf-viewer/pdf-info-panel";
 
-// Import the new page navigation
-import { PdfPageNavigation } from "../pdf-viewer/pdf-page-navigation";
-
-// Define the internal component to handle page rendering logic
+// Define the internal component to handle page rendering logic - RESTORED
 const PageRenderer: React.FC<RenderPageProps & { showTextLayer: boolean }> = ({
   showTextLayer,
   ...props
@@ -64,6 +57,8 @@ const PageRenderer: React.FC<RenderPageProps & { showTextLayer: boolean }> = ({
 
 interface ReactPdfViewerWrapperProps {
   pdfUrl: string;
+  pdfTitle: string;
+  onBackClick: () => void;
   currentPage: number;
   numPages: number;
   showTextLayer: boolean;
@@ -82,6 +77,8 @@ interface ReactPdfViewerWrapperProps {
 
 export const ReactPdfViewerWrapper = ({
   pdfUrl,
+  pdfTitle,
+  onBackClick,
   currentPage,
   numPages,
   showTextLayer,
@@ -97,49 +94,95 @@ export const ReactPdfViewerWrapper = ({
   isLoadingAiMetadata,
   metadataError,
 }: ReactPdfViewerWrapperProps) => {
-  // Wrapper for onPageChange to ensure goToPage receives the correct type
+  // Wrapper for onPageChange to ensure correct page number (1-indexed) is emitted
   const handleInternalPageChange = (event: PageChangeEvent) => {
     const newPage = event.currentPage + 1; // Convert 0-indexed to 1-indexed
     onPageChange?.(newPage);
   };
 
-  // Ensure goToPage is available for PdfPageNavigation
-  const goToPageHandler = (page: number) => {
-    onPageChange?.(page);
-  };
+  // Initialize plugins first so instances are available for configuration
+  const searchPluginInstance = searchPlugin();
+  const { highlight, jumpToNextMatch, jumpToPreviousMatch } =
+    searchPluginInstance;
 
-  // Custom toolbar rendering function - Define it before using it in the plugin config
-  const renderToolbar = (
-    Toolbar: (props: ToolbarProps) => React.ReactElement
-  ) => (
-    <Toolbar>
-      {(slots: ToolbarSlot) => {
-        // Add type to slots
-        const { EnterFullScreen } = slots;
-        return (
-          <div
-            style={{ display: "flex", alignItems: "center", padding: "4px" }}
-          >
-            <div style={{ marginLeft: "auto" }}>
-              {EnterFullScreen && <EnterFullScreen />}
-            </div>
-          </div>
-        );
-      }}
-    </Toolbar>
-  );
-
-  // Configure the default layout plugin WITH the custom toolbar
+  // Define the defaultLayoutPluginInstance using the plugins
   const defaultLayoutPluginInstance = defaultLayoutPlugin({
-    renderToolbar,
-    // Configure sidebar tabs
+    // Define the custom renderToolbar function inline or separately
+    renderToolbar: (Toolbar) => {
+      // Assuming Toolbar renders the standard slots
+      // We get the necessary slots from the searchPluginInstance
+      const { ShowSearchPopover } = searchPluginInstance;
+
+      return (
+        <Toolbar>
+          {(slots) => {
+            // Destructure default slots we want to use
+            const {
+              MoreActionsPopover,
+              EnterFullScreen,
+              ZoomIn,
+              ZoomOut,
+              Rotate,
+            } = slots;
+
+            // Use enhanced title if available, otherwise fallback to pdfTitle prop
+            const displayTitle = enhancedMetadata?.descriptiveTitle || pdfTitle;
+            // Simple metadata string (example, adjust as needed)
+            const displayMetadata = pdfMetadata?.author
+              ? `by ${pdfMetadata.author}`
+              : "";
+
+            return (
+              <div
+                className="flex items-center w-full px-2" // Use Tailwind for padding/layout
+                style={{ height: "40px" }} // Ensure consistent height
+              >
+                {/* Left side: Back button + Title/Metadata */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onBackClick}
+                  className="h-8 w-8 mr-2" // Tailwind classes
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 overflow-hidden whitespace-nowrap text-ellipsis mr-4">
+                  <span className="font-medium">{displayTitle}</span>
+                  {displayMetadata && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      {displayMetadata}
+                    </span>
+                  )}
+                </div>
+
+                {/* Right side: Standard controls + Search + Actions */}
+                <div className="flex items-center space-x-1">
+                  {/* Standard controls can be included directly from slots */}
+                  {/* {ZoomOut && <ZoomOut />}
+                  {ZoomIn && <ZoomIn />}
+                  {Rotate && <Rotate />} */}
+                  {/* Search UI - using the default popover */}
+                  {ShowSearchPopover && <ShowSearchPopover />}
+                  {/* Actions dropdown (print/download/etc.) */}
+                  {MoreActionsPopover && <MoreActionsPopover />}
+                  {/* Full screen button */}
+                  {EnterFullScreen && <EnterFullScreen />}
+                </div>
+              </div>
+            );
+          }}
+        </Toolbar>
+      );
+    },
+    // Configure sidebar tabs - Simplified thumbnail tab
     sidebarTabs: (defaultTabs) => {
-      // Get the original Thumbnails component creator from the plugin instance
+      // Get the thumbnail plugin instance from the default layout plugin
       const thumbnailPluginInstance =
         defaultLayoutPluginInstance.thumbnailPluginInstance;
       const { Thumbnails } = thumbnailPluginInstance;
 
       return [
+        // Info Panel Tab
         {
           content: (
             <PdfInfoPanel
@@ -152,32 +195,19 @@ export const ReactPdfViewerWrapper = ({
           icon: <FileText className="h-4 w-4" />,
           title: "Info",
         },
+        // Simplified Thumbnails Tab
         {
-          content: (
-            // Custom content wrapper for thumbnails + navigation
-            <div className="flex flex-col h-full">
-              <div className="flex-1 overflow-y-auto">
-                <Thumbnails />
-              </div>
-              <PdfPageNavigation
-                currentPage={currentPage}
-                numPages={numPages}
-                goToPage={goToPageHandler}
-              />
-            </div>
-          ),
+          // Use the Thumbnails component directly
+          // The default layout plugin handles scrolling and highlighting
+          content: <Thumbnails />,
           icon: <ThumbnailIcon />,
           title: "Pages",
         },
-        // Add other default tabs if needed (like attachments, bookmarks)
-        // ...defaultTabs.slice(1),
+        // Remove other default tabs if not needed, or keep them:
+        // ...defaultTabs.filter(tab => tab.title !== 'Thumbnails' && tab.title !== 'Info'),
       ];
     },
   });
-
-  const searchPluginInstance = searchPlugin();
-  const { highlight, jumpToNextMatch, jumpToPreviousMatch } =
-    searchPluginInstance;
 
   // Type casting needed as react-pdf-viewer doesn't expose perfect ref types
   const viewerRef = useRef<any>(null);
@@ -185,6 +215,10 @@ export const ReactPdfViewerWrapper = ({
   // Handle imperative zoom/rotation changes
   useEffect(() => {
     if (viewerRef.current) {
+      // Imperative zoom/rotate might conflict with toolbar controls.
+      // Consider removing if scale/rotation are fully managed by parent/header.
+      // Or ensure parent state reflects toolbar actions if needed.
+      // For now, keep existing logic.
       viewerRef.current.zoom(scale);
       viewerRef.current.rotate(rotation);
     }
@@ -193,23 +227,38 @@ export const ReactPdfViewerWrapper = ({
   // Handle imperative page changes
   useEffect(() => {
     if (viewerRef.current) {
+      // Ensure parent's currentPage drives the viewer
       viewerRef.current.scrollToPage(currentPage - 1); // Viewer is 0-indexed
     }
   }, [currentPage]);
 
-  // Handle search text changes
+  // Handle search text changes - Hook up parent state to plugin actions
   useEffect(() => {
-    if (searchText === "next" && onSearchNext) {
-      onSearchNext();
-    } else if (searchText === "prev" && onSearchPrevious) {
-      onSearchPrevious();
+    // Use jumpToNext/Previous if specific strings are passed (parent controls navigation)
+    if (searchText === "next" && jumpToNextMatch) {
+      jumpToNextMatch();
+      // Potentially clear searchText in parent or notify parent action occurred
+      onSearchNext?.(); // Call parent handler if provided
+    } else if (searchText === "prev" && jumpToPreviousMatch) {
+      jumpToPreviousMatch();
+      onSearchPrevious?.(); // Call parent handler if provided
     } else if (searchText && searchText !== "next" && searchText !== "prev") {
+      // Otherwise, perform highlight if text is not a navigation command
       highlight({
         keyword: searchText,
-        matchCase: false,
+        matchCase: false, // Example option
+        // Other options like `wholeWord: true` can be added
       });
     }
-  }, [searchText, highlight, onSearchNext, onSearchPrevious]);
+    // Dependencies: include plugin actions
+  }, [
+    searchText,
+    highlight,
+    jumpToNextMatch,
+    jumpToPreviousMatch,
+    onSearchNext,
+    onSearchPrevious,
+  ]);
 
   // Memoize worker URL to avoid re-creation
   const workerUrl = useMemo(() => {
@@ -232,9 +281,10 @@ export const ReactPdfViewerWrapper = ({
       >
         <Viewer
           fileUrl={pdfUrl}
+          // Ensure the order is correct: defaultLayout must come before search for toolbar slots
           plugins={[defaultLayoutPluginInstance, searchPluginInstance]}
           initialPage={currentPage - 1} // Set initial page (0-indexed)
-          onPageChange={handleInternalPageChange} // Use wrapper
+          onPageChange={handleInternalPageChange} // Use wrapper for 1-indexed pages
           onDocumentLoad={onDocumentLoad} // Pass parent handler directly
           // Use the internal component for rendering, passing necessary props
           renderPage={(props: RenderPageProps) => (
