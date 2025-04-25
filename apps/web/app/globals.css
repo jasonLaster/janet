@@ -99,3 +99,8 @@
 /* Styles for the new viewer */
 @import "@react-pdf-viewer/core/lib/styles/index.css";
 @import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+
+.rpv-default-layout__toolbar {
+  /* background-color: #f0f0f0; */
+  /* height: 60px; */
+}

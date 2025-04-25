@@ -393,20 +393,6 @@ export function PdfViewer({
       ref={setContainerRef}
       className="w-full h-full overflow-hidden flex flex-col"
     >
-      <PdfViewerHeader
-        title={pdfTitle}
-        enhancedMetadata={enhancedMetadata}
-        searchText={searchText}
-        onSearchChange={setSearchText}
-        onToggleTextLayer={toggleTextLayer}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onRotate={handleRotate}
-        onDownload={handleDownload}
-        showTextLayer={showTextLayer}
-        scale={scale}
-      />
-
       <div className="flex-1 flex overflow-hidden">
         {pdfLoadError ? (
           <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">

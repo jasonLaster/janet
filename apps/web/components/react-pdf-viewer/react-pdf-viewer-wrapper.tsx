@@ -23,6 +23,7 @@ import {
   PdfInfoPanel,
   type PdfInfoPanelProps,
 } from "../pdf-viewer/pdf-info-panel";
+import { DocumentMetadata } from "../document-metadata";
 
 // Define the internal component to handle page rendering logic - RESTORED
 const PageRenderer: React.FC<RenderPageProps & { showTextLayer: boolean }> = ({
@@ -128,9 +129,6 @@ export const ReactPdfViewerWrapper = ({
             // Use enhanced title if available, otherwise fallback to pdfTitle prop
             const displayTitle = enhancedMetadata?.descriptiveTitle || pdfTitle;
             // Simple metadata string (example, adjust as needed)
-            const displayMetadata = pdfMetadata?.author
-              ? `by ${pdfMetadata.author}`
-              : "";
 
             return (
               <div
@@ -146,13 +144,9 @@ export const ReactPdfViewerWrapper = ({
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div className="flex-1 overflow-hidden whitespace-nowrap text-ellipsis mr-4">
+                <div className="flex-1 overflow-hidden flex gap-2  text-ellipsis mr-4 flex-row items-center">
                   <span className="font-medium">{displayTitle}</span>
-                  {displayMetadata && (
-                    <span className="text-sm text-gray-500 ml-2">
-                      {displayMetadata}
-                    </span>
-                  )}
+                  <DocumentMetadata metadata={enhancedMetadata} />
                 </div>
 
                 {/* Right side: Standard controls + Search + Actions */}
