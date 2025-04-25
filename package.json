@@ -12,7 +12,8 @@
     "meilisearch": "^0.50.0",
     "pdf-parse": "^1.1.1",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "use-debounce": "^10.0.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

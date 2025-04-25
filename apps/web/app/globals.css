@@ -116,14 +116,12 @@
   user-select: text;
   overflow: hidden;
   position: absolute;
-  left: 50%;
+  left: 50% !important;
   transform: translateX(-50%);
   top: 0;
   z-index: 1;
-  opacity: 0.2;
+  opacity: 1;
   color: transparent;
-  /* width: 100%; */
-  /* max-width: fit-content; */
 }
 
 .react-pdf__Page__textContent span {
@@ -135,7 +133,7 @@
 }
 
 .react-pdf__Page__textContent::selection {
-  background-color: rgba(0, 0, 255, 0.3);
+  background-color: rgba(0, 0, 255, 0.1);
 }
 
 .react-pdf__Page__annotations {
@@ -151,4 +149,37 @@
 
 .react-pdf__Page__annotations.annotationLayer > section {
   margin-bottom: 10px;
+}
+
+/* PDF Search Highlighting Styles */
+mark.pdf-search-highlight {
+  background-color: rgba(119, 192, 251, 0.2);
+  border-radius: 2px;
+  padding: 0;
+  margin: 0;
+  opacity: 1 !important;
+}
+
+mark.pdf-search-current {
+  background-color: rgba(119, 192, 251, 0.35);
+  /* opacity: 1 !important; */
+  border-radius: 2px;
+}
+
+/* Hide text within the highlight marks, letting the background show */
+mark.pdf-search-highlight,
+mark.pdf-search-current {
+  color: transparent !important; /* Make the text itself transparent */
+}
+
+/* Ensure mark elements don't mess with layout too much */
+mark {
+  padding: 0;
+  margin: 0;
+  display: inline; /* Default, but ensures it stays inline */
+}
+
+/* Text layer adjustments if needed */
+.react-pdf__Page__textContent {
+  /* Add styles here if default text layer behavior causes issues with marks */
 }
