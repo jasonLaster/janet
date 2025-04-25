@@ -13,7 +13,10 @@ const nextConfig = {
     config: any,
     { isServer, nextRuntime }: { isServer: boolean; nextRuntime?: string }
   ) => {
-    config.cache = false;
+    // Exclude canvas from server bundle
+    if (isServer && nextRuntime === "nodejs") {
+      config.externals.push("canvas");
+    }
 
     return config;
   },

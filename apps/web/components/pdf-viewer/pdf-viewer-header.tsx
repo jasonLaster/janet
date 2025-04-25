@@ -28,13 +28,11 @@ export interface PdfViewerHeaderProps {
   enhancedMetadata?: EnhancedPdfMetadata | null;
   searchText: string;
   onSearchChange: (text: string) => void;
-  onToggleSidebar: () => void;
   onToggleTextLayer: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onRotate: () => void;
   onDownload: () => void;
-  showSidebar: boolean;
   showTextLayer: boolean;
   scale: number;
 }
@@ -44,13 +42,11 @@ export function PdfViewerHeader({
   enhancedMetadata,
   searchText,
   onSearchChange,
-  onToggleSidebar,
   onToggleTextLayer,
   onZoomIn,
   onZoomOut,
   onRotate,
   onDownload,
-  showSidebar,
   showTextLayer,
   scale,
 }: PdfViewerHeaderProps) {
@@ -93,12 +89,6 @@ export function PdfViewerHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onToggleSidebar}>
-              <Layers
-                className={`h-4 w-4 mr-2 ${showSidebar ? "text-blue-500" : ""}`}
-              />
-              {showSidebar ? "Hide sidebar" : "Show sidebar"}
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={onToggleTextLayer}>
               <EyeOff
                 className={`h-4 w-4 mr-2 ${

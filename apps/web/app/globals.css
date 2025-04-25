@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
+@import "tailwindcss/preflight";
+@tailwind utilities;
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -152,3 +155,6 @@
 .react-pdf__Page__annotations.annotationLayer > section {
   margin-bottom: 10px;
 }
+
+@import "@react-pdf-viewer/core/lib/styles/index.css";
+@import "@react-pdf-viewer/default-layout/lib/styles/index.css";

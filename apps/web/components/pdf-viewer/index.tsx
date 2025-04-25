@@ -2,28 +2,18 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-import { GripVertical, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 import { PdfViewerHeader } from "./pdf-viewer-header";
-import { PdfViewerContent } from "./pdf-viewer-content";
-import { PdfSidebar } from "./pdf-sidebar";
+import { ReactPdfViewerWrapper } from "../react-pdf-viewer/react-pdf-viewer-wrapper";
 import { PdfMetadata, PdfViewerProps } from "./pdf-viewer-types";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
-import { pdfjs } from "react-pdf";
-import { usePDFDocument } from "@/hooks/use-pdf-document";
 import useSWR, { preload } from "swr";
 import { PDF_WORKER_URL } from "./constants";
-// Initialize the PDF.js worker
-if (typeof window !== "undefined") {
-  pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
-}
+import { type DocumentLoadEvent } from "@react-pdf-viewer/core";
+import { usePDFDocument } from "@/hooks/use-pdf-document";
 
 const maxWidth = 800;
 const sidebarDefaultWidth = 250;
@@ -36,7 +26,6 @@ export function PdfViewer({
   existingMetadata,
   onError,
 }: PdfViewerProps) {
-  // Updated to match the new hook API, only passing pdfId
   const {
     cachedDocument,
     loading: cacheLoading,
@@ -45,17 +34,13 @@ export function PdfViewer({
     cachePDFDocument,
   } = usePDFDocument(pdfId);
 
-  // Now cachedDocument is already a base64 string, no conversion needed
-  // We just need to format it as a data URL
   const [cachedDocumentUrl, setCachedDocumentUrl] = useState<string | null>(
     null
   );
 
-  // Create a data URL from the cached document when it's available
   useEffect(() => {
     if (cachedDocument) {
       try {
-        // Simply prefix the base64 string with the data URL format
         const dataUrl = `data:application/pdf;base64,${cachedDocument}`;
         setCachedDocumentUrl(dataUrl);
       } catch (error) {
@@ -67,10 +52,8 @@ export function PdfViewer({
     }
   }, [cachedDocument, pdfId]);
 
-  // Determine if we should show loading state
   const isLoading = cacheLoading;
 
-  // Use the cached document URL if available, otherwise fall back to the provided URL
   const effectivePdfUrl = cachedDocumentUrl || pdfUrl;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,13 +68,14 @@ export function PdfViewer({
   const [scale, setScale] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
   const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
-  const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [showTextLayer, setShowTextLayer] = useState<boolean>(true);
-  const [isManualPageChange, setIsManualPageChange] = useState<boolean>(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const [searchText, setSearchText] = useState<string>("");
+  const searchRef = useRef<{
+    jumpToNext: () => void;
+    jumpToPrevious: () => void;
+  } | null>(null);
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("info");
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>({});
@@ -102,7 +86,150 @@ export function PdfViewer({
     useState<boolean>(false);
   const resizablePanelGroupRef = useRef(null);
 
-  // Manual resize observer implementation
+  const metadataFetcher = useCallback(
+    async (
+      url: string,
+      { pdfUrl, pdfId }: { pdfUrl: string; pdfId?: string | number }
+    ) => {
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000;
+
+      const fetchWithRetry = async (attempt = 1) => {
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ pdfUrl, pdfId }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.details || "Server-side extraction failed"
+            );
+          }
+
+          return response.json();
+        } catch (error) {
+          if (
+            attempt < MAX_RETRIES &&
+            !(error instanceof Error && error.message.includes("Server-side"))
+          ) {
+            console.warn(
+              `Metadata fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+            return fetchWithRetry(attempt + 1);
+          }
+          throw error;
+        }
+      };
+
+      return fetchWithRetry();
+    },
+    []
+  );
+
+  const {
+    data: metadataResponse,
+    error: metadataFetchError,
+    isLoading: isMetadataLoading,
+  } = useSWR(
+    pdfUrl && pdfId && !existingMetadata
+      ? ["/api/metadata", { pdfUrl, pdfId }]
+      : null,
+    ([url, params]) => metadataFetcher(url, params),
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      dedupingInterval: 60000,
+      errorRetryCount: 3,
+      errorRetryInterval: 1000,
+      shouldRetryOnError: true,
+    }
+  );
+
+  const prefetchMetadata = useCallback(() => {
+    if (pdfUrl && pdfId && !existingMetadata) {
+      preload(["/api/metadata", { pdfUrl, pdfId }], ([url, params]) =>
+        metadataFetcher(url, params)
+      );
+    }
+  }, [pdfUrl, pdfId, existingMetadata, metadataFetcher]);
+
+  useEffect(() => {
+    if (metadataResponse?.metadata) {
+      setEnhancedMetadata(metadataResponse.metadata);
+    }
+
+    setIsLoadingAiMetadata(isMetadataLoading);
+
+    if (metadataFetchError) {
+      console.error("Failed to fetch metadata:", metadataFetchError);
+      setMetadataError(true);
+
+      toast({
+        title: "Metadata Analysis Failed",
+        description:
+          metadataFetchError.message || "Could not analyze the document.",
+        variant: "destructive",
+      });
+    }
+  }, [metadataResponse, metadataFetchError, isMetadataLoading, toast]);
+
+  useEffect(() => {
+    if (cacheLoading) {
+      setDocumentLoaded(false);
+    }
+
+    if (cacheError) {
+      console.error("Error loading PDF from cache:", cacheError);
+      onError?.();
+    }
+  }, [cacheLoading, cacheError, onError]);
+
+  useEffect(() => {
+    async function fetchAndCachePDF() {
+      if (!pdfUrl || !pdfId || isCached || cacheLoading) {
+        return;
+      }
+
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000;
+
+      const fetchWithRetry = async (attempt = 1): Promise<ArrayBuffer> => {
+        try {
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+          }
+          return await response.arrayBuffer();
+        } catch (error) {
+          if (attempt < MAX_RETRIES) {
+            console.warn(
+              `Fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+            return fetchWithRetry(attempt + 1);
+          }
+          throw error;
+        }
+      };
+
+      try {
+        const pdfData = await fetchWithRetry();
+
+        await cachePDFDocument(pdfData);
+      } catch (err) {
+        console.error("Error fetching and caching PDF after retries:", err);
+      }
+    }
+
+    fetchAndCachePDF();
+  }, [pdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
+
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -115,231 +242,90 @@ export function PdfViewer({
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
-  // Track visible page based on scroll position
-  useEffect(() => {
-    if (!mainContentRef.current || numPages === 0) return;
-
-    // Track if we're currently processing a scroll event
-    let isProcessingScroll = false;
-
-    const handleScroll = () => {
-      // Skip scroll handling if we're in a manual page change
-      if (!mainContentRef.current || isManualPageChange) return;
-
-      // Avoid processing scroll events when already processing one
-      if (isProcessingScroll) return;
-
-      isProcessingScroll = true;
-
-      // Clear any existing timeout for debouncing scroll events
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = null;
-      }
-
-      // Use a small timeout to avoid excessive updates while scrolling
-      scrollTimeoutRef.current = setTimeout(() => {
-        if (!mainContentRef.current) {
-          isProcessingScroll = false;
-          return;
-        }
-
-        // Skip the processing if a manual page change happened while we were waiting
-        if (isManualPageChange) {
-          isProcessingScroll = false;
-          return;
-        }
-
-        const pageContainers = Array.from(
-          document.querySelectorAll(".pdf-page-container")
-        );
-
-        // Find the page that is most visible in the viewport
-        let bestVisiblePage = 1;
-        let maxVisibleArea = 0;
-
-        for (let i = 0; i < pageContainers.length; i++) {
-          const container = pageContainers[i] as HTMLElement;
-          const rect = container.getBoundingClientRect();
-          const mainContentRect =
-            mainContentRef.current.getBoundingClientRect();
-
-          // Calculate how much of the page is visible
-          const top = Math.max(rect.top, mainContentRect.top);
-          const bottom = Math.min(rect.bottom, mainContentRect.bottom);
-          const visibleHeight = Math.max(0, bottom - top);
-
-          // Get page number from element id
-          const pageId = container.id;
-          const pageNum = parseInt(pageId.replace("page-", ""));
-
-          // Update if this page has more visible area than previous best
-          if (visibleHeight > maxVisibleArea) {
-            maxVisibleArea = visibleHeight;
-            bestVisiblePage = pageNum;
-          }
-        }
-
-        // Only update when page changes to avoid unnecessary re-renders
-        if (bestVisiblePage !== currentPage) {
-          setCurrentPage(bestVisiblePage);
-
-          // Update sidebar scroll position to show current page, but don't trigger another page change
-          const sidebarItem = document.querySelector(
-            `[data-page-thumb="${bestVisiblePage}"]`
-          );
-          if (sidebarItem) {
-            sidebarItem.scrollIntoView({
-              behavior: "smooth",
-              block: "nearest",
-            });
-          }
-        }
-
-        isProcessingScroll = false;
-        scrollTimeoutRef.current = null;
-      }, 250); // Increased debounce time to reduce flickering
-    };
-
-    const scrollContainer = mainContentRef.current.parentElement;
-    if (scrollContainer) {
-      scrollContainer.addEventListener("scroll", handleScroll);
-    }
-
-    // Initial check after a longer delay to ensure PDF has rendered completely
-    const initialCheckTimeout = setTimeout(() => {
-      // Only run initial check if not in manual page change mode
-      if (!isManualPageChange) {
-        handleScroll();
-      }
-    }, 800);
-
-    return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("scroll", handleScroll);
-      }
-      // Clean up timeouts
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      clearTimeout(initialCheckTimeout);
-      isProcessingScroll = false;
-    };
-  }, [mainContentRef, currentPage, numPages, isManualPageChange]);
-
   useEffect(() => {
     // Reset page number when PDF URL changes
     setCurrentPage(1);
   }, [pdfUrl]);
 
-  function onDocumentLoadSuccess({
-    numPages,
-    metadata,
-  }: {
-    numPages: number;
-    metadata?: any;
-  }) {
-    setNumPages(numPages);
-    setDocumentLoaded(true);
-    fetchEnhancedMetadata();
+  const handleDocumentLoad = useCallback(
+    async (event: DocumentLoadEvent) => {
+      console.log("[PdfViewer] Document loaded (react-pdf-viewer)", {
+        numPages: event.doc.numPages,
+      });
+      setNumPages(event.doc.numPages);
+      setPdfLoadError(null);
+      setDocumentLoaded(true);
 
-    // Extract metadata if available
-    if (metadata) {
-      const extractedMetadata: PdfMetadata = {};
+      try {
+        const pdfJsMetadata = await event.doc.getMetadata();
+        if (pdfJsMetadata && pdfJsMetadata.info) {
+          console.log("[PdfViewer] Extracted Metadata:", pdfJsMetadata.info);
+          const extractedMetadata: PdfMetadata = {};
 
-      // Map common metadata fields
-      if (metadata.get("Title"))
-        extractedMetadata.title = metadata.get("Title");
-      if (metadata.get("Author"))
-        extractedMetadata.author = metadata.get("Author");
-      if (metadata.get("Subject"))
-        extractedMetadata.subject = metadata.get("Subject");
-      if (metadata.get("Keywords"))
-        extractedMetadata.keywords = metadata.get("Keywords");
-      if (metadata.get("Creator"))
-        extractedMetadata.creator = metadata.get("Creator");
-      if (metadata.get("Producer"))
-        extractedMetadata.producer = metadata.get("Producer");
-      if (metadata.get("CreationDate")) {
-        const date = new Date(metadata.get("CreationDate"));
-        extractedMetadata.creationDate = date.toLocaleDateString();
-      }
-      if (metadata.get("ModDate")) {
-        const date = new Date(metadata.get("ModDate"));
-        extractedMetadata.modificationDate = date.toLocaleDateString();
-      }
+          if (pdfJsMetadata.info.Title)
+            extractedMetadata.title = pdfJsMetadata.info.Title;
+          if (pdfJsMetadata.info.Author)
+            extractedMetadata.author = pdfJsMetadata.info.Author;
+          if (pdfJsMetadata.info.Subject)
+            extractedMetadata.subject = pdfJsMetadata.info.Subject;
+          if (pdfJsMetadata.info.Keywords)
+            extractedMetadata.keywords = pdfJsMetadata.info.Keywords;
+          if (pdfJsMetadata.info.Creator)
+            extractedMetadata.creator = pdfJsMetadata.info.Creator;
+          if (pdfJsMetadata.info.Producer)
+            extractedMetadata.producer = pdfJsMetadata.info.Producer;
+          if (pdfJsMetadata.info.CreationDate) {
+            const dateStr = pdfJsMetadata.info.CreationDate.replace(
+              /^D:/,
+              ""
+            ).substring(0, 8);
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            extractedMetadata.creationDate = `${month}/${day}/${year}`;
+          }
+          if (pdfJsMetadata.info.ModDate) {
+            const dateStr = pdfJsMetadata.info.ModDate.replace(
+              /^D:/,
+              ""
+            ).substring(0, 8);
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            extractedMetadata.modificationDate = `${month}/${day}/${year}`;
+          }
 
-      setPdfMetadata(extractedMetadata);
-    }
-  }
-
-  function onDocumentLoadError(error: Error) {
-    console.error("Error loading PDF:", error);
-    setPdfLoadError(error.message);
-
-    toast({
-      title: "Error loading PDF",
-      description: error.message,
-      variant: "destructive",
-    });
-
-    if (onError) onError();
-  }
-
-  const changePage = (offset: number) => {
-    const newPageNumber = currentPage + offset;
-    if (newPageNumber >= 1 && newPageNumber <= numPages) {
-      goToPage(newPageNumber);
-    }
-  };
-
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= numPages) {
-      // Clear any existing timeouts that would reset isManualPageChange
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = null;
-      }
-
-      // Set flag to prevent scroll detection from overriding manual navigation
-      setIsManualPageChange(true);
-      setCurrentPage(page);
-
-      // Scroll to the selected page
-      if (mainContentRef.current) {
-        const targetElement = document.getElementById(`page-${page}`);
-        if (targetElement) {
-          // Use smooth scrolling for better UX
-          targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-
-          // Reset the manual page change flag after scrolling finishes with a clear reference
-          scrollTimeoutRef.current = setTimeout(() => {
-            setIsManualPageChange(false);
-            scrollTimeoutRef.current = null;
-          }, 1000); // Extend to allow time for the scroll animation to complete fully
+          setPdfMetadata(extractedMetadata);
         } else {
-          // If we can't find the target element yet (still loading), wait and try again
-          scrollTimeoutRef.current = setTimeout(() => {
-            const retryElement = document.getElementById(`page-${page}`);
-            if (retryElement) {
-              retryElement.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }
-            setIsManualPageChange(false);
-            scrollTimeoutRef.current = null;
-          }, 800);
+          console.log("[PdfViewer] No metadata found in PDF.");
+          setPdfMetadata({});
         }
-      } else {
-        // If no main content ref, just reset the flag
-        scrollTimeoutRef.current = setTimeout(() => {
-          setIsManualPageChange(false);
-          scrollTimeoutRef.current = null;
-        }, 800);
+      } catch (error) {
+        console.error("[PdfViewer] Error fetching PDF metadata:", error);
+        setPdfMetadata({});
       }
-    }
-  };
+
+      if (pdfUrl && !cachedDocumentUrl) {
+        console.warn(
+          "[PdfViewer] Caching logic needs review for react-pdf-viewer"
+        );
+      }
+
+      if (currentPage > event.doc.numPages) {
+        setCurrentPage(1);
+      }
+
+      if (!enhancedMetadata) {
+        prefetchMetadata();
+      }
+    },
+    [pdfUrl, cachedDocumentUrl, currentPage, enhancedMetadata, prefetchMetadata]
+  );
+
+  const handlePageChange = useCallback((page: number) => {
+    console.log(`[PdfViewer] Page changed to: ${page}`);
+    setCurrentPage(page);
+  }, []);
 
   const handleZoomIn = () => {
     setScale((prevScale) => Math.min(prevScale + 0.2, 3));
@@ -363,205 +349,13 @@ export function PdfViewer({
       return;
     }
 
-    // Open the PDF in a new tab for download
     window.open(pdfUrl, "_blank");
-  };
-
-  const toggleSidebar = () => {
-    setShowSidebar((prev) => !prev);
   };
 
   const toggleTextLayer = () => {
     setShowTextLayer((prev) => !prev);
   };
 
-  // SWR fetcher function with retry logic
-  const metadataFetcher = useCallback(
-    async (
-      url: string,
-      { pdfUrl, pdfId }: { pdfUrl: string; pdfId?: string | number }
-    ) => {
-      const MAX_RETRIES = 3;
-      const RETRY_DELAY = 1000; // ms
-
-      const fetchWithRetry = async (attempt = 1) => {
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ pdfUrl, pdfId }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.details || "Server-side extraction failed"
-            );
-          }
-
-          return response.json();
-        } catch (error) {
-          // Only retry for network errors, not for server errors
-          if (
-            attempt < MAX_RETRIES &&
-            !(error instanceof Error && error.message.includes("Server-side"))
-          ) {
-            console.warn(
-              `Metadata fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
-            );
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-            return fetchWithRetry(attempt + 1);
-          }
-          throw error;
-        }
-      };
-
-      return fetchWithRetry();
-    },
-    []
-  );
-
-  // SWR hook for metadata with conditional fetching
-  const {
-    data: metadataResponse,
-    error: metadataFetchError,
-    isLoading: isMetadataLoading,
-  } = useSWR(
-    // Only fetch if we have a URL and don't have existing metadata
-    pdfUrl && pdfId && !existingMetadata
-      ? ["/api/metadata", { pdfUrl, pdfId }]
-      : null,
-    ([url, params]) => metadataFetcher(url, params),
-    {
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
-      dedupingInterval: 60000, // 1 minute
-      errorRetryCount: 3, // SWR's built-in retry mechanism
-      errorRetryInterval: 1000, // Start with 1s delay and increase exponentially
-      shouldRetryOnError: true, // Enables retry on error
-    }
-  );
-
-  // Prefetch helper function that can be used on the server
-  const prefetchMetadata = useCallback(() => {
-    if (pdfUrl && pdfId && !existingMetadata) {
-      preload(
-        ["/api/metadata", { pdfUrl, pdfId }],
-        ([url, params]) => metadataFetcher(url, params),
-        {
-          revalidateOnFocus: false,
-          revalidateIfStale: false,
-          dedupingInterval: 60000, // 1 minute
-          errorRetryCount: 3,
-          errorRetryInterval: 1000,
-          shouldRetryOnError: true,
-        }
-      );
-    }
-  }, [pdfUrl, pdfId, existingMetadata, metadataFetcher]);
-
-  // Handle all SWR metadata-related state updates in a single effect
-  useEffect(() => {
-    // Update metadata when response changes
-    if (metadataResponse?.metadata) {
-      setEnhancedMetadata(metadataResponse.metadata);
-    }
-
-    // Update loading state
-    setIsLoadingAiMetadata(isMetadataLoading);
-
-    // Handle errors
-    if (metadataFetchError) {
-      console.error("Failed to fetch metadata:", metadataFetchError);
-      setMetadataError(true);
-
-      toast({
-        title: "Metadata Analysis Failed",
-        description:
-          metadataFetchError.message || "Could not analyze the document.",
-        variant: "destructive",
-      });
-    }
-  }, [metadataResponse, metadataFetchError, isMetadataLoading, toast]);
-
-  // Function to fetch enhanced metadata using OpenAI
-  const fetchEnhancedMetadata = useCallback(async () => {
-    if (!pdfUrl) return;
-
-    // Skip fetching if we already have metadata
-    if (existingMetadata) {
-      setEnhancedMetadata(existingMetadata);
-      return;
-    }
-
-    // With useSWR, we don't need to manually fetch as it's handled by the hook
-    // We're just triggering the prefetch here in case it hasn't happened yet
-    prefetchMetadata();
-  }, [pdfUrl, existingMetadata, prefetchMetadata]);
-
-  // Combined effect for cache loading and error handling
-  useEffect(() => {
-    // Update loading state
-    if (cacheLoading) {
-      setDocumentLoaded(false);
-    }
-
-    // Handle cache errors
-    if (cacheError) {
-      console.error("Error loading PDF from cache:", cacheError);
-      onDocumentLoadError(new Error(cacheError));
-    }
-  }, [cacheLoading, cacheError, onDocumentLoadError]);
-
-  // Add a new effect to fetch and cache the PDF if not already cached
-  useEffect(() => {
-    async function fetchAndCachePDF() {
-      if (!pdfUrl || !pdfId || isCached || cacheLoading) {
-        return;
-      }
-
-      // Retry logic for network flakiness
-      const MAX_RETRIES = 3;
-      const RETRY_DELAY = 1000; // ms
-
-      const fetchWithRetry = async (attempt = 1): Promise<ArrayBuffer> => {
-        try {
-          const response = await fetch(pdfUrl);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch PDF: ${response.statusText}`);
-          }
-          return await response.arrayBuffer();
-        } catch (error) {
-          if (attempt < MAX_RETRIES) {
-            console.warn(
-              `Fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
-            );
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-            return fetchWithRetry(attempt + 1);
-          }
-          throw error;
-        }
-      };
-
-      try {
-        // Attempt fetch with retry logic
-        const pdfData = await fetchWithRetry();
-
-        // Cache the fetched PDF
-        await cachePDFDocument(pdfData);
-      } catch (err) {
-        console.error("Error fetching and caching PDF after retries:", err);
-        // Could add notification to user here that caching failed
-      }
-    }
-
-    fetchAndCachePDF();
-  }, [pdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
-
-  // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
     return (
       <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
@@ -587,10 +381,9 @@ export function PdfViewer({
     );
   }
 
-  // Calculate width to display page with
   const pageWidth = containerWidth
     ? Math.min(
-        containerWidth - (showSidebar ? sidebarDefaultWidth : 0),
+        containerWidth - (showTextLayer ? sidebarDefaultWidth : 0),
         maxWidth
       )
     : maxWidth;
@@ -605,108 +398,58 @@ export function PdfViewer({
         enhancedMetadata={enhancedMetadata}
         searchText={searchText}
         onSearchChange={setSearchText}
-        onToggleSidebar={toggleSidebar}
         onToggleTextLayer={toggleTextLayer}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onRotate={handleRotate}
         onDownload={handleDownload}
-        showSidebar={showSidebar}
         showTextLayer={showTextLayer}
         scale={scale}
       />
 
-      {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Show loading state during cache loading */}
+        {pdfLoadError ? (
+          <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
+            <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Failed to load PDF</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {pdfLoadError || "There was an error loading the document."}
+            </p>
+            <Button onClick={handleDownload}>Open in New Tab</Button>
+          </div>
+        ) : isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
+            <p className="text-center text-sm text-muted-foreground">
+              Loading PDF...
+            </p>
+          </div>
+        ) : (
+          <div className="relative h-full w-full">
+            <ReactPdfViewerWrapper
+              pdfUrl={effectivePdfUrl}
+              currentPage={currentPage}
+              scale={scale}
+              rotation={rotation}
+              showTextLayer={showTextLayer}
+              onDocumentLoad={handleDocumentLoad}
+              onPageChange={handlePageChange}
+              searchText={searchText}
+              onSearchNext={searchRef.current?.jumpToNext}
+              onSearchPrevious={searchRef.current?.jumpToPrevious}
+              pdfMetadata={pdfMetadata}
+              enhancedMetadata={enhancedMetadata}
+              isLoadingAiMetadata={isLoadingAiMetadata}
+              metadataError={metadataError}
+            />
 
-        {!isLoading && (
-          <ResizablePanelGroup
-            ref={resizablePanelGroupRef}
-            direction="horizontal"
-            className="w-full h-full"
-          >
-            {/* Show sidebar only if enabled */}
-            {showSidebar && (
-              <>
-                <ResizablePanel
-                  defaultSize={sidebarDefaultPercentage}
-                  minSize={15}
-                  maxSize={40}
-                  className="h-full"
-                >
-                  <PdfSidebar
-                    pdfUrl={effectivePdfUrl}
-                    numPages={numPages}
-                    currentPage={currentPage}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    goToPage={goToPage}
-                    changePage={changePage}
-                    pdfMetadata={pdfMetadata}
-                    enhancedMetadata={enhancedMetadata}
-                    isLoadingAiMetadata={isLoadingAiMetadata}
-                    metadataError={metadataError}
-                    onDocumentLoadSuccess={onDocumentLoadSuccess}
-                  />
-                </ResizablePanel>
-                <ResizableHandle withHandle>
-                  <div className="w-3 h-full flex items-center justify-center">
-                    <GripVertical className="h-4 w-4 text-gray-400" />
-                  </div>
-                </ResizableHandle>
-              </>
+            {pdfId && documentLoaded && (
+              <FloatingPdfChat
+                pdfId={pdfId}
+                pdfTitle={pdfTitle}
+                pdfUrl={effectivePdfUrl}
+              />
             )}
-
-            {/* Main PDF view */}
-            <ResizablePanel className="h-full overflow-hidden">
-              {pdfLoadError ? (
-                <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
-                  <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    Failed to load PDF
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {pdfLoadError || "There was an error loading the document."}
-                  </p>
-                  <Button onClick={handleDownload}>Open in New Tab</Button>
-                </div>
-              ) : (
-                <div className="relative h-full overflow-auto">
-                  <PdfViewerContent
-                    pdfUrl={effectivePdfUrl}
-                    numPages={numPages}
-                    currentPage={currentPage}
-                    scale={scale}
-                    rotation={rotation}
-                    showTextLayer={showTextLayer}
-                    isManualPageChange={isManualPageChange}
-                    mainContentRef={mainContentRef}
-                    pageWidth={
-                      containerWidth
-                        ? Math.min(containerWidth, maxWidth)
-                        : maxWidth
-                    }
-                    onDocumentSuccess={onDocumentLoadSuccess}
-                    onDocumentFailed={onDocumentLoadError}
-                    onPageChange={goToPage}
-                    cachedDocumentUrl={cachedDocumentUrl}
-                    isCached={isCached}
-                    loading={isLoading}
-                    handleDownload={handleDownload}
-                  />
-
-                  {pdfId && documentLoaded && (
-                    <FloatingPdfChat
-                      pdfId={pdfId}
-                      pdfTitle={pdfTitle}
-                      pdfUrl={effectivePdfUrl}
-                    />
-                  )}
-                </div>
-              )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
+          </div>
         )}
       </div>
     </div>
