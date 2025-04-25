@@ -7,18 +7,6 @@ import { PdfThumbnails } from "./pdf-thumbnails";
 import { PdfInfoPanel } from "./pdf-info-panel";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
-// Define a type for PDF metadata
-interface PdfMetadata {
-  title?: string;
-  author?: string;
-  subject?: string;
-  keywords?: string;
-  creator?: string;
-  producer?: string;
-  creationDate?: string;
-  modificationDate?: string;
-}
-
 export interface PdfSidebarProps {
   pdfUrl: string;
   numPages: number;
@@ -27,16 +15,14 @@ export interface PdfSidebarProps {
   setActiveTab: (tab: string) => void;
   goToPage: (page: number) => void;
   changePage: (offset: number) => void;
-  pdfMetadata: PdfMetadata;
-  enhancedMetadata: EnhancedPdfMetadata | null;
-  isLoadingAiMetadata: boolean;
-  metadataError: boolean;
+  pdfMetadata?: EnhancedPdfMetadata;
+
   onDocumentLoadSuccess?: ({
     numPages,
     metadata,
   }: {
     numPages: number;
-    metadata?: any;
+    metadata?: EnhancedPdfMetadata;
   }) => void;
 }
 
@@ -49,9 +35,7 @@ export function PdfSidebar({
   goToPage,
   changePage,
   pdfMetadata,
-  enhancedMetadata,
-  isLoadingAiMetadata,
-  metadataError,
+
   onDocumentLoadSuccess,
 }: PdfSidebarProps) {
   return (
@@ -61,7 +45,7 @@ export function PdfSidebar({
       onValueChange={setActiveTab}
       className="w-full h-full flex flex-col"
     >
-      <TabsList className="w-full grid grid-cols-2 px-2">
+      <TabsList className="w-full grid grid-cols-2 px-2 rounded-none">
         <TabsTrigger value="info">
           <FileText className="h-4 w-4 mr-1" />
           <span className="sr-only sm:not-sr-only sm:inline-block text-xs">
@@ -76,13 +60,8 @@ export function PdfSidebar({
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="info" className="flex-1 m-0 overflow-hidden">
-        <PdfInfoPanel
-          pdfMetadata={pdfMetadata}
-          enhancedMetadata={enhancedMetadata}
-          isLoadingAiMetadata={isLoadingAiMetadata}
-          metadataError={metadataError}
-        />
+      <TabsContent value="info" className="flex-1 m-0 overflow-hidden px-4">
+        <PdfInfoPanel pdfMetadata={pdfMetadata} />
       </TabsContent>
 
       <TabsContent

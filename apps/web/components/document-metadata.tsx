@@ -12,9 +12,10 @@ import {
 import { useSetAtom } from "jotai";
 import { metadataFilterAtom } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
 interface DocumentMetadataProps {
-  metadata: any;
+  metadata?: EnhancedPdfMetadata;
   isListView?: boolean;
 }
 
@@ -22,6 +23,10 @@ export function DocumentMetadata({
   metadata,
   isListView = false,
 }: DocumentMetadataProps) {
+  if (!metadata) {
+    return null;
+  }
+
   // Calculate visible labels dynamically, default is 3 but fewer if organization exists
   const maxVisibleLabels = metadata.issuingOrganization ? 2 : 3;
   const labels = metadata.labels || [];
