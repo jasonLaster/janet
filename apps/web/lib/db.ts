@@ -16,6 +16,7 @@ export interface PDF {
   uploaded_at: string;
   metadata?: any; // Add metadata field to PDF interface
   text?: string; // Add text field to PDF interface
+  is_public?: boolean; // Add is_public field
 }
 
 // Create a SQL client with the pooled connection
@@ -36,7 +37,8 @@ export async function getPdfById(id: number): Promise<PDF | null> {
       description,
       page_count,
       uploaded_at,
-      metadata
+      metadata,
+      is_public
      FROM pdfs 
     WHERE id = ${id}
     `;

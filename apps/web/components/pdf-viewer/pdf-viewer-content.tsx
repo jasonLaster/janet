@@ -25,10 +25,7 @@ export interface PdfViewerContentProps {
   pageWidth: number;
   onDocumentSuccess: (pdf: any) => void;
   onDocumentFailed: (error: Error) => void;
-  cachedDocumentUrl: string | null;
   onPageChange?: (page: number) => void;
-  isCached?: boolean;
-  loading?: boolean;
   handleDownload?: () => void;
 }
 
@@ -44,19 +41,8 @@ export function PdfViewerContent({
   pageWidth,
   onDocumentSuccess,
   onDocumentFailed,
-  cachedDocumentUrl,
-  onPageChange,
-  isCached,
-  loading,
-  handleDownload,
 }: PdfViewerContentProps) {
   // Using cached URL if available, otherwise falling back to the direct URL
-  const documentSource = cachedDocumentUrl || pdfUrl;
-  const hasValidSource =
-    !!documentSource &&
-    (documentSource.startsWith("http") ||
-      documentSource.startsWith("blob:") ||
-      documentSource.startsWith("data:"));
 
   // Track loading status of all pages
   const loadedPages = useRef<Set<number>>(new Set());
@@ -69,7 +55,7 @@ export function PdfViewerContent({
   useEffect(() => {
     loadedPages.current = new Set();
     setAllPagesLoaded(false);
-  }, [documentSource, numPages]);
+  }, [pdfUrl, numPages]);
 
   // Handler for successful page load
   const handlePageLoadSuccess = (pageNum: number) => {
@@ -78,18 +64,6 @@ export function PdfViewerContent({
       setAllPagesLoaded(true);
     }
   };
-
-  if (!hasValidSource) {
-    return (
-      <div className="w-full h-full overflow-visible" ref={mainContentRef}>
-        <div className="pdf-container w-full bg-stone-50">
-          <div className="flex items-center justify-center h-full">
-            <div className="text-gray-500">No valid PDF source available</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -105,7 +79,7 @@ export function PdfViewerContent({
           </div>
         )}
         <Document
-          file={documentSource}
+          file={pdfUrl}
           onLoadSuccess={(pdf) => {
             onDocumentSuccess(pdf);
           }}

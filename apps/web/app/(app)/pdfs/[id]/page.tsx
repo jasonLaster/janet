@@ -37,10 +37,9 @@ export default async function PDFViewPage({ params }: PageProps) {
   return (
     // @ts-ignore - Interface issue will be resolved with full implementation
     <PdfViewer
-      pdfUrl={pdf.blob_url}
       pdfTitle={pdf.title || pdf.filename}
       pdfId={pdfId}
-      existingMetadata={pdf.metadata}
+      pdfMetadata={pdf.metadata}
     />
   );
 }

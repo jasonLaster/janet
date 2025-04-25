@@ -14,12 +14,13 @@ import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 import { PdfViewerHeader } from "./pdf-viewer-header";
 import { PdfViewerContent } from "./pdf-viewer-content";
 import { PdfSidebar } from "./pdf-sidebar";
-import { PdfMetadata, PdfViewerProps } from "./pdf-viewer-types";
-import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
+import { PdfViewerProps } from "./pdf-viewer-types";
 import { pdfjs } from "react-pdf";
 import { usePDFDocument } from "@/hooks/use-pdf-document";
-import useSWR, { preload } from "swr";
 import { PDF_WORKER_URL } from "./constants";
+
+import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 // Initialize the PDF.js worker
 if (typeof window !== "undefined") {
   pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
@@ -30,10 +31,9 @@ const sidebarDefaultWidth = 250;
 const sidebarDefaultPercentage = 25;
 
 export function PdfViewer({
-  pdfUrl,
   pdfTitle = "Document",
   pdfId,
-  existingMetadata,
+  pdfMetadata,
   onError,
 }: PdfViewerProps) {
   // Updated to match the new hook API, only passing pdfId
@@ -71,7 +71,7 @@ export function PdfViewer({
   const isLoading = cacheLoading;
 
   // Use the cached document URL if available, otherwise fall back to the provided URL
-  const effectivePdfUrl = cachedDocumentUrl || pdfUrl;
+  const effectivePdfUrl = cachedDocumentUrl || `/api/pdfs/${pdfId}/content`;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const setContainerRef = useCallback((node: HTMLDivElement | null) => {
@@ -94,12 +94,7 @@ export function PdfViewer({
   const [searchText, setSearchText] = useState<string>("");
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("info");
-  const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>({});
-  const [enhancedMetadata, setEnhancedMetadata] =
-    useState<EnhancedPdfMetadata | null>(existingMetadata || null);
-  const [metadataError, setMetadataError] = useState<boolean>(false);
-  const [isLoadingAiMetadata, setIsLoadingAiMetadata] =
-    useState<boolean>(false);
+
   const resizablePanelGroupRef = useRef(null);
 
   // Manual resize observer implementation
@@ -230,7 +225,7 @@ export function PdfViewer({
   useEffect(() => {
     // Reset page number when PDF URL changes
     setCurrentPage(1);
-  }, [pdfUrl]);
+  }, [effectivePdfUrl]);
 
   function onDocumentLoadSuccess({
     numPages,
@@ -241,36 +236,6 @@ export function PdfViewer({
   }) {
     setNumPages(numPages);
     setDocumentLoaded(true);
-    fetchEnhancedMetadata();
-
-    // Extract metadata if available
-    if (metadata) {
-      const extractedMetadata: PdfMetadata = {};
-
-      // Map common metadata fields
-      if (metadata.get("Title"))
-        extractedMetadata.title = metadata.get("Title");
-      if (metadata.get("Author"))
-        extractedMetadata.author = metadata.get("Author");
-      if (metadata.get("Subject"))
-        extractedMetadata.subject = metadata.get("Subject");
-      if (metadata.get("Keywords"))
-        extractedMetadata.keywords = metadata.get("Keywords");
-      if (metadata.get("Creator"))
-        extractedMetadata.creator = metadata.get("Creator");
-      if (metadata.get("Producer"))
-        extractedMetadata.producer = metadata.get("Producer");
-      if (metadata.get("CreationDate")) {
-        const date = new Date(metadata.get("CreationDate"));
-        extractedMetadata.creationDate = date.toLocaleDateString();
-      }
-      if (metadata.get("ModDate")) {
-        const date = new Date(metadata.get("ModDate"));
-        extractedMetadata.modificationDate = date.toLocaleDateString();
-      }
-
-      setPdfMetadata(extractedMetadata);
-    }
   }
 
   function onDocumentLoadError(error: Error) {
@@ -354,7 +319,10 @@ export function PdfViewer({
   };
 
   const handleDownload = () => {
-    if (!pdfUrl.startsWith("http") && !pdfUrl.startsWith("/")) {
+    if (
+      !effectivePdfUrl.startsWith("http") &&
+      !effectivePdfUrl.startsWith("/")
+    ) {
       toast({
         title: "Download error",
         description: "Cannot download this PDF",
@@ -364,7 +332,7 @@ export function PdfViewer({
     }
 
     // Open the PDF in a new tab for download
-    window.open(pdfUrl, "_blank");
+    window.open(effectivePdfUrl, "_blank");
   };
 
   const toggleSidebar = () => {
@@ -374,132 +342,6 @@ export function PdfViewer({
   const toggleTextLayer = () => {
     setShowTextLayer((prev) => !prev);
   };
-
-  // SWR fetcher function with retry logic
-  const metadataFetcher = useCallback(
-    async (
-      url: string,
-      { pdfUrl, pdfId }: { pdfUrl: string; pdfId?: string | number }
-    ) => {
-      const MAX_RETRIES = 3;
-      const RETRY_DELAY = 1000; // ms
-
-      const fetchWithRetry = async (attempt = 1) => {
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ pdfUrl, pdfId }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.details || "Server-side extraction failed"
-            );
-          }
-
-          return response.json();
-        } catch (error) {
-          // Only retry for network errors, not for server errors
-          if (
-            attempt < MAX_RETRIES &&
-            !(error instanceof Error && error.message.includes("Server-side"))
-          ) {
-            console.warn(
-              `Metadata fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
-            );
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-            return fetchWithRetry(attempt + 1);
-          }
-          throw error;
-        }
-      };
-
-      return fetchWithRetry();
-    },
-    []
-  );
-
-  // SWR hook for metadata with conditional fetching
-  const {
-    data: metadataResponse,
-    error: metadataFetchError,
-    isLoading: isMetadataLoading,
-  } = useSWR(
-    // Only fetch if we have a URL and don't have existing metadata
-    pdfUrl && pdfId && !existingMetadata
-      ? ["/api/metadata", { pdfUrl, pdfId }]
-      : null,
-    ([url, params]) => metadataFetcher(url, params),
-    {
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
-      dedupingInterval: 60000, // 1 minute
-      errorRetryCount: 3, // SWR's built-in retry mechanism
-      errorRetryInterval: 1000, // Start with 1s delay and increase exponentially
-      shouldRetryOnError: true, // Enables retry on error
-    }
-  );
-
-  // Prefetch helper function that can be used on the server
-  const prefetchMetadata = useCallback(() => {
-    if (pdfUrl && pdfId && !existingMetadata) {
-      preload(
-        ["/api/metadata", { pdfUrl, pdfId }],
-        ([url, params]) => metadataFetcher(url, params),
-        {
-          revalidateOnFocus: false,
-          revalidateIfStale: false,
-          dedupingInterval: 60000, // 1 minute
-          errorRetryCount: 3,
-          errorRetryInterval: 1000,
-          shouldRetryOnError: true,
-        }
-      );
-    }
-  }, [pdfUrl, pdfId, existingMetadata, metadataFetcher]);
-
-  // Handle all SWR metadata-related state updates in a single effect
-  useEffect(() => {
-    // Update metadata when response changes
-    if (metadataResponse?.metadata) {
-      setEnhancedMetadata(metadataResponse.metadata);
-    }
-
-    // Update loading state
-    setIsLoadingAiMetadata(isMetadataLoading);
-
-    // Handle errors
-    if (metadataFetchError) {
-      console.error("Failed to fetch metadata:", metadataFetchError);
-      setMetadataError(true);
-
-      toast({
-        title: "Metadata Analysis Failed",
-        description:
-          metadataFetchError.message || "Could not analyze the document.",
-        variant: "destructive",
-      });
-    }
-  }, [metadataResponse, metadataFetchError, isMetadataLoading, toast]);
-
-  // Function to fetch enhanced metadata using OpenAI
-  const fetchEnhancedMetadata = useCallback(async () => {
-    if (!pdfUrl) return;
-
-    // Skip fetching if we already have metadata
-    if (existingMetadata) {
-      setEnhancedMetadata(existingMetadata);
-      return;
-    }
-
-    // With useSWR, we don't need to manually fetch as it's handled by the hook
-    // We're just triggering the prefetch here in case it hasn't happened yet
-    prefetchMetadata();
-  }, [pdfUrl, existingMetadata, prefetchMetadata]);
 
   // Combined effect for cache loading and error handling
   useEffect(() => {
@@ -518,7 +360,7 @@ export function PdfViewer({
   // Add a new effect to fetch and cache the PDF if not already cached
   useEffect(() => {
     async function fetchAndCachePDF() {
-      if (!pdfUrl || !pdfId || isCached || cacheLoading) {
+      if (!effectivePdfUrl || !pdfId || isCached || cacheLoading) {
         return;
       }
 
@@ -528,7 +370,7 @@ export function PdfViewer({
 
       const fetchWithRetry = async (attempt = 1): Promise<ArrayBuffer> => {
         try {
-          const response = await fetch(pdfUrl);
+          const response = await fetch(effectivePdfUrl);
           if (!response.ok) {
             throw new Error(`Failed to fetch PDF: ${response.statusText}`);
           }
@@ -559,7 +401,7 @@ export function PdfViewer({
     }
 
     fetchAndCachePDF();
-  }, [pdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
+  }, [effectivePdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
 
   // If we have a PDF error, show a fallback UI
   if (pdfLoadError) {
@@ -567,7 +409,7 @@ export function PdfViewer({
       <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b bg-muted/20">
           <h2 className="font-medium">
-            {enhancedMetadata?.descriptiveTitle || pdfTitle}
+            {pdfMetadata?.descriptiveTitle || pdfTitle}
           </h2>
           <Button variant="outline" size="sm" onClick={handleDownload}>
             Open in New Tab
@@ -587,6 +429,10 @@ export function PdfViewer({
     );
   }
 
+  if (cacheLoading) {
+    return null;
+  }
+
   // Calculate width to display page with
   const pageWidth = containerWidth
     ? Math.min(
@@ -602,8 +448,8 @@ export function PdfViewer({
     >
       <PdfViewerHeader
         title={pdfTitle}
-        enhancedMetadata={enhancedMetadata}
         searchText={searchText}
+        metadata={pdfMetadata}
         onSearchChange={setSearchText}
         onToggleSidebar={toggleSidebar}
         onToggleTextLayer={toggleTextLayer}
@@ -644,9 +490,6 @@ export function PdfViewer({
                     goToPage={goToPage}
                     changePage={changePage}
                     pdfMetadata={pdfMetadata}
-                    enhancedMetadata={enhancedMetadata}
-                    isLoadingAiMetadata={isLoadingAiMetadata}
-                    metadataError={metadataError}
                     onDocumentLoadSuccess={onDocumentLoadSuccess}
                   />
                 </ResizablePanel>
@@ -682,17 +525,10 @@ export function PdfViewer({
                     showTextLayer={showTextLayer}
                     isManualPageChange={isManualPageChange}
                     mainContentRef={mainContentRef}
-                    pageWidth={
-                      containerWidth
-                        ? Math.min(containerWidth, maxWidth)
-                        : maxWidth
-                    }
+                    pageWidth={pageWidth}
                     onDocumentSuccess={onDocumentLoadSuccess}
                     onDocumentFailed={onDocumentLoadError}
                     onPageChange={goToPage}
-                    cachedDocumentUrl={cachedDocumentUrl}
-                    isCached={isCached}
-                    loading={isLoading}
                     handleDownload={handleDownload}
                   />
 
