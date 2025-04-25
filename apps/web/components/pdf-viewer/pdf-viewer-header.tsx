@@ -25,7 +25,7 @@ import { DocumentMetadata } from "../document-metadata";
 
 export interface PdfViewerHeaderProps {
   title: string;
-  enhancedMetadata?: EnhancedPdfMetadata | null;
+  metadata?: EnhancedPdfMetadata | null;
   searchText: string;
   onSearchChange: (text: string) => void;
   onToggleSidebar: () => void;
@@ -41,7 +41,7 @@ export interface PdfViewerHeaderProps {
 
 export function PdfViewerHeader({
   title,
-  enhancedMetadata,
+  metadata,
   searchText,
   onSearchChange,
   onToggleSidebar,
@@ -67,8 +67,8 @@ export function PdfViewerHeader({
           <span className="sr-only">Back</span>
         </Button>
         <h2 className="font-medium flex items-center gap-2">
-          {enhancedMetadata?.descriptiveTitle || title}
-          <DocumentMetadata metadata={enhancedMetadata} />
+          {metadata?.descriptiveTitle || title}
+          <DocumentMetadata metadata={metadata} />
         </h2>
       </div>
 
