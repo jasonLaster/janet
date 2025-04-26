@@ -5,12 +5,13 @@ import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
-  usePdfs,
   metadataFilterAtom,
   searchQueryAtom,
   searchResultsAtom,
   getFilteredPdfs,
+  SearchResult,
 } from "@/lib/store";
+import { PDF } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 
 interface Label {
@@ -18,8 +19,11 @@ interface Label {
   count: number;
 }
 
-export function DocumentLabels() {
-  const { pdfs } = usePdfs();
+interface DocumentLabelsProps {
+  pdfs: PDF[];
+}
+
+export function DocumentLabels({ pdfs }: DocumentLabelsProps) {
   const searchQuery = useAtomValue(searchQueryAtom);
   const searchResults = useAtomValue(searchResultsAtom);
   const metadataFilter = useAtomValue(metadataFilterAtom);
@@ -29,11 +33,16 @@ export function DocumentLabels() {
   // Get filtered PDFs based on current filters
   const filteredPdfs = useMemo(
     () =>
-      getFilteredPdfs(pdfs, searchQuery, searchResults, {
-        ...metadataFilter,
-        type: metadataFilter.type === "label" ? null : metadataFilter.type,
-        value: metadataFilter.type === "label" ? null : metadataFilter.value,
-      }),
+      getFilteredPdfs(
+        pdfs,
+        searchQuery,
+        searchResults.map((result) => ({ id: result.id, title: "" })),
+        {
+          ...metadataFilter,
+          type: metadataFilter.type === "label" ? null : metadataFilter.type,
+          value: metadataFilter.type === "label" ? null : metadataFilter.value,
+        }
+      ),
     [pdfs, searchQuery, searchResults, metadataFilter]
   );
 
