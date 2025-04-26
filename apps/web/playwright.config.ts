@@ -18,6 +18,7 @@ export default defineConfig({
   reporter: process.env.CI ? "html" : "dot",
 
   use: {
+    // headless: false,
     baseURL,
     trace: "on",
   },

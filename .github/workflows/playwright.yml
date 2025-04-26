@@ -9,7 +9,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22.x"
-  PNPM_VERSION: 9.4.0
+  PNPM_VERSION: 10.9.0
 
 jobs:
   test:
