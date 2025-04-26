@@ -5,12 +5,14 @@ import { Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
-  usePdfs,
+  // usePdfs, // Keep commented out
   metadataFilterAtom,
   searchQueryAtom,
   searchResultsAtom,
   getFilteredPdfs,
+  SearchResult, // Import SearchResult type
 } from "@/lib/store";
+import { PDF } from "@/lib/db"; // Import PDF from lib/db
 import { Button } from "@/components/ui/button";
 
 interface Company {
@@ -18,8 +20,11 @@ interface Company {
   count: number;
 }
 
-export function DocumentCompanies() {
-  const { pdfs } = usePdfs();
+interface DocumentCompaniesProps {
+  pdfs: PDF[];
+}
+
+export function DocumentCompanies({ pdfs }: DocumentCompaniesProps) {
   const searchQuery = useAtomValue(searchQueryAtom);
   const searchResults = useAtomValue(searchResultsAtom);
   const metadataFilter = useAtomValue(metadataFilterAtom);
@@ -29,11 +34,18 @@ export function DocumentCompanies() {
   // Get filtered PDFs based on current filters
   const filteredPdfs = useMemo(
     () =>
-      getFilteredPdfs(pdfs, searchQuery, searchResults, {
-        ...metadataFilter,
-        type: metadataFilter.type === "company" ? null : metadataFilter.type,
-        value: metadataFilter.type === "company" ? null : metadataFilter.value,
-      }),
+      getFilteredPdfs(
+        pdfs,
+        searchQuery,
+        // Map searchResults to the required {id, title} format
+        searchResults.map((result) => ({ id: result.id, title: "" })), // Provide dummy title
+        {
+          ...metadataFilter,
+          type: metadataFilter.type === "company" ? null : metadataFilter.type,
+          value:
+            metadataFilter.type === "company" ? null : metadataFilter.value,
+        }
+      ),
     [pdfs, searchQuery, searchResults, metadataFilter]
   );
 

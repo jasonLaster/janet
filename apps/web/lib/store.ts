@@ -2,19 +2,6 @@ import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { toast } from "@/hooks/use-toast"; // Assuming useToast is accessible globally or via context
 import React from "react";
 
-// Define the shape of a PDF object based on usage in PdfList
-export interface PDF {
-  id: number;
-  filename: string;
-  blob_url: string;
-  created_at: string;
-  user_id?: string;
-  organization_id?: string;
-  ocr_result?: any; // Adjust type as needed
-  metadata?: any; // Adjust type as needed
-  is_public: boolean;
-}
-
 // Define the shape for an uploading file's state
 export interface UploadingFileState {
   id: string;

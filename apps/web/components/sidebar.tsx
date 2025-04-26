@@ -9,8 +9,13 @@ import {
   OrganizationSwitcher,
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { PDF } from "@/lib/db";
 
-export function Sidebar() {
+interface SidebarProps {
+  pdfs: PDF[];
+}
+
+export function Sidebar({ pdfs }: SidebarProps) {
   return (
     <div className="w-64 border-r flex flex-col h-full bg-stone-50">
       <div className="px-4 h-[45px] border-b flex justify-between items-center w-full">
@@ -26,9 +31,9 @@ export function Sidebar() {
 
       {/* Scrollable content section */}
       <div className="flex-1 overflow-y-auto">
-        <DocumentCompanies />
+        <DocumentCompanies pdfs={pdfs} />
         <div className="border-t border-gray-100 mx-4"></div>
-        <DocumentLabels />
+        <DocumentLabels pdfs={pdfs} />
       </div>
 
       {/* User/Upload Area in Sidebar - Still uses SignedIn/Out */}
