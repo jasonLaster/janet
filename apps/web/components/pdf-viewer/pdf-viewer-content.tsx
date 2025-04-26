@@ -5,6 +5,7 @@ import { Document, Page } from "react-pdf";
 import { DocumentLoader } from "../ui/document-loader";
 import { PDF_VERSION } from "./constants";
 import { SearchMatch } from "./hooks/use-pdf-search";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 
 const options = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
@@ -25,7 +26,7 @@ export interface PdfViewerContentProps {
   isManualPageChange: boolean;
   mainContentRef: React.RefObject<HTMLDivElement | null>;
   pageWidth: number;
-  onDocumentSuccess: (pdf: any) => void;
+  onDocumentSuccess: (pdf: PDFDocumentProxy) => void;
   onDocumentFailed: (error: Error) => void;
   onPageChange?: (page: number) => void;
   handleDownload?: () => void;
@@ -46,8 +47,6 @@ export function PdfViewerContent({
   onDocumentSuccess,
   onDocumentFailed,
 }: PdfViewerContentProps) {
-  // Using cached URL if available, otherwise falling back to the direct URL
-
   // Track loading status of all pages
   const loadedPages = useRef<Set<number>>(new Set());
   const [allPagesLoaded, setAllPagesLoaded] = useState(false);
@@ -86,11 +85,11 @@ export function PdfViewerContent({
         )}
         <Document
           file={pdfUrl}
-          onLoadSuccess={(pdf) => {
+          onLoadSuccess={(pdf: PDFDocumentProxy) => {
             onDocumentSuccess(pdf);
           }}
           loading={<DocumentLoader mode="large" />}
-          onLoadError={(error) => {
+          onLoadError={(error: Error) => {
             onDocumentFailed(error);
           }}
           error={null}

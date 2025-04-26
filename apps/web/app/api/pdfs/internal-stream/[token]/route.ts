@@ -32,10 +32,10 @@ interface PdfAccessPayload {
 // export const runtime = "edge"; // DO NOT USE EDGE HERE - needs DB access
 
 export async function GET(
-  request: NextRequest, // Although not explicitly used, it's part of the signature
-  context: { params: { token: string } }
+  request: NextRequest, // Keep request parameter
+  { params }: { params: { token: string } } // Destructure params directly from the second argument
 ) {
-  const token = context.params.token;
+  const token = params.token; // Access token directly from destructured params
 
   if (!token) {
     return new NextResponse("Missing access token", { status: 400 });
@@ -49,11 +49,12 @@ export async function GET(
   try {
     // Decrypt and automatically validate the token & TTL
     payload = await unsealData<PdfAccessPayload>(token, ironOptions);
-    console.log(
-      `[Internal Stream ${payload.pdfId}] Token Validated: userId=${payload.userId}, orgId=${payload.orgId}, download=${payload.download}`
-    );
   } catch (error) {
-    console.warn("Token validation failed:", error);
+    console.warn(
+      `[Internal Stream] Token validation failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
     return new NextResponse("Invalid or expired access link", { status: 403 });
   }
 
@@ -66,10 +67,6 @@ export async function GET(
 
     // Final Authorization Check
     if (pdf.is_public) {
-      console.log(
-        `[Internal Stream ${payload.pdfId}] Access granted: Document is public.`
-      );
-    } else {
       // Private doc requires owner match OR matching active orgId
       let isAuthorized = false;
       if (payload.userId) {
@@ -79,15 +76,11 @@ export async function GET(
           pdf.organization_id && pdf.organization_id === payload.orgId
         );
         isAuthorized = isOwner || isOrgMatch;
-
-        // Log the detailed check
-        console.log(
-          `[Internal Stream ${payload.pdfId}] Auth Check: isOwner=${isOwner} (pdf.user_id=${pdf.user_id} vs token.userId=${payload.userId}), isOrgMatch=${isOrgMatch} (pdf.org_id=${pdf.organization_id} vs token.orgId=${payload.orgId})`
-        );
       } else {
         console.warn(
           `[Internal Stream ${payload.pdfId}] Access denied: Private doc, but no userId in token.`
         );
+        return new NextResponse("Forbidden", { status: 403 });
       }
 
       if (!isAuthorized) {
@@ -96,9 +89,6 @@ export async function GET(
         );
         return new NextResponse("Forbidden", { status: 403 });
       }
-      console.log(
-        `[Internal Stream ${payload.pdfId}] Access granted: User is owner or part of matching org.`
-      );
     }
 
     // Authorization passed, fetch and stream the blob
@@ -106,6 +96,9 @@ export async function GET(
     const blobResponse = await fetch(blobUrl);
 
     if (!blobResponse.ok) {
+      console.error(
+        `[Internal Stream ${payload.pdfId}] Failed to fetch blob. Status: ${blobResponse.status} ${blobResponse.statusText}`
+      );
       return new NextResponse("Could not retrieve file", {
         status: blobResponse.status,
       });
@@ -134,12 +127,6 @@ export async function GET(
       headers.set("Content-Length", contentLength);
     }
 
-    // TODO: Consider adding ETag if checksum is available
-    // const checksum = pdf.checksum; // Assuming checksum is available on the pdf object
-    // if (checksum) {
-    //   headers.set("ETag", checksum);
-    // }
-
     const dispositionType = payload.download ? "attachment" : "inline";
     const filename =
       pdf.filename || blobUrl.substring(blobUrl.lastIndexOf("/") + 1);
@@ -147,17 +134,6 @@ export async function GET(
     headers.set(
       "Content-Disposition",
       `${dispositionType}; filename="${safeFilename}"`
-    );
-
-    // You might want to control caching of the stream itself
-    // headers.set('Cache-Control', 'private, no-store');
-
-    console.log(
-      `[Internal Stream ${
-        payload.pdfId
-      }] Streaming response (Content-Type: ${headers.get(
-        "Content-Type"
-      )}, Disposition: ${headers.get("Content-Disposition")})`
     );
 
     // Stream the blob body back
