@@ -45,6 +45,20 @@ export default clerkMiddleware(
       };
 
       try {
+        if (
+          !process.env.IRON_SESSION_PASSWORD ||
+          process.env.IRON_SESSION_PASSWORD.length < 32
+        ) {
+          console.error(
+            "FATAL: Missing IRON_SESSION_PASSWORD environment variable"
+          );
+          return new NextResponse("Server configuration error", {
+            status: 500,
+          });
+        } else {
+          console.log("[Middleware] IRON_SESSION_PASSWORD is set");
+        }
+
         // Iron Session Configuration (must match the one in the target route)
         const ironOptions = {
           password: process.env.IRON_SESSION_PASSWORD!,

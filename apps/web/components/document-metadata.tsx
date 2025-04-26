@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
 interface DocumentMetadataProps {
-  metadata?: EnhancedPdfMetadata | null;
+  metadata?: EnhancedPdfMetadata;
   isListView?: boolean;
 }
 
@@ -32,14 +32,16 @@ export function DocumentMetadata({
   const labels = metadata.labels || [];
   const visibleLabels = labels.slice(0, maxVisibleLabels);
   const hiddenCount = Math.max(0, labels.length - maxVisibleLabels);
-  const setMetadataFilter = useSetAtom(metadataFilterAtom);
 
-  const handleBadgeClick =
-    (type: "company" | "label", value: string) => (e: React.MouseEvent) => {
-      if (!isListView) return;
-      e.preventDefault(); // Prevent link navigation when clicking badge
-      setMetadataFilter({ type, value });
-    };
+  const setFilter = useSetAtom(metadataFilterAtom);
+
+  const onLabelClick = (label: string) => {
+    setFilter((prev) => ({ ...prev, labels: [label] }));
+  };
+
+  const onOrganizationClick = (organization: string) => {
+    setFilter((prev) => ({ ...prev, organization }));
+  };
 
   return (
     <div className="flex flex-nowrap overflow-hidden ml-2 max-w-full">
@@ -47,67 +49,60 @@ export function DocumentMetadata({
         <Badge
           variant="secondary"
           className={cn(
-            "text-xs px-1.5 py-0.5 shrink-0 truncate",
-            isListView && "cursor-pointer hover:bg-secondary/80"
+            "flex items-center gap-1 mr-2 whitespace-nowrap",
+            isListView
+              ? ""
+              : "max-w-[150px] overflow-hidden text-ellipsis cursor-pointer"
           )}
-          onClick={handleBadgeClick("company", metadata.issuingOrganization)}
+          onClick={() => onOrganizationClick(metadata.issuingOrganization!)}
         >
-          <Building className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
+          <Building size={12} />
           <span className="truncate">{metadata.issuingOrganization}</span>
         </Badge>
       )}
-      <div className="flex overflow-hidden flex-nowrap">
-        {visibleLabels.map((label: string, index: number) => (
-          <Badge
-            key={index}
-            variant="secondary"
-            className={cn(
-              "text-xs px-1.5 py-0.5 ml-1 shrink-0 truncate",
-              isListView && "cursor-pointer hover:bg-secondary/80"
-            )}
-            onClick={handleBadgeClick("label", label)}
-          >
-            <Tag className="h-3 w-3 mr-1 opacity-70 flex-shrink-0" />
-            <span className="truncate">{label}</span>
-          </Badge>
-        ))}
-        {hiddenCount > 0 && (
-          <TooltipProvider>
-            <Tooltip delayDuration={300}>
+      <TooltipProvider>
+        <div className="flex flex-nowrap overflow-hidden">
+          {visibleLabels.map((label) => (
+            <Tooltip key={label}>
               <TooltipTrigger asChild>
                 <Badge
                   variant="outline"
-                  className="text-xs px-1.5 py-0.5 ml-1 shrink-0 cursor-pointer"
+                  className={cn(
+                    "flex items-center gap-1 mr-1 whitespace-nowrap",
+                    isListView
+                      ? ""
+                      : "max-w-[100px] overflow-hidden text-ellipsis cursor-pointer"
+                  )}
+                  onClick={() => onLabelClick(label)}
                 >
+                  <Tag size={12} />
+                  <span className="truncate">{label}</span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{label}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+          {hiddenCount > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="ml-1">
                   +{hiddenCount}
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent className="p-2 max-w-xs">
-                <div className="flex flex-col space-y-1">
-                  {labels.map((label: string, index: number) => (
-                    <Badge
-                      key={index}
-                      variant="secondary"
-                      className={cn(
-                        "text-xs px-1.5 py-0.5 justify-start w-full",
-                        isListView && "cursor-pointer hover:bg-secondary/80"
-                      )}
-                      onClick={
-                        isListView
-                          ? handleBadgeClick("label", label)
-                          : undefined
-                      }
-                    >
-                      <Tag className="h-3 w-3 mr-1 opacity-70" />
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
+              <TooltipContent>
+                <p>
+                  {labels
+                    .slice(maxVisibleLabels)
+                    .map((label) => label)
+                    .join(", ")}
+                </p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
+          )}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }

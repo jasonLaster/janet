@@ -259,7 +259,7 @@ export function PdfViewer({
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [numPages, isManualPageChange]); // Removed currentPage dependency
+  }, [numPages, isManualPageChange, currentPage]); // Added currentPage
 
   useEffect(() => {
     // Reset page number when PDF ID changes
@@ -301,20 +301,12 @@ export function PdfViewer({
       setSidebarSize(newSidebarSize);
       if (typeof window !== "undefined") {
         localStorage.setItem(LOCALSTORAGE_KEY, newSidebarSize.toString());
-        // Optional: log the save
-        // console.log(`[PdfViewer] Saved sidebar size to localStorage: ${newSidebarSize}%`);
       }
     }
   };
 
-  function onDocumentLoadSuccess({
-    numPages,
-    metadata,
-  }: {
-    numPages: number;
-    metadata?: any;
-  }) {
-    setNumPages(numPages);
+  function onDocumentLoadSuccess(pdf: pdfjs.PDFDocumentProxy) {
+    setNumPages(pdf.numPages);
     setDocumentLoaded(true);
   }
 

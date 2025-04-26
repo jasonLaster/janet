@@ -9,6 +9,7 @@ export async function sendChatWithPDF({
   maxTokens = 1500,
   systemPrompt = "You are a helpful AI assistant specialized in answering questions about PDF documents.",
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   messages: any[];
   pdfUrl?: string;
   maxTokens?: number;

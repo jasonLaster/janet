@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useMemo } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
@@ -13,7 +13,6 @@ import {
   metadataFilterAtom,
   searchResultsAtom,
   getFilteredPdfs,
-  SearchResult,
 } from "@/lib/store";
 import { PDF } from "@/lib/db";
 import { FixedSizeList as List } from "react-window";
@@ -30,7 +29,7 @@ export function PdfList({ pdfs }: PdfListProps) {
   const metadataFilter = useAtomValue(metadataFilterAtom);
   const { toast } = useToast();
   const router = useRouter();
-  const { organization } = useOrganization();
+  useOrganization();
 
   const handleDelete = async (id: number) => {
     try {
@@ -104,7 +103,7 @@ export function PdfList({ pdfs }: PdfListProps) {
           Upload your first PDF to get started
         </p>
         <div className="flex justify-center gap-4">
-          <FileUpload dropZoneOnly={true} className="w-auto" />
+          <FileUpload className="w-auto" />
         </div>
       </div>
     );
@@ -125,12 +124,16 @@ export function PdfList({ pdfs }: PdfListProps) {
       filterMessage = (
         <>
           No PDFs match the {filterType} {filterIcon}
-          <span className="font-medium">"{metadataFilter.value}"</span>
-          {searchQuery && ' and search query "' + searchQuery + '"'}
+          <span className="font-medium">
+            &quot;{metadataFilter.value}&quot;
+          </span>
+          {searchQuery && ' and search query "&quot;' + searchQuery + '&quot;"'}
         </>
       );
     } else if (searchQuery) {
-      filterMessage = <>No PDFs match your search for "{searchQuery}"</>;
+      filterMessage = (
+        <>No PDFs match your search for "&quot;{searchQuery}&quot;"</>
+      );
     }
 
     return (

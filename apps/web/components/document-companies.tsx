@@ -10,15 +10,9 @@ import {
   searchQueryAtom,
   searchResultsAtom,
   getFilteredPdfs,
-  SearchResult, // Import SearchResult type
 } from "@/lib/store";
 import { PDF } from "@/lib/db"; // Import PDF from lib/db
 import { Button } from "@/components/ui/button";
-
-interface Company {
-  name: string;
-  count: number;
-}
 
 interface DocumentCompaniesProps {
   pdfs: PDF[];
@@ -56,6 +50,7 @@ export function DocumentCompanies({ pdfs }: DocumentCompaniesProps) {
 
     // Process each PDF
     filteredPdfs.forEach((pdf) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const metadata = (pdf as any).metadata;
       // Skip if no metadata or issuing organization
       if (!metadata?.issuingOrganization) return;

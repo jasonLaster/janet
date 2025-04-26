@@ -1,7 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonProps } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Search,
@@ -42,8 +42,16 @@ export interface PdfViewerHeaderProps {
   numMatches?: number;
   currentMatchIndex?: number;
   headerHeight?: number;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
+
+const MemoizedButton = React.memo(
+  ({ children, ...props }: ButtonProps & { children: React.ReactNode }) => {
+    return <Button {...props}>{children}</Button>;
+  }
+);
+
+MemoizedButton.displayName = "MemoizedButton";
 
 export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
   (
@@ -105,7 +113,7 @@ export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
           </Button>
           <h2 className="font-medium flex items-center gap-2">
             {pdfMetadata?.descriptiveTitle || title}
-            <DocumentMetadata metadata={pdfMetadata} />
+            <DocumentMetadata metadata={pdfMetadata || undefined} />
           </h2>
         </div>
 
@@ -179,3 +187,5 @@ export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
     );
   }
 );
+
+PdfViewerHeader.displayName = "PdfViewerHeader";

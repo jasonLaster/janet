@@ -17,8 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PDF } from "@/lib/store";
 import { DocumentMetadata } from "@/components/document-metadata";
-import { useRef, useEffect } from "react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 
@@ -32,6 +31,7 @@ interface PdfListItemProps {
 
 export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const metadata = (pdf as any).metadata || {};
   const [mouseX, setMouseX] = useState<number | null>(null);
   const [rowBottom, setRowBottom] = useState<number | null>(null);

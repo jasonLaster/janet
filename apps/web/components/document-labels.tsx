@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -9,15 +9,9 @@ import {
   searchQueryAtom,
   searchResultsAtom,
   getFilteredPdfs,
-  SearchResult,
 } from "@/lib/store";
 import { PDF } from "@/lib/db";
 import { Button } from "@/components/ui/button";
-
-interface Label {
-  label: string;
-  count: number;
-}
 
 interface DocumentLabelsProps {
   pdfs: PDF[];
@@ -53,6 +47,7 @@ export function DocumentLabels({ pdfs }: DocumentLabelsProps) {
 
     // Process each PDF
     filteredPdfs.forEach((pdf) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const metadata = (pdf as any).metadata;
       // Skip if no metadata or labels
       if (!metadata?.labels || !Array.isArray(metadata.labels)) return;

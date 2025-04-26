@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { generateText, CoreMessage } from "ai";
 
 /**
  * Sends a chat message to Anthropic, optionally with a PDF attachment
@@ -10,7 +10,7 @@ export async function sendChatWithPDF({
   maxTokens = 1500,
   systemPrompt = "You are a helpful AI assistant specialized in answering questions about PDF documents.",
 }: {
-  messages: any[];
+  messages: CoreMessage[];
   pdfUrl?: string;
   maxTokens?: number;
   systemPrompt?: string;
@@ -40,19 +40,24 @@ export async function sendChatWithPDF({
   }
 
   // Format user messages
-  const formattedMessages = messages.map((message: any) => {
+  const formattedMessages = messages.map((message) => {
     // For the last user message, attach the PDF if available
     if (
       message.role === "user" &&
       message === messages[messages.length - 1] &&
       pdfBuffer
     ) {
+      // Ensure message.content is treated as potentially non-string
+      const textContent =
+        typeof message.content === "string"
+          ? message.content
+          : JSON.stringify(message.content);
       return {
         role: "user",
         content: [
-          { type: "text", text: message.content },
+          { type: "text" as const, text: textContent },
           {
-            type: "file",
+            type: "file" as const,
             data: new Uint8Array(pdfBuffer),
             mimeType: "application/pdf",
           },
@@ -60,7 +65,7 @@ export async function sendChatWithPDF({
       };
     }
     return message;
-  });
+  }) as CoreMessage[];
 
   // Use generateText to get response
   const result = await generateText({

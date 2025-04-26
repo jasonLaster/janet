@@ -17,12 +17,12 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ text }), {
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error processing chat with PDFs:", error);
     return new Response(
       JSON.stringify({
         error: "Failed to process your request",
-        details: error?.message || String(error),
+        details: error instanceof Error ? error.message : String(error),
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );

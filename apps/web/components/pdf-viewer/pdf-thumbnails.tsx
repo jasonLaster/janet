@@ -1,16 +1,10 @@
 "use client";
 
 import React from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { Document, Page } from "react-pdf";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PdfPageNavigation } from "./pdf-page-navigation";
 import { DocumentLoader } from "../ui/document-loader";
-
-// Configuration options
-const options = {
-  cMapUrl: "https://unpkg.com/pdfjs-dist@4.8.69/cmaps/",
-  cMapPacked: true,
-};
 
 const thumbnailWidth = 140;
 
@@ -25,6 +19,7 @@ export interface PdfThumbnailsProps {
     metadata,
   }: {
     numPages: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metadata?: any;
   }) => void;
 }
@@ -49,10 +44,7 @@ export function PdfThumbnails({
             onLoadSuccess={onLoadSuccess}
             loading={
               <div className="p-4 text-center text-sm text-gray-500">
-                <DocumentLoader
-                  mode="small"
-                  pulseWidth="w-10"
-                />
+                <DocumentLoader mode="small" pulseWidth="w-10" />
               </div>
             }
           >

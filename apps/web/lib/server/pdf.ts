@@ -2,21 +2,24 @@ import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
 import { getPdfById, updatePdfEnhancedMetadata } from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
 import pdfParse from "pdf-parse";
+import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
-function parseOrExtractJson(responseText: string): any {
+function parseOrExtractJson(
+  responseText: string
+): EnhancedPdfMetadata | Record<string, unknown> | null {
   const trimmedResponse = responseText.trim();
   try {
     // First, try to directly parse the entire response
     return JSON.parse(trimmedResponse);
-  } catch (directParseError) {
+  } catch {
     // If direct parsing fails, try to extract JSON from the response
     const jsonMatch = trimmedResponse.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const jsonText = jsonMatch[0];
       try {
         return JSON.parse(jsonText);
-      } catch (extractParseError) {
-        // If extracted text also fails to parse, throw error with raw response
+      } catch {
+        // If extracted text also fails to parse, return null
         return null;
       }
     } else {
@@ -28,7 +31,7 @@ function parseOrExtractJson(responseText: string): any {
 export async function enhancePdfMetadata(
   pdfUrl: string,
   pdfId: number
-): Promise<{ metadata: any } | null> {
+): Promise<{ metadata: EnhancedPdfMetadata | Record<string, unknown> } | null> {
   let responseText = "";
   try {
     responseText = await sendChatWithPDF({
@@ -47,21 +50,29 @@ export async function enhancePdfMetadata(
     // Attempt to parse the response using the helper function
     const metadata = parseOrExtractJson(responseText);
 
-    if (!metadata || metadata.descriptiveTitle === "") {
-      throw new Error("Failed to parse metadata");
+    if (!metadata) {
+      throw new Error("Failed to parse metadata or empty metadata");
     }
 
-    // If pdfId is provided and metadata was parsed successfully, store it
-    await updatePdfEnhancedMetadata(pdfId, metadata);
+    // Try to cast/validate as EnhancedPdfMetadata if possible before updating
+    // For now, we assume the structure is correct for updatePdfEnhancedMetadata
+    await updatePdfEnhancedMetadata(pdfId, metadata as EnhancedPdfMetadata);
 
     return { metadata };
-  } catch (error: any) {
-    console.error("Error in enhancePdfMetadata:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error in enhancePdfMetadata:", message);
+    // Include raw response in error if available
+    if (responseText) {
+      console.error("Raw AI Response:", responseText);
+    }
     return null;
   }
 }
 
-export async function ocrPdf(pdfId: number): Promise<{ data: any }> {
+export async function ocrPdf(
+  pdfId: number
+): Promise<{ data: Record<string, unknown> }> {
   const ocrServiceUrl = process.env.OCR_SERVICE_URL;
   if (!ocrServiceUrl) {
     throw new Error("OCR service URL not configured");
