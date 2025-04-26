@@ -16,7 +16,6 @@ import { PdfViewerContent } from "./pdf-viewer-content";
 import { PdfSidebar } from "./pdf-sidebar";
 import { PdfViewerProps } from "./pdf-viewer-types";
 import { pdfjs } from "react-pdf";
-import { usePDFDocument } from "@/hooks/use-pdf-document";
 import { PDF_WORKER_URL } from "./constants";
 import { usePdfSearch } from "./hooks/use-pdf-search";
 
@@ -29,7 +28,7 @@ if (typeof window !== "undefined") {
 }
 
 const maxWidth = 800;
-const sidebarDefaultWidth = 250;
+const sidebarDefaultWidth = 280;
 const sidebarDefaultPercentage = 25;
 
 export function PdfViewer({
@@ -38,43 +37,6 @@ export function PdfViewer({
   pdfMetadata,
   onError,
 }: PdfViewerProps) {
-  // Updated to match the new hook API, only passing pdfId
-  const {
-    cachedDocument,
-    loading: cacheLoading,
-    error: cacheError,
-    isCached,
-    cachePDFDocument,
-  } = usePDFDocument(pdfId);
-
-  // Now cachedDocument is already a base64 string, no conversion needed
-  // We just need to format it as a data URL
-  const [cachedDocumentUrl, setCachedDocumentUrl] = useState<string | null>(
-    null
-  );
-
-  // Create a data URL from the cached document when it's available
-  useEffect(() => {
-    if (cachedDocument) {
-      try {
-        // Simply prefix the base64 string with the data URL format
-        const dataUrl = `data:application/pdf;base64,${cachedDocument}`;
-        setCachedDocumentUrl(dataUrl);
-      } catch (error) {
-        console.error("Error creating data URL from cached document:", error);
-        setCachedDocumentUrl(null);
-      }
-    } else {
-      setCachedDocumentUrl(null);
-    }
-  }, [cachedDocument, pdfId]);
-
-  // Determine if we should show loading state
-  const isLoading = cacheLoading;
-
-  // Use the cached document URL if available, otherwise fall back to the provided URL
-  const effectivePdfUrl = cachedDocumentUrl || `/api/pdfs/${pdfId}/content`;
-
   const containerRef = useRef<HTMLDivElement>(null);
   const setContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
@@ -294,9 +256,12 @@ export function PdfViewer({
   }, [numPages, isManualPageChange]); // Removed currentPage dependency
 
   useEffect(() => {
-    // Reset page number when PDF URL changes
+    // Reset page number when PDF ID changes
     setCurrentPage(1);
-  }, [effectivePdfUrl]);
+    setDocumentLoaded(false);
+    setPdfLoadError(null);
+    setIsLoading(true);
+  }, [pdfId]);
 
   function onDocumentLoadSuccess({
     numPages,
@@ -307,11 +272,13 @@ export function PdfViewer({
   }) {
     setNumPages(numPages);
     setDocumentLoaded(true);
+    setIsLoading(false);
   }
 
   function onDocumentLoadError(error: Error) {
     console.error("Error loading PDF:", error);
     setPdfLoadError(error.message);
+    setIsLoading(false);
 
     toast({
       title: "Error loading PDF",
@@ -414,95 +381,11 @@ export function PdfViewer({
     setShowTextLayer((prev) => !prev);
   };
 
-  // Combined effect for cache loading and error handling
-  useEffect(() => {
-    // Update loading state
-    if (cacheLoading) {
-      setDocumentLoaded(false);
-    }
+  // Define the effective URL directly
+  const effectivePdfUrl = `/api/pdfs/${pdfId}/content`;
 
-    // Handle cache errors
-    if (cacheError) {
-      console.error("Error loading PDF from cache:", cacheError);
-      onDocumentLoadError(new Error(cacheError));
-    }
-  }, [cacheLoading, cacheError, onDocumentLoadError]);
-
-  // Add a new effect to fetch and cache the PDF if not already cached
-  useEffect(() => {
-    async function fetchAndCachePDF() {
-      if (!effectivePdfUrl || !pdfId || isCached || cacheLoading) {
-        return;
-      }
-
-      // Retry logic for network flakiness
-      const MAX_RETRIES = 3;
-      const RETRY_DELAY = 1000; // ms
-
-      const fetchWithRetry = async (attempt = 1): Promise<ArrayBuffer> => {
-        try {
-          const response = await fetch(effectivePdfUrl);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch PDF: ${response.statusText}`);
-          }
-          return await response.arrayBuffer();
-        } catch (error) {
-          if (attempt < MAX_RETRIES) {
-            console.warn(
-              `Fetch attempt ${attempt} failed, retrying in ${RETRY_DELAY}ms...`
-            );
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-            return fetchWithRetry(attempt + 1);
-          }
-          throw error;
-        }
-      };
-
-      try {
-        // Attempt fetch with retry logic
-        const pdfData = await fetchWithRetry();
-
-        // Cache the fetched PDF
-        await cachePDFDocument(pdfData);
-      } catch (err) {
-        console.error("Error fetching and caching PDF after retries:", err);
-        // Could add notification to user here that caching failed
-      }
-    }
-
-    fetchAndCachePDF();
-  }, [effectivePdfUrl, pdfId, isCached, cacheLoading, cachePDFDocument]);
-
-  // If we have a PDF error, show a fallback UI
-  if (pdfLoadError) {
-    return (
-      <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between p-2 border-b bg-muted/20">
-          <h2 className="font-medium">
-            {pdfMetadata?.descriptiveTitle || pdfTitle}
-          </h2>
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            Open in New Tab
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center bg-gray-100">
-          <div className="max-w-md p-6 bg-white rounded-lg shadow-md text-center">
-            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-            <p className="mb-4 text-gray-600">
-              Apologies, we couldn't load this PDF.
-            </p>
-            <Button onClick={handleDownload}>Open PDF in New Tab</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (cacheLoading) {
-    return null;
-  }
+  // Determine if we should show loading state (now based on react-pdf loading)
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Calculate width to display page with
   const pageWidth = containerWidth
@@ -545,6 +428,12 @@ export function PdfViewer({
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Show loading state during cache loading */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-gray-200"></div>
+            <p className="text-sm text-gray-500 mt-4">Loading PDF...</p>
+          </div>
+        )}
 
         {!isLoading && (
           <ResizablePanelGroup
@@ -570,7 +459,7 @@ export function PdfViewer({
                     goToPage={goToPage}
                     changePage={changePage}
                     pdfMetadata={pdfMetadata}
-                    onDocumentLoadSuccess={onDocumentLoadSuccess}
+                    onDocumentLoadSuccess={() => {}}
                   />
                 </ResizablePanel>
                 <ResizableHandle withHandle>

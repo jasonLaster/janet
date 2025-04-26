@@ -117,6 +117,29 @@ export async function GET(
       "Content-Type",
       blobResponse.headers.get("Content-Type") || "application/pdf"
     );
+
+    // Add Cache-Control based on document visibility
+    const isPublic = pdf.is_public;
+    const cacheHeader = isPublic
+      ? "public, immutable, max-age=31536000, s-maxage=31536000"
+      : "private, immutable, max-age=31536000"; // browser-only cache
+    headers.set("Cache-Control", cacheHeader);
+
+    // Add Accept-Ranges to support byte range requests from react-pdf
+    headers.set("Accept-Ranges", "bytes");
+
+    // Add Content-Length if available from the blob storage response
+    const contentLength = blobResponse.headers.get("Content-Length");
+    if (contentLength) {
+      headers.set("Content-Length", contentLength);
+    }
+
+    // TODO: Consider adding ETag if checksum is available
+    // const checksum = pdf.checksum; // Assuming checksum is available on the pdf object
+    // if (checksum) {
+    //   headers.set("ETag", checksum);
+    // }
+
     const dispositionType = payload.download ? "attachment" : "inline";
     const filename =
       pdf.filename || blobUrl.substring(blobUrl.lastIndexOf("/") + 1);
