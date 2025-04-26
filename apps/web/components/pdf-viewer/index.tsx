@@ -260,7 +260,6 @@ export function PdfViewer({
     setCurrentPage(1);
     setDocumentLoaded(false);
     setPdfLoadError(null);
-    setIsLoading(true);
   }, [pdfId]);
 
   function onDocumentLoadSuccess({
@@ -272,13 +271,11 @@ export function PdfViewer({
   }) {
     setNumPages(numPages);
     setDocumentLoaded(true);
-    setIsLoading(false);
   }
 
   function onDocumentLoadError(error: Error) {
     console.error("Error loading PDF:", error);
     setPdfLoadError(error.message);
-    setIsLoading(false);
 
     toast({
       title: "Error loading PDF",
@@ -384,9 +381,6 @@ export function PdfViewer({
   // Define the effective URL directly
   const effectivePdfUrl = `/api/pdfs/${pdfId}/content`;
 
-  // Determine if we should show loading state (now based on react-pdf loading)
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
   // Calculate width to display page with
   const pageWidth = containerWidth
     ? Math.min(
@@ -421,100 +415,88 @@ export function PdfViewer({
           scale={scale}
           ref={headerRef}
           headerHeight={headerHeight}
-          searchInputRef={searchInputRef}
+          searchInputRef={searchInputRef as React.RefObject<HTMLInputElement>}
         />
       </div>
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Show loading state during cache loading */}
-        {isLoading && (
-          <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-gray-200"></div>
-            <p className="text-sm text-gray-500 mt-4">Loading PDF...</p>
-          </div>
-        )}
+        <ResizablePanelGroup
+          ref={resizablePanelGroupRef}
+          direction="horizontal"
+          className="w-full h-full"
+        >
+          {/* Show sidebar only if enabled */}
+          {showSidebar && (
+            <>
+              <ResizablePanel
+                defaultSize={sidebarDefaultPercentage}
+                minSize={15}
+                maxSize={40}
+                className="h-full"
+              >
+                <PdfSidebar
+                  pdfUrl={effectivePdfUrl}
+                  numPages={numPages}
+                  currentPage={currentPage}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  goToPage={goToPage}
+                  changePage={changePage}
+                  pdfMetadata={pdfMetadata}
+                  onDocumentLoadSuccess={() => {}}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle>
+                <div className="w-3 h-full flex items-center justify-center">
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+              </ResizableHandle>
+            </>
+          )}
 
-        {!isLoading && (
-          <ResizablePanelGroup
-            ref={resizablePanelGroupRef}
-            direction="horizontal"
-            className="w-full h-full"
-          >
-            {/* Show sidebar only if enabled */}
-            {showSidebar && (
-              <>
-                <ResizablePanel
-                  defaultSize={sidebarDefaultPercentage}
-                  minSize={15}
-                  maxSize={40}
-                  className="h-full"
-                >
-                  <PdfSidebar
+          {/* Main PDF view */}
+          <ResizablePanel className="h-full overflow-hidden">
+            {pdfLoadError ? (
+              <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
+                <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Failed to load PDF</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  {pdfLoadError || "There was an error loading the document."}
+                </p>
+                <Button onClick={handleDownload}>Open in New Tab</Button>
+              </div>
+            ) : (
+              <div className="relative h-full overflow-auto">
+                <PdfViewerContent
+                  pdfUrl={effectivePdfUrl}
+                  numPages={numPages}
+                  currentPage={currentPage}
+                  scale={scale}
+                  rotation={rotation}
+                  showTextLayer={showTextLayer}
+                  isManualPageChange={isManualPageChange}
+                  mainContentRef={mainContentRef}
+                  pageWidth={pageWidth}
+                  onDocumentSuccess={onDocumentLoadSuccess}
+                  onDocumentFailed={onDocumentLoadError}
+                  onPageChange={goToPage}
+                  handleDownload={handleDownload}
+                  searchKeyword={searchKeyword}
+                  matches={matches}
+                />
+
+                {pdfId && documentLoaded && (
+                  <FloatingPdfChat
+                    pdfId={pdfId}
+                    pdfTitle={pdfTitle}
                     pdfUrl={effectivePdfUrl}
-                    numPages={numPages}
-                    currentPage={currentPage}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    goToPage={goToPage}
-                    changePage={changePage}
-                    pdfMetadata={pdfMetadata}
-                    onDocumentLoadSuccess={() => {}}
                   />
-                </ResizablePanel>
-                <ResizableHandle withHandle>
-                  <div className="w-3 h-full flex items-center justify-center">
-                    <GripVertical className="h-4 w-4 text-gray-400" />
-                  </div>
-                </ResizableHandle>
-              </>
+                )}
+              </div>
             )}
-
-            {/* Main PDF view */}
-            <ResizablePanel className="h-full overflow-hidden">
-              {pdfLoadError ? (
-                <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
-                  <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    Failed to load PDF
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {pdfLoadError || "There was an error loading the document."}
-                  </p>
-                  <Button onClick={handleDownload}>Open in New Tab</Button>
-                </div>
-              ) : (
-                <div className="relative h-full overflow-auto">
-                  <PdfViewerContent
-                    pdfUrl={effectivePdfUrl}
-                    numPages={numPages}
-                    currentPage={currentPage}
-                    scale={scale}
-                    rotation={rotation}
-                    showTextLayer={showTextLayer}
-                    isManualPageChange={isManualPageChange}
-                    mainContentRef={mainContentRef}
-                    pageWidth={pageWidth}
-                    onDocumentSuccess={onDocumentLoadSuccess}
-                    onDocumentFailed={onDocumentLoadError}
-                    onPageChange={goToPage}
-                    handleDownload={handleDownload}
-                    searchKeyword={searchKeyword}
-                    matches={matches}
-                  />
-
-                  {pdfId && documentLoaded && (
-                    <FloatingPdfChat
-                      pdfId={pdfId}
-                      pdfTitle={pdfTitle}
-                      pdfUrl={effectivePdfUrl}
-                    />
-                  )}
-                </div>
-              )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        )}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

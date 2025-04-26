@@ -25,12 +25,8 @@ export default clerkMiddleware(
     const { userId, orgId } = await auth();
     const url = req.nextUrl;
 
-    console.log("Middleware running for:", url.pathname);
-
     // --- Handle PDF Content API Route ---
     if (isPdfContentApiRoute(req)) {
-      console.log("[Middleware] PDF Content API route detected:", url.pathname);
-
       // Extract PDF ID from pathname (e.g., /api/pdfs/123/content  -> 123)
       const pdfIdMatch = url.pathname.match(/\/api\/pdfs\/([^\/]+)\/content/);
       const pdfId = pdfIdMatch ? pdfIdMatch[1] : null;
@@ -63,11 +59,17 @@ export default clerkMiddleware(
         const sealedToken = await sealData(payload, ironOptions);
 
         // Rewrite to the internal streaming handler
-        return NextResponse.rewrite(
-          new URL(`/api/pdfs/internal-stream/${sealedToken}`, url.origin)
+        const rewriteUrl = new URL(
+          `/api/pdfs/internal-stream/${sealedToken}`,
+          url.origin
         );
+        return NextResponse.rewrite(rewriteUrl);
       } catch (error) {
-        console.error("[Middleware] Error sealing token:", error);
+        console.error(
+          `[Middleware] Error sealing token: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
         return new NextResponse("Could not generate secure link", {
           status: 500,
         });
@@ -77,7 +79,6 @@ export default clerkMiddleware(
     // --- Handle Public Page Routes ---
     if (isPublicPageRoute(req)) {
       // Allow access to public pages without authentication
-      console.log("[Middleware] Public page route allowed:", url.pathname);
       // If user is logged in and trying to access landing, redirect to root
       if (userId && url.pathname === "/landing") {
         return NextResponse.redirect(new URL("/", url.origin));
@@ -92,24 +93,18 @@ export default clerkMiddleware(
         return NextResponse.redirect(new URL("/landing", url.origin));
       }
       // If user is logged in, allow access to the PDF list at root
-      console.log("[Middleware] Authenticated access to root allowed.");
       return NextResponse.next();
     }
 
     // --- Handle All Other Protected Routes ---
     if (!userId) {
       // Redirect unauthenticated users trying to access other protected pages to sign-in
-      console.log(
-        "[Middleware] User not authenticated for protected route, redirecting to sign-in:",
-        url.pathname
-      );
       const signInUrl = new URL("/sign-in", url.origin);
       signInUrl.searchParams.set("redirect_url", url.pathname);
       return NextResponse.redirect(signInUrl);
     }
 
     // If authenticated and not handled above, allow access
-    console.log("[Middleware] Authenticated user allowed:", url.pathname);
     return NextResponse.next();
   },
   {
