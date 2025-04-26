@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "test": "vitest run",
     "test:watch": "vitest",
     "migrate": "bun migration/run-migration.js"
@@ -103,7 +104,7 @@
     "node": "22.15.0"
   },
   "engines": {
-    "node": ">=22.0.0 <23.0.0",
-    "pnpm": ">=10.0.0"
+    "node": ">=22.15.0",
+    "pnpm": ">=10.9.0"
   }
 }
