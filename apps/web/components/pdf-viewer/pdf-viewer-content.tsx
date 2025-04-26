@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Document, Page } from "react-pdf";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 import { DocumentLoader } from "../ui/document-loader";
 import { PDF_VERSION } from "./constants";
-import { SearchMatch } from "./hooks/use-pdf-search";
 import type { PDFDocumentProxy } from "pdfjs-dist";
+import { SearchMatch } from "./hooks/use-pdf-search";
 
 const options = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
@@ -16,34 +18,30 @@ const options = {
   disableAutoFetch: false,
 };
 
-export interface PdfViewerContentProps {
+interface PdfViewerContentProps {
   pdfUrl: string;
   numPages: number;
-  currentPage: number;
   scale: number;
   rotation: number;
-  showTextLayer: boolean;
-  isManualPageChange: boolean;
-  mainContentRef: React.RefObject<HTMLDivElement | null>;
   pageWidth: number;
-  onDocumentSuccess: (pdf: PDFDocumentProxy) => void;
+  showTextLayer: boolean;
+  mainContentRef: React.RefObject<HTMLDivElement | null>;
+  currentPage: number;
+  isManualPageChange: boolean;
+  onDocumentSuccess: (pdf: pdfjs.PDFDocumentProxy) => void;
   onDocumentFailed: (error: Error) => void;
-  onPageChange?: (page: number) => void;
-  handleDownload?: () => void;
-  searchKeyword: string;
-  matches: SearchMatch[];
 }
 
 export function PdfViewerContent({
   pdfUrl,
   numPages,
-  currentPage,
   scale,
   rotation,
-  showTextLayer,
-  isManualPageChange,
-  mainContentRef,
   pageWidth,
+  showTextLayer,
+  mainContentRef,
+  currentPage,
+  isManualPageChange,
   onDocumentSuccess,
   onDocumentFailed,
 }: PdfViewerContentProps) {
@@ -77,10 +75,17 @@ export function PdfViewerContent({
         className="pdf-container w-full relative h-full overflow-y-auto"
         ref={mainContentRef}
       >
+        {/* Loading overlay that shows until all pages are loaded */}
+        {!allPagesLoaded && numPages > 0 && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
+            <DocumentLoader mode="large" />
+          </div>
+        )}
+
         <Document
           file={pdfUrl}
-          onLoadSuccess={(pdf: PDFDocumentProxy) => {
-            onDocumentSuccess(pdf);
+          onLoadSuccess={(pdf: unknown) => {
+            onDocumentSuccess(pdf as PDFDocumentProxy);
           }}
           loading={<DocumentLoader mode="large" />}
           onLoadError={(error: Error) => {
@@ -95,7 +100,7 @@ export function PdfViewerContent({
               key={`page_${pageNum}`}
               className="mb-8 pdf-page-container w-full bg-stone-50"
               id={`page-${pageNum}`}
-              style={{ opacity: allPagesLoaded ? 1 : 0 }}
+              style={{ opacity: allPagesLoaded ? 1 : 0 }} // Hide pages until all loaded
             >
               <div className="text-center text-sm text-gray-500 mb-2 bg-white py-1 rounded-t-md shadow-md border-b border-gray-300 px-2 rounded mt-2">
                 Page {pageNum} of {numPages}
@@ -118,6 +123,7 @@ export function PdfViewerContent({
                 className="pdf-page shadow-md mx-auto bg-stone-50!"
                 onRenderSuccess={() => {
                   handlePageLoadSuccess(pageNum);
+                  // Scroll to the current page ONLY if it's a manual change AND all pages are loaded
                   if (
                     isManualPageChange &&
                     pageNum === currentPage &&

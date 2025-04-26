@@ -6,6 +6,7 @@ import { Waitlist, SignInButton } from "@clerk/nextjs";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import Image from "next/image";
+import React from "react";
 
 const Index = () => {
   const [showWaitlist, setShowWaitlist] = useState(false);
@@ -81,7 +82,13 @@ const Index = () => {
   );
 };
 
-const Feature = ({ icon: Icon, text }: { icon: any; text: string }) => (
+const Feature = ({
+  icon: Icon,
+  text,
+}: {
+  icon: React.ElementType;
+  text: string;
+}) => (
   <div className="flex items-center space-x-4">
     <div className="flex-shrink-0">
       <Icon className="h-6 w-6 text-violet-800" />

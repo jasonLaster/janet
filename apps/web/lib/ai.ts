@@ -1,6 +1,12 @@
 import { sendChatWithPDF as sendChatWithPDFAnthropiс } from "./anthropic";
 import { sendChatWithPDF as sendChatWithPDFOpenAI } from "./openai";
 
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+  // Add other potential properties if needed, e.g., name
+}
+
 /**
  * Sends a chat message with PDF to either Anthropic or OpenAI based on AI_PROVIDER environment variable
  */
@@ -10,7 +16,7 @@ export async function sendChatWithPDF({
   maxTokens = 1500,
   systemPrompt,
 }: {
-  messages: any[];
+  messages: ChatMessage[];
   pdfUrl?: string;
   maxTokens?: number;
   systemPrompt?: string;

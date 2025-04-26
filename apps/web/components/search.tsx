@@ -8,7 +8,7 @@ import { searchQueryAtom, searchResultsAtom } from "@/lib/store";
 import debounce from "lodash/debounce";
 
 export function Search() {
-  const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
+  const [_, setSearchQuery] = useAtom(searchQueryAtom);
   const [, setSearchResults] = useAtom(searchResultsAtom);
   const [inputValue, setInputValue] = useState("");
   const [isSearching, setIsSearching] = useState(false);

@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getPdfById } from "@/lib/db";
 import { PdfViewer } from "@/components/pdf-viewer";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 
 interface PageProps {
   params: {

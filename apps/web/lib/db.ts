@@ -1,5 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
+import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 
 // Define PDF interface for type safety
 export interface PDF {
@@ -176,7 +176,7 @@ export async function updatePdfMetadata(
 // Function to update PDF enhanced metadata
 export async function updatePdfEnhancedMetadata(
   id: number,
-  metadata: any
+  metadata: EnhancedPdfMetadata
 ): Promise<PDF | null> {
   if (!id || !metadata) {
     return null;

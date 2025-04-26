@@ -1,6 +1,4 @@
-import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
-import { toast } from "@/hooks/use-toast"; // Assuming useToast is accessible globally or via context
-import React from "react";
+import { atom } from "jotai";
 
 // Define the shape for an uploading file's state
 export interface UploadingFileState {
@@ -280,6 +278,7 @@ export function getFilteredPdfs(
   // Apply metadata filter if active
   if (metadataFilter.type && metadataFilter.value) {
     filteredPdfs = filteredPdfs.filter((pdf) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const metadata = (pdf as any).metadata;
 
       if (metadataFilter.type === "label") {

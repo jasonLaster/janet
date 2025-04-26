@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import {
-  normalizeSingleKeyword,
-  NormalizedKeyword,
-} from "@/lib/search-normalize-keyword";
+import { normalizeSingleKeyword } from "@/lib/search-normalize-keyword";
 
 // Helper function to wrap text node content
 function wrapTextNode(
