@@ -29,7 +29,10 @@ if (typeof window !== "undefined") {
 
 const maxWidth = 800;
 const sidebarDefaultWidth = 280;
-const sidebarDefaultPercentage = 25;
+const SIDEBAR_DEFAULT_PERCENTAGE = 25;
+const SIDEBAR_MIN_PERCENTAGE = 10;
+const SIDEBAR_MAX_PERCENTAGE = 60;
+const LOCALSTORAGE_KEY = "pdfViewerSidebarSizePercent";
 
 export function PdfViewer({
   pdfTitle = "Document",
@@ -57,6 +60,9 @@ export function PdfViewer({
   const { toast } = useToast();
   const [documentLoaded, setDocumentLoaded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("info");
+  const [sidebarSize, setSidebarSize] = useState<number>(
+    SIDEBAR_DEFAULT_PERCENTAGE
+  );
 
   const resizablePanelGroupRef = useRef(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -262,6 +268,45 @@ export function PdfViewer({
     setPdfLoadError(null);
   }, [pdfId]);
 
+  // Load sidebar size from localStorage on mount (client-side only)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedSize = localStorage.getItem(LOCALSTORAGE_KEY);
+      if (savedSize) {
+        try {
+          const parsedSize = parseFloat(savedSize);
+          // Validate the saved size
+          if (
+            !isNaN(parsedSize) &&
+            parsedSize >= SIDEBAR_MIN_PERCENTAGE &&
+            parsedSize <= SIDEBAR_MAX_PERCENTAGE
+          ) {
+            setSidebarSize(parsedSize);
+            console.log(
+              `[PdfViewer] Loaded sidebar size from localStorage: ${parsedSize}%`
+            );
+          }
+        } catch (e) {
+          console.error("[PdfViewer] Error parsing saved sidebar size:", e);
+          localStorage.removeItem(LOCALSTORAGE_KEY); // Clear invalid entry
+        }
+      }
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  const handleLayout = (sizes: number[]) => {
+    if (sizes.length >= 1) {
+      const newSidebarSize = sizes[0];
+      // Update state and localStorage
+      setSidebarSize(newSidebarSize);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LOCALSTORAGE_KEY, newSidebarSize.toString());
+        // Optional: log the save
+        // console.log(`[PdfViewer] Saved sidebar size to localStorage: ${newSidebarSize}%`);
+      }
+    }
+  };
+
   function onDocumentLoadSuccess({
     numPages,
     metadata,
@@ -425,14 +470,17 @@ export function PdfViewer({
           ref={resizablePanelGroupRef}
           direction="horizontal"
           className="w-full h-full"
+          onLayout={handleLayout}
         >
           {/* Show sidebar only if enabled */}
           {showSidebar && (
             <>
               <ResizablePanel
-                defaultSize={sidebarDefaultPercentage}
-                minSize={15}
-                maxSize={40}
+                id="pdf-sidebar-panel"
+                order={1}
+                defaultSize={sidebarSize}
+                minSize={SIDEBAR_MIN_PERCENTAGE}
+                maxSize={SIDEBAR_MAX_PERCENTAGE}
                 className="h-full"
               >
                 <PdfSidebar
@@ -456,7 +504,13 @@ export function PdfViewer({
           )}
 
           {/* Main PDF view */}
-          <ResizablePanel className="h-full overflow-hidden">
+          <ResizablePanel
+            id="pdf-content-panel"
+            order={2}
+            defaultSize={100 - sidebarSize}
+            minSize={100 - SIDEBAR_MAX_PERCENTAGE}
+            className="h-full overflow-hidden"
+          >
             {pdfLoadError ? (
               <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
                 <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
@@ -467,7 +521,7 @@ export function PdfViewer({
                 <Button onClick={handleDownload}>Open in New Tab</Button>
               </div>
             ) : (
-              <div className="relative h-full overflow-auto">
+              <div className="relative h-full overflow-auto bg-gray-100">
                 <PdfViewerContent
                   pdfUrl={effectivePdfUrl}
                   numPages={numPages}

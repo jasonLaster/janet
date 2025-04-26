@@ -77,12 +77,6 @@ export function PdfViewerContent({
         className="pdf-container w-full relative h-full overflow-y-auto"
         ref={mainContentRef}
       >
-        {/* Loading overlay that shows until all pages are loaded */}
-        {!allPagesLoaded && numPages > 0 && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
-            <DocumentLoader mode="large" />
-          </div>
-        )}
         <Document
           file={pdfUrl}
           onLoadSuccess={(pdf: PDFDocumentProxy) => {
