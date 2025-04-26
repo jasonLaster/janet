@@ -72,10 +72,10 @@ export function DocumentLoader({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
+        "flex items-center flex-col justify-center",
         `w-${width}`,
         `h-${height}`,
-        "bg-white",
+        "",
         className
       )}
     >
