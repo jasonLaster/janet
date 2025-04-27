@@ -29,7 +29,6 @@ function parseOrExtractJson(
 }
 
 export async function enhancePdfMetadata(
-  pdfUrl: string,
   pdfId: number
 ): Promise<{ metadata: EnhancedPdfMetadata | Record<string, unknown> } | null> {
   let responseText = "";
@@ -41,7 +40,7 @@ export async function enhancePdfMetadata(
           content: pdfMetadataPrompt,
         },
       ],
-      pdfUrl,
+      pdfId,
       maxTokens: 2000,
       systemPrompt:
         "You are an AI assistant that analyzes PDF documents and extracts structured metadata. Your task is to thoroughly analyze the provided document and identify key information. Be comprehensive and accurate in your analysis. ALWAYS respond with properly formatted JSON when asked to.",

@@ -9,30 +9,26 @@ const baseURL = usePreviewUrl
 
 export default defineConfig({
   testDir: "./tests",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
 
   retries: process.env.CI ? 2 : 0,
 
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? "html" : "dot",
 
+  globalSetup: "./tests/global.setup.ts",
+
   use: {
-    // headless: false,
     baseURL,
     trace: "on",
+    storageState: "playwright/.auth/storageState.json",
   },
 
-  /* Configure projects for major browsers */
   projects: [
-    {
-      name: "setup",
-      testMatch: /global\.setup\.ts/,
-    },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      dependencies: ["setup"],
     },
   ],
 });

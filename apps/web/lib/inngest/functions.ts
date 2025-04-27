@@ -1,6 +1,7 @@
 import { enhancePdfMetadata, ocrPdf } from "@/lib/server/pdf";
 import { inngest } from "./client";
 import { getPdfById } from "@/lib/db";
+
 export const helloWorld = inngest.createFunction(
   { id: "hello-world" },
   { event: "test/hello.world" },
@@ -29,7 +30,7 @@ export const enrichDocument = inngest.createFunction(
 
     const [metadata, ocr] = await Promise.all([
       step.run("enhance-metadata", async () => {
-        const metadata = await enhancePdfMetadata(pdf.blob_url, +pdf.id);
+        const metadata = await enhancePdfMetadata(+pdf.id);
         return metadata;
       }),
       step.run("ocr", async () => {
