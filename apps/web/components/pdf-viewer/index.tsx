@@ -532,13 +532,10 @@ export function PdfViewer({
                   matches={matches}
                 />
 
-                {pdfId && documentLoaded && (
-                  <FloatingPdfChat
-                    pdfId={pdfId}
-                    pdfTitle={pdfTitle}
-                    pdfUrl={effectivePdfUrl}
-                  />
-                )}
+                <FloatingPdfChat
+                  pdfId={pdfId}
+                  documentLoaded={documentLoaded}
+                />
               </div>
             )}
           </ResizablePanel>
