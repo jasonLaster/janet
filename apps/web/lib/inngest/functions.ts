@@ -1,6 +1,5 @@
 import { enhancePdfMetadata, ocrPdf } from "@/lib/server/pdf";
 import { inngest } from "./client";
-import { getPdfById } from "@/lib/db";
 
 export const helloWorld = inngest.createFunction(
   { id: "hello-world" },
@@ -20,9 +19,7 @@ export const enrichDocument = inngest.createFunction(
     },
   },
   async ({ event, step }) => {
-    const { pdfId } = event.data;
-
-    const pdf = await getPdfById(pdfId);
+    const { pdf } = event.data;
 
     if (!pdf) {
       throw new Error("PDF not found");

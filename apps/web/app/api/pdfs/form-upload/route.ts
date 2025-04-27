@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     inngest.send({
       name: "pdf/enrich-document",
       data: {
-        pdfId: pdfRecord.id,
+        pdf: pdfRecord,
       },
     });
 

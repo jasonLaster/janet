@@ -55,7 +55,10 @@ export function usePdfMetadata(
     attemptsRef.current = 0;
 
     const poll = async () => {
-      if (!pdfId) return; // Should not happen due to check above, but safety first
+      if (!pdfId || metadata) {
+        setIsLoading(false);
+        return;
+      } // Should not happen due to check above, but safety first
 
       if (initialMetadataFailed) {
         setError("Metadata processing failed.");
