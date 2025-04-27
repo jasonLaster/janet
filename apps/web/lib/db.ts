@@ -17,6 +17,8 @@ export interface PDF {
   metadata?: any; // Add metadata field to PDF interface
   text?: string; // Add text field to PDF interface
   is_public?: boolean; // Add is_public field
+  metadata_failed: boolean;
+  ocr_failed: boolean;
 }
 
 // Create a SQL client with the pooled connection
@@ -38,7 +40,9 @@ export async function getPdfById(id: number): Promise<PDF | null> {
       page_count,
       uploaded_at,
       metadata,
-      is_public
+      is_public,
+      metadata_failed,
+      ocr_failed
      FROM pdfs 
     WHERE id = ${id}
     `;
@@ -74,7 +78,9 @@ export async function getAllPdfs(
         description,
         page_count,
         uploaded_at,
-        metadata
+        metadata,
+        metadata_failed,
+        ocr_failed
       FROM pdfs 
       WHERE organization_id = ${organizationId}
       ORDER BY uploaded_at DESC
@@ -95,7 +101,9 @@ export async function getAllPdfs(
         description,
         page_count,
         uploaded_at,
-        metadata
+        metadata,
+        metadata_failed,
+        ocr_failed
       FROM pdfs 
       WHERE user_id = ${userId} AND organization_id IS NULL
       ORDER BY uploaded_at DESC

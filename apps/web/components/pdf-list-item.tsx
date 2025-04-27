@@ -7,6 +7,7 @@ import {
   ExternalLinkIcon,
   MoreHorizontalIcon,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import { DocumentMetadata } from "@/components/document-metadata";
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
+import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
 
 const TOOLTIP_WIDTH = 384; // max-w-sm = 24rem = 384px
 
@@ -58,18 +60,21 @@ const formatDate = (dateString: string) => {
 
 export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const metadata = (pdf as any).metadata || {};
+  const {
+    metadata: currentMetadata,
+    isLoading: isMetadataLoading,
+    error: metadataError,
+  } = usePdfMetadata(pdf.id, pdf.metadata, pdf.metadata_failed);
   const [mouseX, setMouseX] = useState<number | null>(null);
   const [rowBottom, setRowBottom] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState<number | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
-  // Use descriptive title from metadata if available, otherwise fallback to title or filename
-  const displayTitle = metadata.descriptiveTitle || pdf.title || pdf.filename;
+  const effectiveMetadata = currentMetadata || {};
+  const displayTitle =
+    effectiveMetadata.descriptiveTitle || pdf.title || pdf.filename;
 
-  // Use primary date from metadata if available, otherwise use uploaded date
   const displayDate = formatDate(pdf.uploaded_at) || "";
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -95,7 +100,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const renderTooltip = () => {
     if (
       !isHovering ||
-      !metadata.summary ||
+      !effectiveMetadata.summary ||
       mouseX === null ||
       rowBottom === null ||
       tooltipPosition === null
@@ -113,7 +118,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
           opacity: isHovering ? 1 : 0,
         }}
       >
-        <ReactMarkdown>{metadata.summary}</ReactMarkdown>
+        <ReactMarkdown>{effectiveMetadata.summary}</ReactMarkdown>
       </div>,
       document.body
     );
@@ -147,7 +152,13 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                   {displayTitle}
                 </div>
                 <div className="overflow-hidden flex-shrink min-w-0">
-                  <DocumentMetadata metadata={metadata} isListView={true} />
+                  <DocumentMetadata
+                    metadata={effectiveMetadata}
+                    isListView={true}
+                  />
+                  {isMetadataLoading && !metadataError && (
+                    <Loader2 className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block" />
+                  )}
                 </div>
               </div>
               <div className="text-sm text-right whitespace-nowrap w-28">

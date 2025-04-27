@@ -2,8 +2,9 @@
 
 import React, { useRef, useCallback, useState } from "react";
 import { useAtom } from "jotai";
+import { useRouter } from "next/navigation";
 
-import { UploadCloudIcon } from "lucide-react";
+import { UploadCloudIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useOrganization } from "@clerk/nextjs";
 import { uploadingFilesAtom, uploadFileAtom } from "@/lib/store";
@@ -15,6 +16,7 @@ interface FileUploadProps {
 export function FileUpload({ className = "" }: FileUploadProps) {
   const [uploadingFiles] = useAtom(uploadingFilesAtom);
   const [, uploadFile] = useAtom(uploadFileAtom);
+  const router = useRouter();
 
   const [isDragging, setIsDragging] = React.useState(false);
 
@@ -27,42 +29,46 @@ export function FileUpload({ className = "" }: FileUploadProps) {
 
   const { toast } = useToast();
 
-  const processFiles = (selectedFiles: FileList | File[]) => {
-    const pdfFiles = Array.from(selectedFiles).filter(
-      (file) => file.type === "application/pdf"
-    );
-    const nonPdfFiles = Array.from(selectedFiles).filter(
-      (file) => file.type !== "application/pdf"
-    );
+  const processFiles = useCallback(
+    (selectedFiles: FileList | File[]) => {
+      const pdfFiles = Array.from(selectedFiles).filter(
+        (file) => file.type === "application/pdf"
+      );
+      const nonPdfFiles = Array.from(selectedFiles).filter(
+        (file) => file.type !== "application/pdf"
+      );
 
-    if (nonPdfFiles.length > 0) {
-      toast({
-        title: "Invalid file type",
-        description: `${nonPdfFiles.length} file(s) were not PDFs and were ignored.`,
-        variant: "default",
-      });
-    }
-
-    pdfFiles.forEach((file) => {
-      if (
-        !uploadingFiles.some(
-          (f) => f.file.name === file.name && (f.uploading || f.progress === 0)
-        )
-      ) {
-        if (!userId && !orgId) {
-          console.error("User ID or Org ID is missing");
-          toast({
-            title: "Authentication Error",
-            description:
-              "Could not upload file due to missing user information.",
-            variant: "destructive",
-          });
-          return;
-        }
-        uploadFile(file, userId, orgId);
+      if (nonPdfFiles.length > 0) {
+        toast({
+          title: "Invalid file type",
+          description: `${nonPdfFiles.length} file(s) were not PDFs and were ignored.`,
+          variant: "default",
+        });
       }
-    });
-  };
+
+      pdfFiles.forEach((file) => {
+        if (
+          !uploadingFiles.some(
+            (f) =>
+              f.file.name === file.name && (f.uploading || f.progress === 0)
+          )
+        ) {
+          if (!userId && !orgId) {
+            console.error("User ID or Org ID is missing");
+            toast({
+              title: "Authentication Error",
+              description:
+                "Could not upload file due to missing user information.",
+              variant: "destructive",
+            });
+            return;
+          }
+          uploadFile({ file, userId, orgId, refresh: router.refresh });
+        }
+      });
+    },
+    [uploadFile, userId, orgId, uploadingFiles, toast, router]
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -103,7 +109,7 @@ export function FileUpload({ className = "" }: FileUploadProps) {
         processFiles(e.dataTransfer.files);
       }
     },
-    [processFiles, userId, orgId] // Add dependencies
+    [processFiles]
   );
 
   const isAnyFileUploading = uploadingFiles.some((f) => f.uploading);
@@ -141,11 +147,19 @@ export function FileUpload({ className = "" }: FileUploadProps) {
           disabled={isAnyFileUploading}
         />
         <div
-          className={`rounded-lg py-1 px-1 flex items-center justify-center gap-2 transition-colors cursor-pointer h-6 w-6 text-lg text-white ${
-            isDragging ? "bg-slate-500 " : "bg-slate-400  hover:bg-slate-500  "
+          className={`rounded-lg py-1 px-1 flex items-center justify-center gap-2 transition-colors h-6 w-6 text-lg text-white ${
+            isAnyFileUploading
+              ? "cursor-not-allowed bg-slate-500"
+              : isDragging
+              ? "cursor-pointer bg-slate-500"
+              : "cursor-pointer bg-slate-400 hover:bg-slate-500"
           }`}
         >
-          <UploadCloudIcon className="h-3 w-3 stroke-[3]" />
+          {isAnyFileUploading ? (
+            <Loader2 className="h-3 w-3 animate-spin stroke-[3]" />
+          ) : (
+            <UploadCloudIcon className="h-3 w-3 stroke-[3]" />
+          )}
         </div>
       </div>
     </div>

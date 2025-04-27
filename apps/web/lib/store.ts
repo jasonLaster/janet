@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { PDF } from "./db";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"; // Import necessary type if needed, or use a simpler () => void type
 
 // Define the shape for an uploading file's state
 export interface UploadingFileState {
@@ -39,12 +40,24 @@ export const uploadFileAtom = atom(
   (
     get,
     set,
-    file: File,
-    userId: string | undefined,
-    orgId: string | undefined
+    config: {
+      file: File;
+      userId: string | undefined;
+      orgId: string | undefined;
+      refresh: () => void; // Function to trigger data refresh
+    }
   ) => {
+    const { file, userId, orgId, refresh } = config; // Destructure config
     const controller = new AbortController();
     const fileId = `${file.name}-${file.lastModified}`;
+
+    // Helper function to check if uploads are finished and refresh
+    const checkAndRefresh = () => {
+      const currentUploads = get(uploadingFilesAtom);
+      if (!currentUploads.some((f) => f.uploading)) {
+        refresh();
+      }
+    };
 
     const newFileState: UploadingFileState = {
       id: fileId,
@@ -71,12 +84,14 @@ export const uploadFileAtom = atom(
     };
 
     xhr.onload = () => {
+      let updatedState: UploadingFileState[] = [];
       if (xhr.status >= 200 && xhr.status < 300) {
-        set(uploadingFilesAtom, (prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, uploading: false } : f))
-        );
-        // Optionally trigger a refetch of the PDF list after successful upload
-        // triggerRefetchPdfs();
+        set(uploadingFilesAtom, (prev) => {
+          updatedState = prev.map((f) =>
+            f.id === fileId ? { ...f, uploading: false } : f
+          );
+          return updatedState;
+        });
       } else {
         let errorMessage = `Upload failed with status: ${xhr.status}`;
         try {
@@ -85,19 +100,25 @@ export const uploadFileAtom = atom(
         } catch (e) {
           // Ignore JSON parse error
         }
-        set(uploadingFilesAtom, (prev) =>
-          prev.map((f) =>
+        set(uploadingFilesAtom, (prev) => {
+          updatedState = prev.map((f) =>
             f.id === fileId
               ? { ...f, uploading: false, error: errorMessage }
               : f
-          )
-        );
+          );
+          return updatedState;
+        });
+      }
+      // Check completion status *after* state update
+      if (!updatedState.some((f) => f.uploading)) {
+        refresh();
       }
     };
 
     xhr.onerror = () => {
-      set(uploadingFilesAtom, (prev) =>
-        prev.map((f) =>
+      let updatedState: UploadingFileState[] = [];
+      set(uploadingFilesAtom, (prev) => {
+        updatedState = prev.map((f) =>
           f.id === fileId
             ? {
                 ...f,
@@ -105,13 +126,26 @@ export const uploadFileAtom = atom(
                 error: "Network error during upload",
               }
             : f
-        )
-      );
+        );
+        return updatedState;
+      });
+      // Check completion status *after* state update
+      if (!updatedState.some((f) => f.uploading)) {
+        refresh();
+      }
     };
 
     xhr.onabort = () => {
-      set(uploadingFilesAtom, (prev) => prev.filter((f) => f.id !== fileId));
+      let updatedState: UploadingFileState[] = [];
+      set(uploadingFilesAtom, (prev) => {
+        updatedState = prev.filter((f) => f.id !== fileId);
+        return updatedState;
+      });
       console.log(`Upload aborted for ${file.name}`);
+      // Check completion status *after* state update
+      if (!updatedState.some((f) => f.uploading)) {
+        refresh();
+      }
     };
 
     xhr.open("POST", "/api/pdfs/file-upload", true);
