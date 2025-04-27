@@ -1,7 +1,9 @@
 ## V1
 
 - [ ] Show PDFs in a sheet from the right
-  - [ ]
+- [ ] Organization features
+  - [ ] Improve label management
+  - [ ] Improve person discovery
 - [ ] Mobile support
   - [ ] List looks good on mobile
   - [ ] Capture PDF
@@ -36,5 +38,12 @@
 ## Feature requests
 
 - [ ] Automatically split PDFS
+- [ ] Add a branch command
+- [ ] Try Mistral OCR
+- [ ] De-dupe files
+- [ ] Pass prior document context
+- [ ] Do research on the document
+- [ ] PDF as markdown
+- [ ] Share a document via email
 
 ### Mobile support

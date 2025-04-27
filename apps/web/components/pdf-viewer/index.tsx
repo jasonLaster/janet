@@ -18,6 +18,7 @@ import { PdfViewerProps } from "./pdf-viewer-types";
 import { pdfjs } from "react-pdf";
 import { PDF_WORKER_URL } from "./constants";
 import { usePdfSearch } from "./hooks/use-pdf-search";
+import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
 
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -165,6 +166,13 @@ export function PdfViewer({
       clearSearch();
     }
   }, [documentLoaded, clearSearch]);
+
+  // Use the custom hook for metadata
+  const {
+    metadata: currentMetadata,
+    isLoading: isMetadataLoading,
+    error: metadataError,
+  } = usePdfMetadata(pdfId, pdfMetadata);
 
   // Track visible page based on scroll position
   useEffect(() => {
@@ -416,7 +424,7 @@ export function PdfViewer({
   };
 
   // Define the effective URL directly
-  const effectivePdfUrl = `/api/pdfs/${pdfId}/content`;
+  const effectivePdfUrl = currentMetadata?.blob_url || "";
 
   // Calculate width to display page with
   const pageWidth = containerWidth
@@ -426,15 +434,24 @@ export function PdfViewer({
       )
     : maxWidth;
 
+  // --- Calculate derived values ---
+  const pdfContentIsReady = !isMetadataLoading && effectivePdfUrl;
+
+  // Recalculate pageWidth based on container and sidebar state
+  const mainPanelWidth = containerWidth
+    ? containerWidth * (1 - (showSidebar ? sidebarSize / 100 : 0))
+    : maxWidth; // Fallback if containerWidth not yet available
+  const calculatedPageWidth = Math.min(mainPanelWidth - 40, maxWidth); // Subtract some padding, cap at max
+
   return (
     <div
       ref={setContainerRef}
-      className="w-full h-full overflow-hidden flex flex-col"
+      className="w-full h-full overflow-hidden flex flex-col bg-muted/30"
     >
       <div ref={headerRef}>
         <PdfViewerHeader
           title={pdfTitle}
-          pdfMetadata={pdfMetadata}
+          pdfMetadata={currentMetadata}
           searchText={searchKeyword}
           onSearchChange={setSearchKeyword}
           onJumpToNextMatch={() => jumpToNextMatch(headerHeight)}
@@ -483,7 +500,7 @@ export function PdfViewer({
                   setActiveTab={setActiveTab}
                   goToPage={goToPage}
                   changePage={changePage}
-                  pdfMetadata={pdfMetadata}
+                  pdfMetadata={currentMetadata}
                   onDocumentLoadSuccess={() => {}}
                 />
               </ResizablePanel>
@@ -512,6 +529,22 @@ export function PdfViewer({
                 </p>
                 <Button onClick={handleDownload}>Open in New Tab</Button>
               </div>
+            ) : metadataError && !currentMetadata ? (
+              <div className="flex flex-col items-center justify-center h-full p-4 text-center bg-gray-50">
+                <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2">
+                  Could not load Metadata
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  {metadataError || "Failed to fetch document details."}
+                </p>
+              </div>
+            ) : !pdfContentIsReady ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <p>Loading document details...</p>
+                </div>
+              </div>
             ) : (
               <div className="relative h-full overflow-auto bg-gray-100">
                 <PdfViewerContent
@@ -523,13 +556,9 @@ export function PdfViewer({
                   showTextLayer={showTextLayer}
                   isManualPageChange={isManualPageChange}
                   mainContentRef={mainContentRef}
-                  pageWidth={pageWidth}
+                  pageWidth={calculatedPageWidth}
                   onDocumentSuccess={onDocumentLoadSuccess}
                   onDocumentFailed={onDocumentLoadError}
-                  onPageChange={goToPage}
-                  handleDownload={handleDownload}
-                  searchKeyword={searchKeyword}
-                  matches={matches}
                 />
 
                 <FloatingPdfChat
