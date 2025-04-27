@@ -2,7 +2,11 @@ import fs from "fs/promises";
 import os, { tmpdir } from "os";
 import path from "path";
 import { put } from "@vercel/blob";
-import { getPdfById, updatePdfWithSearchableUrl } from "../lib/db.js";
+import {
+  getPdfById,
+  updatePdfWithSearchableUrl,
+  updatePdfText,
+} from "../lib/db.js";
 import {
   debug,
   convertPdfToImages,
@@ -10,6 +14,7 @@ import {
   createPdfWithTextLayers,
   cleanupTempFiles,
   getPageCount,
+  getPdfText,
 } from "../lib/ocr-utils.js";
 import dotenv from "dotenv";
 
@@ -156,6 +161,15 @@ export async function processPdf(pdfId: number): Promise<OCRResponse> {
     debug(`Updating PDF record ${pdfId} with searchable URL`);
     await updatePdfWithSearchableUrl(pdfRecord.id, searchableUrl);
     debug(`Updated PDF record with searchable URL`);
+
+    debug(`Updating PDF record ${pdfId} with text from PDF`);
+    const { text, error } = await getPdfText(pdfRecord.id);
+    if (error || !text) {
+      debug(`Error getting text from PDF: ${error}`);
+    } else {
+      await updatePdfText(pdfRecord.id, text);
+      debug(`Updated PDF record with text from PDF`);
+    }
 
     await cleanupTempFiles(tempDir, [
       ...tempImagePaths,

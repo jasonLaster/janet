@@ -116,9 +116,17 @@ export async function getAllPdfs(
   return result as PDF[];
 }
 
+type InsertPdfResult = {
+  id: number;
+  filename: string;
+  blob_url: string;
+  size_bytes: number;
+  user_id: string;
+  organization_id: string | null;
+};
 export async function insertPdf(
   pdfData: Omit<PDF, "id" | "uploaded_at">
-): Promise<{ id: number }> {
+): Promise<InsertPdfResult> {
   const result = await sql`
     INSERT INTO pdfs (
       filename, 
@@ -141,9 +149,9 @@ export async function insertPdf(
       ${pdfData.page_count ?? null},
       ${pdfData.original_blob_url}
     )
-    RETURNING id
+    RETURNING id, filename, blob_url, size_bytes, user_id, organization_id
   `;
-  return result[0] as { id: number };
+  return result[0] as InsertPdfResult;
 }
 
 // Helper function to delete a PDF

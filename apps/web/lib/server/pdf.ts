@@ -1,8 +1,14 @@
 import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
-import { getPdfById, updatePdfEnhancedMetadata, setOcrFailed } from "@/lib/db";
+import {
+  getPdfById,
+  updatePdfEnhancedMetadata,
+  setOcrFailed,
+  sql,
+} from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
 import pdfParse from "pdf-parse";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
+import { MeiliSearch } from "meilisearch";
 
 function parseOrExtractJson(
   responseText: string
@@ -108,7 +114,7 @@ export async function getPdfText(
     return { error: "PDF text already exists" };
   }
 
-  const urlToFetch = pdfRecord.original_blob_url || pdfRecord.blob_url;
+  const urlToFetch = pdfRecord.blob_url || pdfRecord.original_blob_url;
 
   if (!urlToFetch) {
     console.error(
@@ -136,4 +142,43 @@ export async function getPdfText(
   const text = parsedPdf.text;
 
   return { text };
+}
+
+export async function addPdfToSearchIndex(pdfId: number) {
+  const pdfRecord = await getPdfById(pdfId);
+
+  if (!pdfRecord) {
+    console.error(`PDF record not found for ID: ${pdfId}`);
+    return { error: "PDF record not found" };
+  }
+
+  const client = new MeiliSearch({
+    host: process.env.MEILISEARCH_HOST!,
+    apiKey: process.env.MEILISEARCH_API_KEY!,
+  });
+
+  const index = client.index("pdfs");
+  const document = {
+    id: pdfRecord.id,
+    title:
+      pdfRecord.metadata?.descriptiveTitle ||
+      pdfRecord.title ||
+      pdfRecord.filename,
+    description: pdfRecord.description || pdfRecord.metadata?.summary,
+    label: pdfRecord.metadata?.labels,
+    userId: pdfRecord.user_id || "",
+    organizationId: pdfRecord.organization_id || "",
+    primaryDate: pdfRecord.metadata?.primaryDate || "",
+    uploadedAt: pdfRecord.uploaded_at || "",
+    text: pdfRecord.text,
+    issuingOrganization: pdfRecord.metadata?.issuingOrganization || "",
+    accountHolder: pdfRecord.metadata?.accountHolder || "",
+    otherPeople: pdfRecord.metadata?.otherPeople || [],
+  };
+
+  let response = await index.addDocuments([document], {
+    primaryKey: "id",
+  });
+
+  return response;
 }

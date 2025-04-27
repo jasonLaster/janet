@@ -1,4 +1,8 @@
-import { enhancePdfMetadata, ocrPdf } from "@/lib/server/pdf";
+import {
+  enhancePdfMetadata,
+  ocrPdf,
+  addPdfToSearchIndex,
+} from "@/lib/server/pdf";
 import { inngest } from "./client";
 
 export const helloWorld = inngest.createFunction(
@@ -26,16 +30,14 @@ export const enrichDocument = inngest.createFunction(
     }
 
     const [metadata, ocr] = await Promise.all([
-      step.run("enhance-metadata", async () => {
-        const metadata = await enhancePdfMetadata(+pdf.id);
-        return metadata;
-      }),
-      step.run("ocr", async () => {
-        const ocr = await ocrPdf(pdf.id);
-        return ocr;
-      }),
+      step.run("enhance-metadata", async () => enhancePdfMetadata(pdf.id)),
+      step.run("ocr", async () => ocrPdf(pdf.id)),
     ]);
 
-    return { metadata, ocr };
+    const searchIndex = await step.run("add-to-search-index", async () =>
+      addPdfToSearchIndex(pdf.id)
+    );
+
+    return { metadata, ocr, searchIndex };
   }
 );
