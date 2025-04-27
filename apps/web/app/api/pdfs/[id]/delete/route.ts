@@ -41,6 +41,10 @@ export async function DELETE(
         await del(pdf.blob_url, {
           token: process.env.BLOB_READ_WRITE_TOKEN,
         });
+
+        await del(pdf.original_blob_url, {
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
       } catch (blobError) {
         console.error("Error deleting blob:", blobError);
         // Continue even if blob deletion fails

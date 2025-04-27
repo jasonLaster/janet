@@ -41,10 +41,6 @@ export default async function PDFViewPage({ params }: PageProps) {
 
   return (
     // @ts-ignore - Interface issue will be resolved with full implementation
-    <PdfViewer
-      pdfTitle={pdf.title || pdf.filename}
-      pdfId={pdfId}
-      pdfMetadata={pdf.metadata}
-    />
+    <PdfViewer pdf={pdf} />
   );
 }

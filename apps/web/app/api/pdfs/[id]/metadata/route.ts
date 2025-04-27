@@ -16,15 +16,12 @@ export async function GET(
 
     const id = Number.parseInt(params.id, 10);
     if (isNaN(id)) {
-      console.error(`Invalid ID format: ${params.id}`);
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    console.log(`(API) Fetching metadata for PDF ID: ${id}`);
     const pdf = await getPdfById(id);
 
     if (!pdf) {
-      console.error(`(API) PDF not found for metadata request, ID: ${id}`);
       return NextResponse.json({ error: "PDF not found" }, { status: 404 });
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useOptimistic } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
@@ -31,27 +31,30 @@ export function PdfList({ pdfs }: PdfListProps) {
   const router = useRouter();
   useOrganization();
 
+  const [optimisticPdfs, removeOptimisticPdf] = useOptimistic(
+    pdfs,
+    (state: PDF[], pdfIdToRemove: number) =>
+      state.filter((pdf) => pdf.id !== pdfIdToRemove)
+  );
+
   const handleDelete = async (id: number) => {
+    removeOptimisticPdf(id);
+
     try {
       const response = await fetch(`/api/pdfs/${id}/delete`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete PDF");
+        throw new Error("Failed to delete PDF from server");
       }
 
       router.refresh();
-
-      toast({
-        title: "PDF deleted",
-        description: "The PDF has been deleted successfully",
-      });
     } catch (error) {
       console.error("Error deleting PDF:", error);
       toast({
         title: "Error",
-        description: "Failed to delete the PDF",
+        description: "Failed to delete the PDF. Please try again.",
         variant: "destructive",
       });
     }
@@ -59,7 +62,7 @@ export function PdfList({ pdfs }: PdfListProps) {
 
   const filteredPdfs = useMemo(() => {
     const filtered = getFilteredPdfs(
-      pdfs,
+      optimisticPdfs,
       searchQuery,
       searchResults.map((result) => ({ id: result.id, title: "" })),
       metadataFilter
@@ -72,7 +75,7 @@ export function PdfList({ pdfs }: PdfListProps) {
       const dateObjB = new Date(dateB);
       return dateObjB.getTime() - dateObjA.getTime();
     });
-  }, [pdfs, searchQuery, searchResults, metadataFilter]);
+  }, [optimisticPdfs, searchQuery, searchResults, metadataFilter]);
 
   const Row = ({
     index,
