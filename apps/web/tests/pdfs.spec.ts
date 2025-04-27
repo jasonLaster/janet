@@ -19,23 +19,19 @@ test("Viewing a PDF", async ({ page }) => {
   await page.getByText("Document Type").click();
 
   await page.getByRole("tab", { name: "Pages" }).click();
-
   await page.getByTestId("pdf-thumbnail-2").click();
-
-  //
   expect(await getCurrentPage()).toBe("2");
-
   await page.getByTestId("pdf-page-navigation-input").fill("3");
-
   expect(await getCurrentPage()).toBe("3");
-
   await page.getByTestId("pdf-page-navigation-next").click();
-
   expect(await getCurrentPage()).toBe("4");
-
   await page.getByTestId("pdf-page-navigation-previous").click();
-
   expect(await getCurrentPage()).toBe("3");
+
+  await page.getByTestId("pdf-search-input").fill("cobra");
+  await page.getByTestId("pdf-search-input").press("Enter");
+
+  await page.waitForSelector(".pdf-search-current");
 });
 
 test("Chatting with a PDF", async ({ page }) => {

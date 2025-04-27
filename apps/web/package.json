@@ -13,6 +13,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test": "vitest run",
     "test:watch": "vitest",
+    "codegen": "playwright codegen --load-storage=playwright/auth.json localhost:3000",
+    "codegen:login": "playwright codegen --save-storage=playwright/auth.json --open localhost:3000",
     "migrate": "bun migration/run-migration.js"
   },
   "dependencies": {
