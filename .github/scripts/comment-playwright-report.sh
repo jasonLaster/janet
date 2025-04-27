@@ -48,8 +48,25 @@ fi
 if [[ -n "$PR_NUMBER" ]]; then
   echo "Targeting PR #$PR_NUMBER."
 
-  # Define the marker separately
-  COMMENT_MARKER="Playwright Test Report"
+  # Define the marker separately using single quotes to prevent history expansion
+  COMMENT_MARKER=\'<!-- playwright-report -->\'
+
+  # Construct the comment body using command substitution with cat and a here document
+  COMMENT_BODY=$(cat <<EOF
+${COMMENT_MARKER}
+📊 **Playwright Test Report**
+
+A new [report](${DEPLOY_URL}) for [commit](https://github.com/${REPO}/commit/${COMMIT_SHA}) is available.
+EOF
+)
+
+  # Create a temporary file for the comment body
+  BODY_TEMP_FILE=$(mktemp)
+  # Ensure cleanup even on error using trap
+  trap 'rm -f "$BODY_TEMP_FILE"' EXIT
+
+  # Write the body to the temp file using printf for robustness
+  printf "%s" "$COMMENT_BODY" > "$BODY_TEMP_FILE"
 
   # Check if a comment with the marker already exists
   readarray -t EXISTING_COMMENT_IDS < <(gh pr view "$PR_NUMBER" --repo "$REPO" --json comments --jq '.comments[] | select(.body | contains("'$COMMENT_MARKER'")) | .id' 2>/dev/null || true)
@@ -57,27 +74,16 @@ if [[ -n "$PR_NUMBER" ]]; then
   if [[ ${#EXISTING_COMMENT_IDS[@]} -gt 0 ]]; then
     EXISTING_COMMENT_ID="${EXISTING_COMMENT_IDS[0]}" # Take the first one if multiple found
     echo "Updating existing comment $EXISTING_COMMENT_ID on PR #$PR_NUMBER."
-    # Use here document directly with gh command
-    gh pr comment "$PR_NUMBER" --repo "$REPO" --edit "$EXISTING_COMMENT_ID" --body-file - <<EOF
-$COMMENT_MARKER
-📊 **Playwright Test Report**
-
-A new [report]($DEPLOY_URL) for [commit](https://github.com/$REPO/commit/$COMMIT_SHA) is available.
-
-EOF
+    # Read body from temp file
+    gh pr comment "$PR_NUMBER" --repo "$REPO" --edit "$EXISTING_COMMENT_ID" --body-file "$BODY_TEMP_FILE"
   else
     echo "Creating new comment on PR #$PR_NUMBER."
-    # Use here document directly with gh command
-    gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file - <<EOF
-$COMMENT_MARKER
-📊 **Playwright Test Report**
-
-A new [report]($DEPLOY_URL) for [commit](https://github.com/$REPO/commit/$COMMIT_SHA) is available.
-
-EOF
+    # Read body from temp file
+    gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file "$BODY_TEMP_FILE"
   fi
   echo "Successfully added/updated comment on PR #$PR_NUMBER."
 
+  # Temp file is cleaned up automatically by the EXIT trap
 else
   echo "No open PR found for commit $COMMIT_SHA. Skipping comment."
   # Optional: Add logic here to search merged PRs if desired
