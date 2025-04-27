@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { PDF } from "./db";
 
 // Define the shape for an uploading file's state
 export interface UploadingFileState {
@@ -24,109 +25,6 @@ export const metadataFilterAtom = atom<MetadataFilter>({
   type: null,
   value: null,
 });
-
-// --- PDF List State Atoms ---
-
-// Holds the array of PDF objects fetched from the API
-// export const pdfsAtom = atom<PDF[]>([]);
-
-// Tracks the loading state during the fetch operation
-// export const pdfsLoadingAtom = atom<boolean>(false);
-
-// Stores any error message if the fetch fails
-// export const pdfsErrorAtom = atom<string | null>(null);
-
-// Define the fetcher function for useSWR
-// const pdfsFetcher = async (url: string) => {
-//   const response = await fetch(url);
-//   if (!response.ok) {
-//     // Attempt to get more specific error from response body if available
-//     let errorBody = "Failed to fetch PDFs";
-//     try {
-//       const errorJson = await response.json();
-//       errorBody = errorJson.error || errorBody; // Use error from JSON if present
-//     } catch (_) {
-//       // Ignore if response is not JSON or body is empty
-//     }
-//     throw new Error(errorBody);
-//   }
-//   const data = await response.json();
-//   return data.pdfs;
-// };
-
-// Create a global cache for SWR mutate functions
-// const mutateCache = new Map<string, KeyedMutator<any>>();
-
-// Hook to use SWR for fetching PDFs
-// export function usePdfs() {
-//   const setPdfs = useSetAtom(pdfsAtom);
-//   const setPdfsLoading = useSetAtom(pdfsLoadingAtom);
-//   const setPdfsError = useSetAtom(pdfsErrorAtom);
-//   const pdfs = useAtomValue(pdfsAtom);
-
-//   const { data, error, isLoading, mutate } = useSWR<PDF[], Error>(
-//     "/api/pdfs",
-//     pdfsFetcher,
-//     {
-//       revalidateOnFocus: true,
-//       dedupingInterval: 5000, // Deduplicate requests within 5 seconds
-//       onSuccess: (data) => {
-//         // This callback may not be reliable for state updates
-//         console.log("SWR success, fetched PDFs:", data?.length || 0);
-//       },
-//       onError: (error) => {
-//         console.error("Error fetching PDFs:", error);
-//       },
-//     }
-//   );
-
-//   // Use an effect to update the atoms when SWR state changes
-//   // This is more reliable than the callbacks
-//   React.useEffect(() => {
-//     if (data) {
-//       console.log("Updating pdfs atom with", data.length, "PDFs");
-//       setPdfs(data);
-//     }
-
-//     if (error) {
-//       setPdfsError(error.message);
-//     } else {
-//       setPdfsError(null);
-//     }
-
-//     setPdfsLoading(isLoading);
-//   }, [data, error, isLoading, setPdfs, setPdfsLoading, setPdfsError]);
-
-//   // Store the mutate function in the global cache
-//   if (mutate) {
-//     mutateCache.set("/api/pdfs", mutate);
-//   }
-
-//   // Always use SWR data if available, fall back to atom state
-//   const currentPdfs = data || pdfs;
-
-//   console.log("usePdfs returning", {
-//     pdfsCount: currentPdfs?.length || 0,
-//     isLoading,
-//     hasError: !!error,
-//   });
-
-//   return {
-//     pdfs: currentPdfs,
-//     isLoading,
-//     error: error?.message || null,
-//     refetch: mutate,
-//   };
-// }
-
-// Function to trigger a refetch from outside components
-// export const refetchPdfs = async () => {
-//   const mutate = mutateCache.get("/api/pdfs");
-//   if (mutate) {
-//     return mutate();
-//   }
-//   return Promise.resolve();
-// };
 
 // --- Upload State Atoms ---
 

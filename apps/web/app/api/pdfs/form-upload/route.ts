@@ -7,6 +7,7 @@ import { inngest } from "@/lib/inngest/client";
 export async function POST(request: Request) {
   try {
     const { userId, orgId } = await auth();
+
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
