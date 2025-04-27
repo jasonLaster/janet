@@ -18,13 +18,6 @@ export async function POST(request: Request) {
     const filenameMatch = contentDisposition?.match(/filename="([^"]+)"/);
     const filename = filenameMatch?.[1];
 
-    // Log headers safely
-    console.log("contentType:", contentType);
-    console.log("contentDisposition:", contentDisposition);
-    console.log("userId:", userId);
-    console.log("orgId:", orgId);
-    console.log("filename:", filename);
-
     if (!contentType || contentType !== "application/pdf") {
       return NextResponse.json(
         { error: "Content must be a PDF" },

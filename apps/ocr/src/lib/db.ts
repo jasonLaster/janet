@@ -53,3 +53,17 @@ export async function updatePdfWithSearchableUrl(
     throw error;
   }
 }
+
+// Helper function to update PDF record with text
+export async function updatePdfText(id: number, text: string): Promise<void> {
+  try {
+    await sql`
+      UPDATE pdfs  
+      SET text = ${text}
+      WHERE id = ${id}
+    `;
+  } catch (error) {
+    console.error(`Error updating PDF record ${id}:`, error);
+    throw error;
+  }
+}

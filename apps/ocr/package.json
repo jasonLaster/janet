@@ -1,5 +1,5 @@
 {
-  "name": "pdf-ocr-service",
+  "name": "ocr",
   "version": "1.0.0",
   "description": "PDF OCR Service for fly.io",
   "type": "module",
