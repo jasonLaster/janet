@@ -1,44 +1,26 @@
 import { test, expect } from "@playwright/test";
-import { signin } from "./utils";
+import { signin, navigateToPdf } from "./utils";
 
 test("Viewing a PDF", async ({ page }) => {
-  await signin(page);
+  await page.goto("/");
 
-  const link = await page.getByRole("link", { name: /cobra/i }).first();
-
-  const href = await link.getAttribute("href");
-
-  await link.scrollIntoViewIfNeeded(); // Scroll into view first
-  await link.dispatchEvent("click"); // Click using JS dispatchEvent
-  console.log("clicked");
-  // Wait for the navigation to complete and the URL to contain the href
-  await page.waitForURL(`**${href}`);
-
-  // check the url
+  const href = await navigateToPdf(page, "cobra");
   expect(page.url()).toContain(href);
 
-  // Make the selector more specific to target the heading
   expect(await page.getByRole("heading", { name: /cobra/i }).isVisible()).toBe(
     true
   );
 });
 
-test.skip("Chatting with a PDF", async ({ page }) => {
-  await signin(page);
-
-  const link = await page.getByRole("link", { name: /cobra/i }).first();
-
-  const href = await link.getAttribute("href");
-  expect(href).toBeTruthy();
-  await page.goto(href!);
+test("Chatting with a PDF", async ({ page }) => {
+  await page.goto("/");
+  await navigateToPdf(page, "cobra");
 
   await page.waitForSelector("[data-document-loaded]");
 
   await page.getByTestId("chat-button").click();
-
   await page.getByTestId("chat-input").click();
   await page.getByTestId("chat-input").fill("Summarize");
-
   await page.getByTestId("chat-send-button").click();
 
   await page.getByTestId("chat-loading-message").waitFor({

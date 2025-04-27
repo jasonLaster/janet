@@ -1,5 +1,7 @@
 ## V1
 
+- [ ] Show PDFs in a sheet from the right
+  - [ ]
 - [ ] Mobile support
   - [ ] List looks good on mobile
   - [ ] Capture PDF
@@ -15,6 +17,21 @@
   - [ ] ensure they run in ci
   - [ ] add more
 - [ ] Requirements
+
+## Playwright tests
+
+- [ ] PDF
+  - [ ] Chat with PDF
+  - [ ] Go to page
+  - [ ] Scrolling
+  - [ ] Search
+- [ ] List
+  - [ ] Search for PDFS
+  - [ ] Upload PDF
+  - [ ] filter by label
+  - [ ] filter by company
+  - [ ] delete pdf
+  - [ ] download pdf
 
 ## Feature requests
 

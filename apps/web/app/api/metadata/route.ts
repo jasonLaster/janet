@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     try {
       // Call the new function to enhance metadata
-      const enhancedResult = await enhancePdfMetadata(pdfUrl, pdfId);
+      const enhancedResult = await enhancePdfMetadata(pdfId);
 
       if (!enhancedResult) {
         throw new Error("Metadata enhancement returned null");

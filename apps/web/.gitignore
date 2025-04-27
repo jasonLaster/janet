@@ -3,6 +3,7 @@
 .next
 requirements.md
 tsconfig.tsbuildinfo
+playwright
 
 # Playwright
 node_modules/
