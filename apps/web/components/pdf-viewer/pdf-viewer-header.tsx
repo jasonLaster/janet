@@ -126,6 +126,7 @@ export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
                 ref={searchInputRef}
                 type="text"
                 placeholder="Search..."
+                data-testid="pdf-search-input"
                 value={searchText}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onKeyDown={handleKeyDown}
