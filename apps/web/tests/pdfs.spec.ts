@@ -50,19 +50,23 @@ test("Uploading a PDF", async ({ page }) => {
   });
   const initialCount = await initialYakimaLinks.count();
 
-  const fileInput = page.getByTestId("file-upload-input");
+  await page
+    .getByRole("button", { name: "File upload area" })
+    .waitFor({ state: "visible", timeout: 15_000 });
 
-  // Use path.join to construct the file path reliably
+  const fileInput = page.locator('input[type="file"]');
   const filePath = path.join(__dirname, "artifacts", "yakima.pdf");
-
-  // Set the input files for the file chooser
   await fileInput.setInputFiles(filePath);
 
-  // Wait for the link count to increase by one
+  await page.getByTestId("upload-loader").waitFor({ state: "visible" });
+
+  await page
+    .getByTestId("upload-loader")
+    .waitFor({ state: "hidden", timeout: 30_000 });
+
+  await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
+
   await expect(
     page.getByRole("link", { name: /yakima/i, exact: false })
-  ).toHaveCount(initialCount + 1, { timeout: 15000 }); // Increased timeout for upload/processing
-
-  // Optional: Verify navigation or further state changes if needed
-  // For example, check if the URL changes or if a success toast appears
+  ).toHaveCount(initialCount + 1, { timeout: 10_000 });
 });

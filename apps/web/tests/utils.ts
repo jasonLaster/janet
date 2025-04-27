@@ -1,17 +1,27 @@
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { Page } from "@playwright/test";
 
+export function browserDevTools(page: Page) {
+  page.on("console", (message) => {
+    console.log(`[browser:${message.type()}] ${message.text()}`);
+  });
+
+  page.on("request", (request) => {
+    console.log(`[request] ${request.method()} ${request.url()}`);
+  });
+
+  page.on("response", (response) => {
+    console.log(`[response] ${response.status()} ${response.url()}`);
+  });
+}
+
 export async function signin(page: Page, baseURL: string) {
-  console.log("signin");
   await setupClerkTestingToken({ page });
 
   while (true) {
-    console.log("goto");
     await page.goto(`${baseURL}/sign-in`);
 
-    console.log("get email input");
     const emailInput = page.getByRole("textbox", { name: "Email address" });
-    console.log("emailInput", emailInput);
 
     try {
       await emailInput.waitFor({ timeout: 1000 });
@@ -33,11 +43,6 @@ export async function signin(page: Page, baseURL: string) {
     .getByRole("textbox", { name: "Password" })
     .fill(process.env.TEST_PASSWORD!);
   await page.getByRole("button", { name: "Continue" }).click();
-
-  // console.log("waiting for url");
-  // await page.waitForURL("/"); // Assuming successful signin redirects to root
-  // console.log("waiting for pdf list");
-  // await page.waitForSelector("[data-testid='pdf-list']");
 }
 
 export async function navigateToPdf(page: Page, name: string) {

@@ -142,6 +142,7 @@ export function FileUpload({ className = "" }: FileUploadProps) {
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
+          data-testid="file-upload-input"
           multiple
           accept="application/pdf"
           disabled={isAnyFileUploading}
@@ -156,7 +157,10 @@ export function FileUpload({ className = "" }: FileUploadProps) {
           }`}
         >
           {isAnyFileUploading ? (
-            <Loader2 className="h-3 w-3 animate-spin stroke-[3]" />
+            <Loader2
+              data-testid="upload-loader"
+              className="h-3 w-3 animate-spin stroke-[3]"
+            />
           ) : (
             <UploadCloudIcon className="h-3 w-3 stroke-[3]" />
           )}

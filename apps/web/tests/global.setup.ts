@@ -12,14 +12,12 @@ const baseURL = usePreviewUrl
   : `http://localhost:${port}`;
 
 export default async function globalSetup() {
-  console.log("globalSetup");
   await clerkSetup();
 
-  console.log("launching browser");
   const browser = await chromium.launch();
   const page = await browser.newPage();
 
-  console.log("signing in");
+  console.log("globalSetup: Signing in");
   await signin(page, baseURL);
 
   await page.waitForURL(`${baseURL}/`);
@@ -27,6 +25,6 @@ export default async function globalSetup() {
     .context()
     .storageState({ path: "playwright/.auth/storageState.json" });
 
-  console.log("closing browser");
+  console.log("globalSetup: Done signing in");
   await browser.close();
 }
