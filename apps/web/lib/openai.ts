@@ -11,7 +11,7 @@ export async function sendChatWithPDF({
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   messages: any[];
-  pdfUrl?: string;
+  pdfUrl: string;
   maxTokens?: number;
   systemPrompt?: string;
 }) {
@@ -25,24 +25,17 @@ export async function sendChatWithPDF({
   });
 
   // If there's a PDF URL, fetch it
-  let pdfBase64: string | undefined;
-  if (pdfUrl && !pdfUrl.includes("undefined")) {
-    try {
-      console.log(":: chatting with PDF from", pdfUrl);
-      const pdfResponse = await fetch(pdfUrl);
 
-      if (!pdfResponse.ok) {
-        throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
-      }
+  console.log(":: chatting with PDF from", pdfUrl);
+  const pdfResponse = await fetch(pdfUrl);
 
-      const pdfBuffer = await pdfResponse.arrayBuffer();
-      pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
-      console.log("PDF fetched successfully");
-    } catch (error) {
-      console.error("Error processing PDF:", error);
-      throw error;
-    }
+  if (!pdfResponse.ok) {
+    throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
   }
+
+  const pdfBuffer = await pdfResponse.arrayBuffer();
+  const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+  console.log("PDF fetched successfully");
 
   // Extract the text content from the last user message
   const lastUserMessage = messages[messages.length - 1];

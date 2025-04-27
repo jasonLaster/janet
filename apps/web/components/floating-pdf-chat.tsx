@@ -13,12 +13,15 @@ import ReactMarkdown from "react-markdown";
 
 interface FloatingPdfChatProps {
   pdfId: number;
-  pdfTitle: string;
-  pdfUrl: string;
   onClose?: () => void;
+  documentLoaded: boolean;
 }
 
-export function FloatingPdfChat({ pdfUrl, onClose }: FloatingPdfChatProps) {
+export function FloatingPdfChat({
+  pdfId,
+  onClose,
+  documentLoaded,
+}: FloatingPdfChatProps) {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -72,7 +75,7 @@ export function FloatingPdfChat({ pdfUrl, onClose }: FloatingPdfChatProps) {
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
-          pdfUrl,
+          pdfId,
         }),
       });
 
@@ -113,6 +116,10 @@ export function FloatingPdfChat({ pdfUrl, onClose }: FloatingPdfChatProps) {
       onClose();
     }
   };
+
+  if (!documentLoaded) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

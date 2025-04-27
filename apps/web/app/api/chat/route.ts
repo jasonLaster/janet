@@ -5,11 +5,11 @@ export const maxDuration = 60; // Increase duration for PDF processing
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { messages, pdfUrl } = body;
+    const { messages, pdfId } = body;
 
     const text = await sendChatWithPDF({
       messages,
-      pdfUrl,
+      pdfId,
       systemPrompt:
         "You are an AI assistant that analyzes PDF documents and answer's the user's question. Keep your answers concise and to the point. Ideally no more than a sentence or two.",
     });

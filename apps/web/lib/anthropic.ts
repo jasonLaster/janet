@@ -10,8 +10,8 @@ export async function sendChatWithPDF({
   maxTokens = 1500,
   systemPrompt = "You are a helpful AI assistant specialized in answering questions about PDF documents.",
 }: {
-  messages: CoreMessage[];
-  pdfUrl?: string;
+  messages: any[];
+  pdfUrl: string;
   maxTokens?: number;
   systemPrompt?: string;
 }) {
@@ -21,23 +21,16 @@ export async function sendChatWithPDF({
   }
 
   // If there's a PDF URL, fetch it
-  let pdfBuffer: ArrayBuffer | undefined;
-  if (pdfUrl && !pdfUrl.includes("undefined")) {
-    try {
-      console.log(":: chatting with PDF from", pdfUrl);
-      const pdfResponse = await fetch(pdfUrl);
 
-      if (!pdfResponse.ok) {
-        throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
-      }
+  console.log(":: chatting with PDF from", pdfUrl);
+  const pdfResponse = await fetch(pdfUrl);
 
-      pdfBuffer = await pdfResponse.arrayBuffer();
-      console.log("PDF fetched successfully");
-    } catch (error) {
-      console.error("Error processing PDF:", error);
-      throw error;
-    }
+  if (!pdfResponse.ok) {
+    throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
   }
+
+  const pdfBuffer = await pdfResponse.arrayBuffer();
+  console.log("PDF fetched successfully");
 
   // Format user messages
   const formattedMessages = messages.map((message) => {

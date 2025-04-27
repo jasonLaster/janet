@@ -1,27 +1,29 @@
 import { sendChatWithPDF as sendChatWithPDFAnthropiс } from "./anthropic";
 import { sendChatWithPDF as sendChatWithPDFOpenAI } from "./openai";
+import { getPdfById } from "@/lib/db";
 
-interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-  // Add other potential properties if needed, e.g., name
-}
+const aiProvider = process.env.AI_PROVIDER?.toLowerCase() || "openai";
 
 /**
  * Sends a chat message with PDF to either Anthropic or OpenAI based on AI_PROVIDER environment variable
  */
 export async function sendChatWithPDF({
   messages,
-  pdfUrl,
+  pdfId,
   maxTokens = 1500,
   systemPrompt,
 }: {
-  messages: ChatMessage[];
-  pdfUrl?: string;
+  messages: any[];
+  pdfId: number;
   maxTokens?: number;
   systemPrompt?: string;
 }) {
-  const aiProvider = process.env.AI_PROVIDER?.toLowerCase() || "openai";
+  const pdf = await getPdfById(pdfId);
+  if (!pdf) {
+    throw new Error("PDF not found");
+  }
+
+  const pdfUrl = pdf.blob_url;
 
   try {
     if (aiProvider === "openai") {
