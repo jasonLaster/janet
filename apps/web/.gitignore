@@ -5,6 +5,7 @@ requirements.md
 tsconfig.tsbuildinfo
 playwright
 
+/scripts/
 # Playwright
 node_modules/
 /test-results/

@@ -10,7 +10,7 @@ output
 .next
 .vercel
 out
-scripts
+/scripts
 proposal.md
 .DS_Store
 

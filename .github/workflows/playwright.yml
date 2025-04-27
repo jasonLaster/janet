@@ -17,6 +17,8 @@ jobs:
     environment: preview
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' }}
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -66,9 +68,32 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 30
 
-      - name: Deploy playwright report to Vercel
+      - name: Deploy playwright report to Vercel and capture URL
         if: always()
+        id: deploy_report
         run: |
           cd apps/web/playwright-report
           vercel link --project janet-playwright --yes --token=${{ secrets.VERCEL_TOKEN }}
-          vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL=$(vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} | tail -n 1)
+          if [[ "$DEPLOY_URL" == http* ]]; then
+            echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+            echo "Report URL: $DEPLOY_URL"
+          else
+            echo "Failed to capture valid deployment URL."
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Add/Update Playwright Report Comment on PR
+        # Only run if triggered by deployment_status and a deploy URL was captured
+        if: always() && github.event_name == 'deployment_status' && env.DEPLOY_URL
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.deployment.sha }}
+        run: |
+          chmod +x .github/scripts/comment-playwright-report.sh # Ensure script is executable
+          ./.github/scripts/comment-playwright-report.sh \
+            "$COMMIT_SHA" \
+            "${{ env.DEPLOY_URL }}" \
+            "$GH_REPO"
