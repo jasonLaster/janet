@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PDF } from "@/lib/store";
+import { PDF } from "@/lib/db";
 import { DocumentMetadata } from "@/components/document-metadata";
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -29,6 +29,33 @@ interface PdfListItemProps {
   style?: React.CSSProperties; // For react-window
 }
 
+const formatDate = (dateString: string) => {
+  if (!dateString) {
+    return null;
+  }
+
+  const date = new Date(dateString);
+
+  const isInvalid = isNaN(date.getTime());
+
+  if (isInvalid) {
+    return null;
+  }
+  // Format with ordinal suffix
+  const day = date.getDate();
+  const ordinal = (d: number) =>
+    d +
+    (["th", "st", "nd", "rd"][
+      d % 10 > 3 || Math.floor((d % 100) / 10) == 1 ? 0 : d % 10
+    ] || "th");
+
+  const formattedDate = `${date.toLocaleString("en-US", {
+    month: "long",
+  })} ${ordinal(day)}, ${date.getFullYear()}`;
+
+  return formattedDate;
+};
+
 export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,35 +66,9 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const [tooltipPosition, setTooltipPosition] = useState<number | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) {
-      return null;
-    }
-
-    const date = new Date(dateString);
-
-    const isInvalid = isNaN(date.getTime());
-
-    if (isInvalid) {
-      return null;
-    }
-    // Format with ordinal suffix
-    const day = date.getDate();
-    const ordinal = (d: number) =>
-      d +
-      (["th", "st", "nd", "rd"][
-        d % 10 > 3 || Math.floor((d % 100) / 10) == 1 ? 0 : d % 10
-      ] || "th");
-
-    const formattedDate = `${date.toLocaleString("en-US", {
-      month: "long",
-    })} ${ordinal(day)}, ${date.getFullYear()}`;
-
-    return formattedDate;
-  };
-
   // Use descriptive title from metadata if available, otherwise fallback to title or filename
-  const displayTitle = metadata.descriptiveTitle || pdf.title || pdf.name;
+  const displayTitle = metadata.descriptiveTitle || pdf.title || pdf.filename;
+
   // Use primary date from metadata if available, otherwise use uploaded date
   const displayDate = formatDate(pdf.uploaded_at) || "";
 
