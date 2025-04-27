@@ -44,7 +44,10 @@ export function DocumentMetadata({
   };
 
   return (
-    <div className="flex flex-nowrap overflow-hidden ml-2 max-w-full">
+    <div
+      data-testid="document-metadata"
+      className="flex flex-nowrap overflow-hidden ml-2 max-w-full"
+    >
       {metadata.issuingOrganization && (
         <Badge
           variant="secondary"

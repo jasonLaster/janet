@@ -14,11 +14,11 @@ import { FloatingPdfChat } from "@/components/floating-pdf-chat";
 import { PdfViewerHeader } from "./pdf-viewer-header";
 import { PdfViewerContent } from "./pdf-viewer-content";
 import { PdfSidebar } from "./pdf-sidebar";
-import { PdfViewerProps } from "./pdf-viewer-types";
 import { pdfjs } from "react-pdf";
 import { PDF_WORKER_URL } from "./constants";
 import { usePdfSearch } from "./hooks/use-pdf-search";
 import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
+import { PDF } from "@/lib/db";
 
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -35,12 +35,12 @@ const SIDEBAR_MIN_PERCENTAGE = 10;
 const SIDEBAR_MAX_PERCENTAGE = 60;
 const LOCALSTORAGE_KEY = "pdfViewerSidebarSizePercent";
 
-export function PdfViewer({
-  pdfTitle = "Document",
-  pdfId,
-  pdfMetadata,
-  onError,
-}: PdfViewerProps) {
+interface PdfViewerProps {
+  pdf: PDF;
+  onError?: () => void;
+}
+
+export function PdfViewer({ pdf, onError }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const setContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
@@ -172,7 +172,7 @@ export function PdfViewer({
     metadata: currentMetadata,
     isLoading: isMetadataLoading,
     error: metadataError,
-  } = usePdfMetadata(pdfId, pdfMetadata);
+  } = usePdfMetadata(pdf.id, pdf.metadata, pdf.metadata_failed);
 
   // Track visible page based on scroll position
   useEffect(() => {
@@ -274,7 +274,7 @@ export function PdfViewer({
     setCurrentPage(1);
     setDocumentLoaded(false);
     setPdfLoadError(null);
-  }, [pdfId]);
+  }, [pdf.id]);
 
   // Load sidebar size from localStorage on mount (client-side only)
   useEffect(() => {
@@ -290,9 +290,6 @@ export function PdfViewer({
             parsedSize <= SIDEBAR_MAX_PERCENTAGE
           ) {
             setSidebarSize(parsedSize);
-            console.log(
-              `[PdfViewer] Loaded sidebar size from localStorage: ${parsedSize}%`
-            );
           }
         } catch (e) {
           console.error("[PdfViewer] Error parsing saved sidebar size:", e);
@@ -424,7 +421,7 @@ export function PdfViewer({
   };
 
   // Define the effective URL directly
-  const effectivePdfUrl = currentMetadata?.blob_url || "";
+  const effectivePdfUrl = `/api/pdfs/${pdf.id}/content`;
 
   // Calculate width to display page with
   const pageWidth = containerWidth
@@ -433,9 +430,6 @@ export function PdfViewer({
         maxWidth
       )
     : maxWidth;
-
-  // --- Calculate derived values ---
-  const pdfContentIsReady = !isMetadataLoading && effectivePdfUrl;
 
   // Recalculate pageWidth based on container and sidebar state
   const mainPanelWidth = containerWidth
@@ -450,7 +444,7 @@ export function PdfViewer({
     >
       <div ref={headerRef}>
         <PdfViewerHeader
-          title={pdfTitle}
+          title={pdf.title || pdf.filename}
           pdfMetadata={currentMetadata}
           searchText={searchKeyword}
           onSearchChange={setSearchKeyword}
@@ -539,12 +533,6 @@ export function PdfViewer({
                   {metadataError || "Failed to fetch document details."}
                 </p>
               </div>
-            ) : !pdfContentIsReady ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <p>Loading document details...</p>
-                </div>
-              </div>
             ) : (
               <div className="relative h-full overflow-auto bg-gray-100">
                 <PdfViewerContent
@@ -562,7 +550,7 @@ export function PdfViewer({
                 />
 
                 <FloatingPdfChat
-                  pdfId={pdfId}
+                  pdfId={pdf.id}
                   documentLoaded={documentLoaded}
                 />
               </div>

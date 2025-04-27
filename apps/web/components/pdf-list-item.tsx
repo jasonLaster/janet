@@ -157,7 +157,10 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                     isListView={true}
                   />
                   {isMetadataLoading && !metadataError && (
-                    <Loader2 className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block" />
+                    <Loader2
+                      data-testid="metadata-loader"
+                      className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block"
+                    />
                   )}
                 </div>
               </div>
@@ -174,7 +177,12 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
         <div className="w-12 flex justify-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                data-testid="pdf-list-item-menu-button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+              >
                 <MoreHorizontalIcon className="h-4 w-4" />
                 <span className="sr-only">Open menu</span>
               </Button>
@@ -185,6 +193,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                 View PDF
               </DropdownMenuItem>
               <DropdownMenuItem
+                data-testid="pdf-list-item-delete-button"
                 className="text-destructive focus:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();

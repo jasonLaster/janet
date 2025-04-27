@@ -66,7 +66,7 @@ export async function GET(
     }
 
     // Final Authorization Check
-    if (pdf.is_public) {
+    if (!pdf.is_public) {
       // Private doc requires owner match OR matching active orgId
       let isAuthorized = false;
       if (payload.userId) {

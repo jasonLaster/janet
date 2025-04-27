@@ -65,17 +65,11 @@ export function usePdfMetadata(
       }
 
       attemptsRef.current++;
-      console.log(
-        `(Hook) Polling metadata for PDF ${pdfId}, attempt ${attemptsRef.current}`
-      );
 
       try {
         const response = await fetch(`/api/pdfs/${pdfId}/metadata`);
 
         if (response.status === 404) {
-          console.error(
-            `(Hook) PDF ${pdfId} not found during polling. Stopping.`
-          );
           setError("PDF not found.");
           setIsLoading(false);
           if (intervalIdRef.current) clearInterval(intervalIdRef.current);
@@ -83,17 +77,11 @@ export function usePdfMetadata(
         }
 
         if (!response.ok) {
-          console.error(
-            `(Hook) Metadata poll failed for ${pdfId} with status: ${response.status}`
-          );
           // Keep polling for transient errors, but stop if max attempts reached
         } else {
           const { metadata: fetchedMetadata, failed } = await response.json();
 
           if (failed) {
-            console.warn(
-              `(Hook) Metadata processing failed permanently for PDF ${pdfId}. Stopping polling.`
-            );
             setError("Metadata processing failed."); // Set an error state
             setMetadata(null); // Ensure metadata is null if failed
             setIsLoading(false);
@@ -102,7 +90,6 @@ export function usePdfMetadata(
           }
 
           if (fetchedMetadata) {
-            console.log(`(Hook) Metadata found for PDF ${pdfId}!`);
             setMetadata(fetchedMetadata);
             setIsLoading(false);
             setError(null);
@@ -112,22 +99,16 @@ export function usePdfMetadata(
           // If metadata is null but not failed, continue polling
         }
       } catch (err) {
-        console.error(
-          `(Hook) Network error during metadata poll for ${pdfId}:`,
-          err
-        );
         // Keep polling for network errors, but stop if max attempts reached
         setError("Network error during polling."); // Reflect temporary error
       }
 
       // --- Check stop condition for attempts ---
       if (attemptsRef.current >= MAX_POLLING_ATTEMPTS) {
-        console.warn(
-          `(Hook) Max polling attempts reached for PDF ${pdfId}. Stopping polling.`
-        );
         setError("Polling timed out. Metadata might still be processing.");
         setIsLoading(false);
         if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
       }
     };
 
@@ -140,7 +121,6 @@ export function usePdfMetadata(
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
-        console.log(`(Hook) Cleared polling interval for PDF ${pdfId}`);
       }
     };
     // Re-run effect if pdfId changes, or if metadata becomes available (to stop polling)
