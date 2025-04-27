@@ -139,7 +139,7 @@ export async function getPdfText(
   const buffer = Buffer.from(arrayBuffer);
 
   const parsedPdf = await pdfParse(buffer);
-  const text = parsedPdf.text;
+  const text = parsedPdf.text.trim();
 
   return { text };
 }
