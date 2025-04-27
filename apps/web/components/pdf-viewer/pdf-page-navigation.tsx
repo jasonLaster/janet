@@ -26,6 +26,7 @@ export function PdfPageNavigation({
         onClick={() => changePage(-1)}
         disabled={currentPage <= 1}
         className="h-8 w-8"
+        data-testid="pdf-page-navigation-previous"
       >
         <ChevronLeft className="h-4 w-4" />
         <span className="sr-only">Previous page</span>
@@ -35,6 +36,7 @@ export function PdfPageNavigation({
         <Input
           type="number"
           value={currentPage}
+          data-testid="pdf-page-navigation-input"
           onChange={(e) => {
             const page = Number.parseInt(e.target.value);
             if (page >= 1 && page <= numPages) {
@@ -54,6 +56,7 @@ export function PdfPageNavigation({
         onClick={() => changePage(1)}
         disabled={currentPage >= numPages}
         className="h-8 w-8"
+        data-testid="pdf-page-navigation-next"
       >
         <ChevronRight className="h-4 w-4" />
         <span className="sr-only">Next page</span>

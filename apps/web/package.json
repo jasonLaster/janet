@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node -v && next dev",
+    "dev": "next dev",
+    "inngest": "pnpm dlx inngest-cli@latest dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -61,6 +62,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "inngest": "^3.35.1",
+    "inngest-cli": "^1.5.10",
     "input-otp": "1.4.1",
     "iron-session": "^8.0.4",
     "jotai": "^2.12.3",

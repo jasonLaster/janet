@@ -11,6 +11,10 @@ const isPublicPageRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks/(.*)", // Allow webhooks without auth
+  "/api/inngest(.*)", // Allow Inngest API route
+  "/x/inngest(.*)", // Allow /x/inngest route (often used by Inngest Dev Server)
+  "/.netlify/functions/inngest(.*)", // Allow Netlify function route
+  "/.redwood/functions/inngest(.*)", // Allow Redwood function route
   "/landing",
   "/about",
   "/pricing",

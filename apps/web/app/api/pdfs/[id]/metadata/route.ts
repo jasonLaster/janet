@@ -14,12 +14,13 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const id = Number.parseInt(params.id, 10);
-    if (isNaN(id)) {
+    const { id } = await params;
+    const idInt = Number.parseInt(id, 10);
+    if (isNaN(idInt)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    const pdf = await getPdfById(id);
+    const pdf = await getPdfById(idInt);
 
     if (!pdf) {
       return NextResponse.json({ error: "PDF not found" }, { status: 404 });

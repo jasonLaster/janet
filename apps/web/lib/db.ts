@@ -184,9 +184,12 @@ export async function updatePdfMetadata(
 // Function to update PDF enhanced metadata
 export async function updatePdfEnhancedMetadata(
   id: number,
-  metadata: EnhancedPdfMetadata
+  metadata?: EnhancedPdfMetadata
 ): Promise<PDF | null> {
-  if (!id || !metadata) {
+  if (!metadata) {
+    await sql`
+      UPDATE pdfs SET metadata_failed = true WHERE id = ${id}
+    `;
     return null;
   }
 
@@ -205,4 +208,9 @@ export async function updatePdfEnhancedMetadata(
   }
 }
 
-// Function to update PDF text content
+// set ocr_failed to true
+export async function setOcrFailed(id: number): Promise<void> {
+  await sql`
+    UPDATE pdfs SET ocr_failed = true WHERE id = ${id}
+  `;
+}

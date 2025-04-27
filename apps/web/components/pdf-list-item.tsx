@@ -22,7 +22,7 @@ import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
-
+import { formatDate } from "@/lib/utils";
 const TOOLTIP_WIDTH = 384; // max-w-sm = 24rem = 384px
 
 interface PdfListItemProps {
@@ -31,33 +31,6 @@ interface PdfListItemProps {
   style?: React.CSSProperties; // For react-window
 }
 
-const formatDate = (dateString: string) => {
-  if (!dateString) {
-    return null;
-  }
-
-  const date = new Date(dateString);
-
-  const isInvalid = isNaN(date.getTime());
-
-  if (isInvalid) {
-    return null;
-  }
-  // Format with ordinal suffix
-  const day = date.getDate();
-  const ordinal = (d: number) =>
-    d +
-    (["th", "st", "nd", "rd"][
-      d % 10 > 3 || Math.floor((d % 100) / 10) == 1 ? 0 : d % 10
-    ] || "th");
-
-  const formattedDate = `${date.toLocaleString("en-US", {
-    month: "long",
-  })} ${ordinal(day)}, ${date.getFullYear()}`;
-
-  return formattedDate;
-};
-
 export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const router = useRouter();
   const {
@@ -65,6 +38,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
     isLoading: isMetadataLoading,
     error: metadataError,
   } = usePdfMetadata(pdf.id, pdf.metadata, pdf.metadata_failed);
+
   const [mouseX, setMouseX] = useState<number | null>(null);
   const [rowBottom, setRowBottom] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState(false);

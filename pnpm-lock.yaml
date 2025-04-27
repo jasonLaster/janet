@@ -334,6 +334,9 @@ importers:
       inngest:
         specifier: ^3.35.1
         version: 3.35.1(express@4.21.2)(next@15.2.3(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(typescript@5.8.3)
+      inngest-cli:
+        specifier: ^1.5.10
+        version: 1.5.10
       input-otp:
         specifier: 1.4.1
         version: 1.4.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -2801,6 +2804,10 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  adm-zip@0.5.16:
+    resolution: {integrity: sha512-TGw5yVi4saajsSEgz25grObGHEUaDrniwvA2qwSC060KfqGPdglhvPMA2lPIoxs3PQIItj2iag35fONcQqgUaQ==}
+    engines: {node: '>=12.0'}
+
   agent-base@6.0.2:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
     engines: {node: '>= 6.0.0'}
@@ -4014,6 +4021,10 @@ packages:
 
   inline-style-parser@0.2.4:
     resolution: {integrity: sha512-0aO8FkhNZlj/ZIbNi7Lxxr12obT7cL1moPfE4tg1LkX7LlLfC6DeX4l2ZEud1ukP9jNQyNnfzQVqwbwmAATY4Q==}
+
+  inngest-cli@1.5.10:
+    resolution: {integrity: sha512-9xxoouNgRs+rOJF1mJusCzVnOfx47CvDbL5XQJfpDr2IiRZZeOQul8jC/HDBFvivI8MbxO6fQ2CYNvdV/vw8nw==}
+    hasBin: true
 
   inngest@3.35.1:
     resolution: {integrity: sha512-6JODVMuNRITLspMjkpGBOYhBTGxZAiA/oQCOlzh4AbOiKOCdbDFP6FQJSA6cWAXOM5HA5WQMj2SWLiKs5fE46g==}
@@ -8344,6 +8355,8 @@ snapshots:
 
   acorn@8.14.1: {}
 
+  adm-zip@0.5.16: {}
+
   agent-base@6.0.2:
     dependencies:
       debug: 4.4.0
@@ -9957,6 +9970,16 @@ snapshots:
     optional: true
 
   inline-style-parser@0.2.4: {}
+
+  inngest-cli@1.5.10:
+    dependencies:
+      adm-zip: 0.5.16
+      debug: 4.4.0
+      node-fetch: 2.7.0
+      tar: 6.2.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   inngest@3.35.1(express@4.21.2)(next@15.2.3(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(typescript@5.8.3):
     dependencies:

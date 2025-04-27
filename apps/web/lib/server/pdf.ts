@@ -1,5 +1,5 @@
 import { pdfMetadataPrompt } from "@/lib/prompts/pdf-metadata";
-import { getPdfById, updatePdfEnhancedMetadata } from "@/lib/db";
+import { getPdfById, updatePdfEnhancedMetadata, setOcrFailed } from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
 import pdfParse from "pdf-parse";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
@@ -28,9 +28,10 @@ function parseOrExtractJson(
   }
 }
 
-export async function enhancePdfMetadata(
-  pdfId: number
-): Promise<{ metadata: EnhancedPdfMetadata | Record<string, unknown> } | null> {
+export async function enhancePdfMetadata(pdfId: number): Promise<{
+  metadata: EnhancedPdfMetadata | Record<string, unknown> | null;
+  error: boolean;
+}> {
   let responseText = "";
   try {
     responseText = await sendChatWithPDF({
@@ -49,15 +50,11 @@ export async function enhancePdfMetadata(
     // Attempt to parse the response using the helper function
     const metadata = parseOrExtractJson(responseText);
 
-    if (!metadata) {
-      throw new Error("Failed to parse metadata or empty metadata");
-    }
-
     // Try to cast/validate as EnhancedPdfMetadata if possible before updating
     // For now, we assume the structure is correct for updatePdfEnhancedMetadata
     await updatePdfEnhancedMetadata(pdfId, metadata as EnhancedPdfMetadata);
 
-    return { metadata };
+    return { metadata, error: !metadata };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Error in enhancePdfMetadata:", message);
@@ -65,7 +62,7 @@ export async function enhancePdfMetadata(
     if (responseText) {
       console.error("Raw AI Response:", responseText);
     }
-    return null;
+    return { metadata: null, error: true };
   }
 }
 
@@ -87,6 +84,7 @@ export async function ocrPdf(
   });
 
   if (!ocrResponse.ok) {
+    await setOcrFailed(pdfId);
     throw new Error("OCR service request failed");
   }
 

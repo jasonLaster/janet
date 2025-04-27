@@ -52,6 +52,7 @@ export function PdfThumbnails({
               <div
                 key={`thumb-${pageNumber}`}
                 data-page-thumb={pageNumber}
+                data-testid={`pdf-thumbnail-${pageNumber}`}
                 className={`cursor-pointer w-[150px] p-[2px] border rounded transition-colors mb-2 ${
                   pageNumber === currentPage
                     ? "border-blue-500 bg-blue-50"
