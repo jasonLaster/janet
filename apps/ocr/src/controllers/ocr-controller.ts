@@ -1,12 +1,12 @@
 import fs from "fs/promises";
-import os, { tmpdir } from "os";
+import os from "os";
 import path from "path";
 import { put } from "@vercel/blob";
 import {
   getPdfById,
   updatePdfWithSearchableUrl,
   updatePdfText,
-} from "../lib/db.js";
+} from "../lib/db";
 import {
   debug,
   convertPdfToImages,
