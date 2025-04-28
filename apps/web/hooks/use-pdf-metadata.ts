@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { trpc } from "@/utils/trpcClient";
 
 const POLLING_INTERVAL_MS = 3000; // Poll every 3 seconds
 const MAX_POLLING_ATTEMPTS = 20; // Stop after ~1 minute
@@ -24,31 +25,49 @@ export function usePdfMetadata(
   const attemptsRef = useRef(0);
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Use tRPC for the initial fetch
+  const {
+    data,
+    isLoading: trpcLoading,
+    error: trpcError,
+    refetch,
+  } = trpc.pdf.metadata.useQuery(pdfId ? { id: pdfId } : { id: -1 }, {
+    enabled: !!pdfId && !initialMetadata && !initialMetadataFailed,
+  });
+
   useEffect(() => {
-    // --- Conditions to stop or not start polling ---
-    // Don't poll if we already have metadata
-    if (metadata) {
+    // If tRPC returns metadata, use it and stop polling
+    if (data?.metadata) {
+      setMetadata(data.metadata);
       setIsLoading(false);
       setError(null);
-      // Clear any potential lingering interval (e.g., if initialMetadata arrived late)
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
       }
       return;
     }
-    // Don't poll if pdfId is invalid
-    if (!pdfId) {
+    // If tRPC returns failed, stop polling and set error
+    if (data && data.failed) {
+      setError("Metadata processing failed.");
       setIsLoading(false);
-      setError(null); // No error, just nothing to fetch
+      setMetadata(null);
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
       return;
     }
-    // Don't start polling if already loading (prevents duplicate intervals on rapid changes)
+    // If pdfId is invalid, stop
+    if (!pdfId) {
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+    // If already polling, don't start again
     if (isLoading && intervalIdRef.current) {
       return;
     }
-    // ------------------------------------------------
-
     // Reset state for a new polling session
     setIsLoading(true);
     setError(null);
@@ -58,55 +77,34 @@ export function usePdfMetadata(
       if (!pdfId || metadata) {
         setIsLoading(false);
         return;
-      } // Should not happen due to check above, but safety first
-
-      if (initialMetadataFailed) {
+      }
+      if (data && data.failed) {
         setError("Metadata processing failed.");
         setIsLoading(false);
         if (intervalIdRef.current) clearInterval(intervalIdRef.current);
         return;
       }
-
       attemptsRef.current++;
-
       try {
-        const response = await fetch(`/api/pdfs/${pdfId}/metadata`);
-
-        if (response.status === 404) {
-          setError("PDF not found.");
+        const result = await refetch();
+        const { metadata: fetchedMetadata, failed } = result.data || {};
+        if (failed) {
+          setError("Metadata processing failed.");
+          setMetadata(null);
           setIsLoading(false);
           if (intervalIdRef.current) clearInterval(intervalIdRef.current);
           return;
         }
-
-        if (!response.ok) {
-          // Keep polling for transient errors, but stop if max attempts reached
-        } else {
-          const { metadata: fetchedMetadata, failed } = await response.json();
-
-          if (failed) {
-            setError("Metadata processing failed."); // Set an error state
-            setMetadata(null); // Ensure metadata is null if failed
-            setIsLoading(false);
-            if (intervalIdRef.current) clearInterval(intervalIdRef.current);
-            return;
-          }
-
-          if (fetchedMetadata) {
-            setMetadata(fetchedMetadata);
-            setIsLoading(false);
-            setError(null);
-            if (intervalIdRef.current) clearInterval(intervalIdRef.current);
-            return; // Stop polling
-          }
-          // If metadata is null but not failed, continue polling
+        if (fetchedMetadata) {
+          setMetadata(fetchedMetadata);
+          setIsLoading(false);
+          setError(null);
+          if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+          return;
         }
       } catch (err) {
-        // Keep polling for network errors, but stop if max attempts reached
-        setError("Network error during polling."); // Reflect temporary error
+        setError("Network error during polling.");
       }
-
-      // --- Check stop condition for attempts ---
       if (attemptsRef.current >= MAX_POLLING_ATTEMPTS) {
         setError("Polling timed out. Metadata might still be processing.");
         setIsLoading(false);
@@ -119,15 +117,22 @@ export function usePdfMetadata(
     poll();
     intervalIdRef.current = setInterval(poll, POLLING_INTERVAL_MS);
 
-    // --- Cleanup function ---
+    // Cleanup
     return () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
       }
     };
-    // Re-run effect if pdfId changes, or if metadata becomes available (to stop polling)
-  }, [pdfId, metadata, isLoading]); // Added isLoading to deps to prevent loop if start conditions met while polling
+  }, [pdfId, data, metadata, isLoading, refetch]);
 
-  return { metadata, isLoading, error };
+  // If tRPC errored (404, etc), show error
+  useEffect(() => {
+    if (trpcError) {
+      setError(trpcError.message || "Unknown error");
+      setIsLoading(false);
+    }
+  }, [trpcError]);
+
+  return { metadata, isLoading: isLoading || trpcLoading, error };
 }

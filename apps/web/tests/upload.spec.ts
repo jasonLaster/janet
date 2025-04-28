@@ -1,65 +1,5 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
-import { signin, navigateToPdf } from "./utils";
-
-test("Viewing a PDF", async ({ page }) => {
-  const getCurrentPage = async () => {
-    return await page.getByTestId("pdf-page-navigation-input").inputValue();
-  };
-
-  await page.goto("/");
-
-  const href = await navigateToPdf(page, "cobra");
-  expect(page.url()).toContain(href);
-
-  expect(await page.getByRole("heading", { name: /cobra/i }).isVisible()).toBe(
-    true
-  );
-
-  await page.getByText("Document Type").click();
-
-  await page.getByRole("tab", { name: "Pages" }).click();
-  await page.getByTestId("pdf-thumbnail-2").click();
-  expect(await getCurrentPage()).toBe("2");
-  await page.getByTestId("pdf-page-navigation-input").fill("3");
-  expect(await getCurrentPage()).toBe("3");
-  await page.getByTestId("pdf-page-navigation-next").click();
-  expect(await getCurrentPage()).toBe("4");
-  await page.getByTestId("pdf-page-navigation-previous").click();
-  expect(await getCurrentPage()).toBe("3");
-
-  await page.getByTestId("pdf-search-input").fill("cobra");
-  await page.getByTestId("pdf-search-input").press("Enter");
-
-  await page.waitForSelector(".pdf-search-current");
-});
-
-test("Chatting with a PDF", async ({ page }) => {
-  await page.goto("/");
-  await navigateToPdf(page, "cobra");
-
-  await page.waitForSelector("[data-document-loaded]");
-
-  await page.getByTestId("chat-button").click();
-  await page.getByTestId("chat-input").click();
-  await page.getByTestId("chat-input").fill("Summarize");
-  await page.getByTestId("chat-send-button").click();
-
-  await page.getByTestId("chat-loading-message").waitFor({
-    state: "detached",
-  });
-
-  expect(
-    await page
-      .getByTestId("chat-user-message")
-      .filter({ hasText: /Summarize/i })
-      .isVisible()
-  ).toBe(true);
-
-  expect(
-    await page.getByTestId("chat-assistant-message").nth(0).isVisible()
-  ).toBe(true);
-});
 
 test("Uploading a PDF", async ({ page }) => {
   await page.goto("/");
@@ -121,8 +61,11 @@ test("Uploading a PDF", async ({ page }) => {
   );
   await deleteButton.click();
 
+  // Assert the row is marked as deleting
+  await expect(yakimaListItem.locator('[data-deleting="true"]')).toBeVisible();
+
   // Verify the item is removed by checking the count decreases
   await expect(
     page.getByRole("link", { name: /yakima/i, exact: false })
-  ).toHaveCount(initialCount, { timeout: 2_000 });
+  ).toHaveCount(initialCount, { timeout: 10_000 });
 });

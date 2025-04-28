@@ -31,6 +31,7 @@ export default clerkMiddleware(
     const { userId, orgId } = await auth();
     const url = req.nextUrl;
 
+    console.log("[Middleware] req", req.nextUrl.pathname);
     // --- Handle PDF Content API Route ---
     if (isPdfContentApiRoute(req)) {
       // Extract PDF ID from pathname (e.g., /api/pdfs/123/content  -> 123)
