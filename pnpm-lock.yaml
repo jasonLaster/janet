@@ -428,9 +428,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.1.2(@types/react@19.1.2)
-      '@types/react-pdf':
-        specifier: ^7.0.0
-        version: 7.0.0(@types/react@19.1.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       eslint:
         specifier: ^9
         version: 9.24.0(jiti@2.4.2)
@@ -2543,10 +2540,6 @@ packages:
     resolution: {integrity: sha512-XGJkWF41Qq305SKWEILa1O8vzhb3aOo3ogBlSmiqNko/WmRb6QIaweuZCXjKygVDXpzXb5wyxKTSOsmkuqj+Qw==}
     peerDependencies:
       '@types/react': ^19.0.0
-
-  '@types/react-pdf@7.0.0':
-    resolution: {integrity: sha512-G0a+5UiKk3AvEauBP/Js7r9kGZNW3iBbS6kXkH0foGSaKWR6K3ElTe7Y4tlolc2VKbM9udmMxpkbxh/dtR2wXA==}
-    deprecated: This is a stub types definition. react-pdf provides its own type definitions, so you do not need this installed.
 
   '@types/react-virtualized-auto-sizer@1.0.8':
     resolution: {integrity: sha512-keJpNyhiwfl2+N12G1ocCVA5ZDBArbPLe/S90X3kt7fam9naeHdaYYWbpe2sHczp70JWJ+2QLhBE8kLvLuVNjA==}
@@ -4887,6 +4880,10 @@ packages:
   pdf-parse@1.1.1:
     resolution: {integrity: sha512-v6ZJ/efsBpGrGGknjtq9J/oC8tZWq0KWL5vQrk2GlzLEQPUDB1ex+13Rmidl1neNN358Jn9EHZw5y07FFtaC7A==}
     engines: {node: '>=6.8.1'}
+
+  pdfjs-dist@4.10.38:
+    resolution: {integrity: sha512-/Y3fcFrXEAsMjJXeL9J8+ZG9U01LbuWaYypvDW2ycW1jL269L3js3DVBjDJ0Up9Np1uqDXsDrRihHANhZOlwdQ==}
+    engines: {node: '>=20'}
 
   pdfjs-dist@4.8.69:
     resolution: {integrity: sha512-IHZsA4T7YElCKNNXtiLgqScw4zPd3pG9do8UrznC757gMd7UPeHSL2qwNNMJo4r79fl8oj1Xx+1nh2YkzdMpLQ==}
@@ -8052,14 +8049,6 @@ snapshots:
     dependencies:
       '@types/react': 19.1.2
 
-  '@types/react-pdf@7.0.0(@types/react@19.1.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
-    dependencies:
-      react-pdf: 9.2.1(@types/react@19.1.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-      - react-dom
-
   '@types/react-virtualized-auto-sizer@1.0.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       react-virtualized-auto-sizer: 1.0.26(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -10895,7 +10884,7 @@ snapshots:
       canvas: 2.11.2
       is-url: 1.2.4
       node-fetch: 3.3.2
-      pdfjs-dist: 4.8.69
+      pdfjs-dist: 4.10.38
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -10913,6 +10902,10 @@ snapshots:
       node-ensure: 0.0.0
     transitivePeerDependencies:
       - supports-color
+
+  pdfjs-dist@4.10.38:
+    optionalDependencies:
+      '@napi-rs/canvas': 0.1.69
 
   pdfjs-dist@4.8.69:
     optionalDependencies:

@@ -29,7 +29,6 @@ if (typeof window !== "undefined") {
 }
 
 const maxWidth = 800;
-const sidebarDefaultWidth = 280;
 const SIDEBAR_DEFAULT_PERCENTAGE = 25;
 const SIDEBAR_MIN_PERCENTAGE = 10;
 const SIDEBAR_MAX_PERCENTAGE = 60;
@@ -170,7 +169,7 @@ export function PdfViewer({ pdf, onError }: PdfViewerProps) {
   // Use the custom hook for metadata
   const {
     metadata: currentMetadata,
-    isLoading: isMetadataLoading,
+    // isLoading: isMetadataLoading, // unused
     error: metadataError,
   } = usePdfMetadata(pdf.id, pdf.metadata, pdf.metadata_failed);
 
@@ -180,10 +179,11 @@ export function PdfViewer({ pdf, onError }: PdfViewerProps) {
 
     // Track if we're currently processing a scroll event
     let isProcessingScroll = false;
+    const mainContentElement = mainContentRef.current; // Capture ref value
 
     const handleScroll = () => {
       // Skip scroll handling if we're in a manual page change
-      if (!mainContentRef.current || isManualPageChange) return;
+      if (!mainContentElement || isManualPageChange) return;
 
       // Avoid processing scroll events when already processing one
       if (isProcessingScroll) return;
@@ -198,7 +198,7 @@ export function PdfViewer({ pdf, onError }: PdfViewerProps) {
 
       // Use a small timeout to avoid excessive updates while scrolling
       scrollTimeoutRef.current = setTimeout(() => {
-        if (!mainContentRef.current) {
+        if (!mainContentElement) {
           isProcessingScroll = false;
           return;
         }
@@ -220,8 +220,7 @@ export function PdfViewer({ pdf, onError }: PdfViewerProps) {
         for (let i = 0; i < pageContainers.length; i++) {
           const container = pageContainers[i] as HTMLElement;
           const rect = container.getBoundingClientRect();
-          const mainContentRect =
-            mainContentRef.current.getBoundingClientRect();
+          const mainContentRect = mainContentElement.getBoundingClientRect();
 
           // Calculate how much of the page is visible
           const top = Math.max(rect.top, mainContentRect.top);
@@ -260,14 +259,15 @@ export function PdfViewer({ pdf, onError }: PdfViewerProps) {
       }, 150);
     };
 
-    mainContentRef.current?.addEventListener("scroll", handleScroll);
+    mainContentElement.addEventListener("scroll", handleScroll);
     return () => {
-      mainContentRef.current?.removeEventListener("scroll", handleScroll);
+      // Use the captured value in the cleanup function
+      mainContentElement?.removeEventListener("scroll", handleScroll);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [numPages, isManualPageChange, currentPage]); // Added currentPage
+  }, [numPages, isManualPageChange, currentPage]);
 
   useEffect(() => {
     // Reset page number when PDF ID changes
@@ -422,14 +422,6 @@ export function PdfViewer({ pdf, onError }: PdfViewerProps) {
 
   // Define the effective URL directly
   const effectivePdfUrl = `/api/pdfs/${pdf.id}/content`;
-
-  // Calculate width to display page with
-  const pageWidth = containerWidth
-    ? Math.min(
-        containerWidth - (showSidebar ? sidebarDefaultWidth : 0),
-        maxWidth
-      )
-    : maxWidth;
 
   // Recalculate pageWidth based on container and sidebar state
   const mainPanelWidth = containerWidth

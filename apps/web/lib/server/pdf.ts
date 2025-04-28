@@ -3,7 +3,7 @@ import {
   getPdfById,
   updatePdfEnhancedMetadata,
   setOcrFailed,
-  sql,
+  // sql,
 } from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
 import pdfParse from "pdf-parse";
@@ -176,7 +176,7 @@ export async function addPdfToSearchIndex(pdfId: number) {
     otherPeople: pdfRecord.metadata?.otherPeople || [],
   };
 
-  let response = await index.addDocuments([document], {
+  const response = await index.addDocuments([document], {
     primaryKey: "id",
   });
 

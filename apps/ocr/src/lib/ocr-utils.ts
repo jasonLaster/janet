@@ -4,10 +4,10 @@ import path from "path";
 import { exec, execSync } from "child_process";
 import util from "util";
 import PDFDocument from "pdfkit";
-import vision from "@google-cloud/vision";
+import vision, { ImageAnnotatorClient } from "@google-cloud/vision";
 import { imageSize } from "image-size"; // Correct import
-import { parsePDFText } from "./pdf-parse";
-import { getPdfById } from "./db";
+import { parsePDFText } from "./pdf-parse.js";
+import { getPdfById } from "./db.js";
 
 const execPromise = util.promisify(exec);
 
@@ -57,7 +57,8 @@ export async function getPageCount(pdfPath: string): Promise<number> {
   }
 }
 
-let client: vision.ImageAnnotatorClient | null = null;
+// Use the directly imported type
+let client: ImageAnnotatorClient | null = null;
 
 /**
  * Get Google Vision client
@@ -386,7 +387,6 @@ export async function getPdfText(
   }
 
   console.log(`Downloading PDF from: ${urlToFetch}`);
-  // Removed @ts-ignore - let TypeScript check compatibility
   const response = await fetch(urlToFetch);
 
   if (!response.ok) {
@@ -396,12 +396,11 @@ export async function getPdfText(
     return { error: "Failed to download PDF" };
   }
 
-  // Removed @ts-ignore - let TypeScript check compatibility
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const parsedPdf = await parsePDFText(buffer);
-  const text = parsedPdf.text.trim();
+  // Use the local parsePDFText function with the buffer
+  const text = await parsePDFText(buffer);
 
   return { text };
 }

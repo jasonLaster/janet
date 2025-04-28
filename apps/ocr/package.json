@@ -10,6 +10,7 @@
     "start": "tsx src/index.ts",
     "lint": "eslint --ext .ts src/",
     "test": "vitest",
+    "tsc": "tsc --noEmit",
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org jason-laster --project pdf-ocr-service ./dist && sentry-cli sourcemaps upload --org jason-laster --project pdf-ocr-service ./dist"
   },
   "dependencies": {

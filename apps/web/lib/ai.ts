@@ -1,6 +1,7 @@
 import { sendChatWithPDF as sendChatWithPDFAnthropiс } from "./anthropic";
 import { sendChatWithPDF as sendChatWithPDFOpenAI } from "./openai";
 import { getPdfById } from "@/lib/db";
+import { CoreMessage } from "ai";
 
 const aiProvider = process.env.AI_PROVIDER?.toLowerCase() || "openai";
 
@@ -13,7 +14,7 @@ export async function sendChatWithPDF({
   maxTokens = 1500,
   systemPrompt,
 }: {
-  messages: any[];
+  messages: CoreMessage[];
   pdfId: number;
   maxTokens?: number;
   systemPrompt?: string;

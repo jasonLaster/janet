@@ -2,20 +2,15 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getPdfById } from "@/lib/db";
 import { PdfViewer } from "@/components/pdf-viewer";
-import type { PDFDocumentProxy } from "pdfjs-dist";
 
-import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-  searchParams: Record<string, string | string[] | undefined>;
-}
-
-export default async function PDFViewPage({ params }: PageProps) {
+export default async function PDFViewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const pdfId = Number.parseInt(id);
 
@@ -39,8 +34,5 @@ export default async function PDFViewPage({ params }: PageProps) {
     notFound();
   }
 
-  return (
-    // @ts-ignore - Interface issue will be resolved with full implementation
-    <PdfViewer pdf={pdf} />
-  );
+  return <PdfViewer pdf={pdf} />;
 }

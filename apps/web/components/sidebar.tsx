@@ -23,7 +23,7 @@ export function Sidebar({ pdfs }: SidebarProps) {
           <div className="grow-1">
             <OrganizationSwitcher />
           </div>
-          <FileUpload className="grow-0" dropZoneOnly={true}></FileUpload>
+          <FileUpload className="grow-0"></FileUpload>
         </SignedIn>
       </div>
 

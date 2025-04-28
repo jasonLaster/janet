@@ -130,12 +130,12 @@ export function PdfList({ pdfs }: PdfListProps) {
           <span className="font-medium">
             &quot;{metadataFilter.value}&quot;
           </span>
-          {searchQuery && ' and search query "&quot;' + searchQuery + '&quot;"'}
+          {searchQuery && ' and search query "' + searchQuery + '"'}
         </>
       );
     } else if (searchQuery) {
       filterMessage = (
-        <>No PDFs match your search for "&quot;{searchQuery}&quot;"</>
+        <>No PDFs match your search for &quot;{searchQuery}&quot;</>
       );
     }
 

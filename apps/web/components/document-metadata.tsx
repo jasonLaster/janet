@@ -23,6 +23,8 @@ export function DocumentMetadata({
   metadata,
   isListView = false,
 }: DocumentMetadataProps) {
+  const setFilter = useSetAtom(metadataFilterAtom);
+
   if (!metadata) {
     return null;
   }
@@ -32,8 +34,6 @@ export function DocumentMetadata({
   const labels = metadata.labels || [];
   const visibleLabels = labels.slice(0, maxVisibleLabels);
   const hiddenCount = Math.max(0, labels.length - maxVisibleLabels);
-
-  const setFilter = useSetAtom(metadataFilterAtom);
 
   const onLabelClick = (label: string) => {
     setFilter((prev) => ({ ...prev, labels: [label] }));

@@ -10,7 +10,7 @@ export async function sendChatWithPDF({
   maxTokens = 1500,
   systemPrompt = "You are a helpful AI assistant specialized in answering questions about PDF documents.",
 }: {
-  messages: any[];
+  messages: CoreMessage[];
   pdfUrl: string;
   maxTokens?: number;
   systemPrompt?: string;

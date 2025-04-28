@@ -30,7 +30,9 @@
     "build:web": "pnpm --filter web build",
     "install:web": "pnpm --filter web install",
     "lint:web": "pnpm --filter web lint",
-    "dev:ocr": "pnpm --filter ocr dev"
+    "dev:ocr": "pnpm --filter ocr dev",
+    "tsc:web": "pnpm --filter web tsc",
+    "tsc:ocr": "pnpm --filter ocr tsc"
   },
   "author": "",
   "license": "ISC",

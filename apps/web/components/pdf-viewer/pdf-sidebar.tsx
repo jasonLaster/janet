@@ -53,6 +53,7 @@ export function PdfSidebar({
           </span>
         </TabsTrigger>
         <TabsTrigger value="thumbnails">
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- Icon has adjacent text label */}
           <Image className="h-4 w-4 mr-1" />
           <span className="sr-only sm:not-sr-only sm:inline-block text-xs">
             Pages

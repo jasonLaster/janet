@@ -3,10 +3,8 @@ import { deletePdf, getPdfById } from "@/lib/db";
 import { del } from "@vercel/blob";
 import { auth } from "@clerk/nextjs/server";
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
 
