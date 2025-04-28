@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { useSetAtom } from "jotai";
 import { searchQueryAtom, searchResultsAtom } from "@/lib/store";
 import debounce from "lodash/debounce";
+import { trpc } from "@/utils/trpcClient";
 
 export function Search() {
   const setSearchQuery = useSetAtom(searchQueryAtom);
   const setSearchResults = useSetAtom(searchResultsAtom);
   const [inputValue, setInputValue] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+
+  const searchMutation = trpc.pdf.search.useMutation();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
@@ -24,20 +27,16 @@ export function Search() {
 
       setIsSearching(true);
       try {
-        const response = await fetch("/api/search", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query }),
+        const response = await searchMutation.mutateAsync({ query });
+        const results = (response.results || []).map((hit) => {
+          const h = hit as { id: number; title: string };
+          return {
+            id: h.id,
+            query: h.title,
+            score: 1,
+          };
         });
-
-        if (!response.ok) {
-          throw new Error("Search failed");
-        }
-
-        const data = await response.json();
-        setSearchResults(data.results);
+        setSearchResults(results);
         setSearchQuery(query);
       } catch (error) {
         console.error("Search error:", error);
@@ -46,7 +45,7 @@ export function Search() {
         setIsSearching(false);
       }
     }, 300),
-    [setSearchQuery, setSearchResults]
+    [setSearchQuery, setSearchResults, searchMutation]
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, SendHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { trpc } from "@/utils/trpcClient";
 
 interface FloatingPdfChatProps {
   pdfId: number;
@@ -32,6 +33,8 @@ export function FloatingPdfChat({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const chatMutation = trpc.pdf.chat.useMutation();
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -68,23 +71,10 @@ export function FloatingPdfChat({
     setError(null);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          pdfId,
-        }),
+      const response = await chatMutation.mutateAsync({
+        messages: [...messages, userMessage],
+        pdfId,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to get response");
-      }
-
-      const data = await response.json();
 
       // Add assistant response to chat
       setMessages((prev) => [
@@ -92,7 +82,7 @@ export function FloatingPdfChat({
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data.text,
+          content: response.text,
         },
       ]);
     } catch (err) {
