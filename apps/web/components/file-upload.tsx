@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useRef, useCallback, useState } from "react";
+import React, { useRef, useCallback } from "react";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
+import { useSetAtom } from "jotai";
 
 import { UploadCloudIcon, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useUser, useOrganization } from "@clerk/nextjs";
 import { uploadingFilesAtom, uploadFileAtom } from "@/lib/store";
 
@@ -15,7 +16,7 @@ interface FileUploadProps {
 
 export function FileUpload({ className = "" }: FileUploadProps) {
   const [uploadingFiles] = useAtom(uploadingFilesAtom);
-  const [, uploadFile] = useAtom(uploadFileAtom);
+  const uploadFile = useSetAtom(uploadFileAtom);
   const router = useRouter();
 
   const [isDragging, setIsDragging] = React.useState(false);

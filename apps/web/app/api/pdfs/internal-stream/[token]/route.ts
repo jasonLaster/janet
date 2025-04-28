@@ -32,9 +32,11 @@ interface PdfAccessPayload {
 // export const runtime = "edge"; // DO NOT USE EDGE HERE - needs DB access
 
 export async function GET(
-  request: NextRequest, // Keep request parameter
-  { params }: { params: { token: string } } // Destructure params directly from the second argument
+  // Keep request parameter
+  request: NextRequest,
+  props: { params: Promise<{ token: string }> }
 ) {
+  const params = await props.params;
   const token = params.token; // Access token directly from destructured params
 
   if (!token) {

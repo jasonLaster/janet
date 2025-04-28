@@ -1,6 +1,7 @@
 import { atom } from "jotai";
 import { PDF } from "./db";
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"; // Import necessary type if needed, or use a simpler () => void type
+// import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"; // Import necessary type if needed, or use a simpler () => void type
+import { atomWithStorage } from "jotai/utils";
 
 // Define the shape for an uploading file's state
 export interface UploadingFileState {
@@ -51,14 +52,6 @@ export const uploadFileAtom = atom(
     const controller = new AbortController();
     const fileId = `${file.name}-${file.lastModified}`;
 
-    // Helper function to check if uploads are finished and refresh
-    const checkAndRefresh = () => {
-      const currentUploads = get(uploadingFilesAtom);
-      if (!currentUploads.some((f) => f.uploading)) {
-        refresh();
-      }
-    };
-
     const newFileState: UploadingFileState = {
       id: fileId,
       file,
@@ -97,7 +90,7 @@ export const uploadFileAtom = atom(
         try {
           const response = JSON.parse(xhr.responseText);
           errorMessage = response.error || errorMessage;
-        } catch (e) {
+        } catch {
           // Ignore JSON parse error
         }
         set(uploadingFilesAtom, (prev) => {
@@ -238,3 +231,6 @@ export interface SearchResult {
   query: string;
   score: number;
 }
+
+// Atom for managing the PDF list state
+export const pdfsAtom = atomWithStorage<PDF[]>("pdfs", []);

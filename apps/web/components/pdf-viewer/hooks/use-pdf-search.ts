@@ -217,7 +217,7 @@ export function usePdfSearch(
       }
     },
     // Dependencies updated
-    [numPages, mainContentRef, clearSearch] // clearSearch includes clearAllHighlights
+    [numPages, mainContentRef, clearAllHighlights, clearSearch]
   );
 
   const debouncedSearch = useDebouncedCallback(
@@ -338,7 +338,7 @@ export function usePdfSearch(
     }
     // NOTE: This might run search twice if keyword changes *and* numPages changes simultaneously.
     // Could be optimized, but likely low impact.
-  }, [numPages, performSearch, clearSearch]); // Removed keyword from deps, handled by other effect
+  }, [numPages, keyword, performSearch, clearSearch]); // Added keyword back
 
   // Cleanup highlights on unmount
   useEffect(() => {

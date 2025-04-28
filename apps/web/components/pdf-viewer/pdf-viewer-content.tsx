@@ -7,7 +7,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { DocumentLoader } from "../ui/document-loader";
 import { PDF_VERSION } from "./constants";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { SearchMatch } from "./hooks/use-pdf-search";
+// import { SearchMatch } from "./hooks/use-pdf-search"; // Unused import
 
 const options = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${PDF_VERSION}/cmaps/`,
@@ -85,7 +85,7 @@ export function PdfViewerContent({
         <Document
           file={pdfUrl}
           onLoadSuccess={(pdf: unknown) => {
-            onDocumentSuccess(pdf as PDFDocumentProxy);
+            onDocumentSuccess(pdf as pdfjs.PDFDocumentProxy);
           }}
           loading={<DocumentLoader mode="large" />}
           onLoadError={(error: Error) => {

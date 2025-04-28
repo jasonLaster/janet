@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { getPdfById } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // TODO: Revisit auth - should we check ownership here or rely on getPdfById logic if it includes it?
     // For now, just check if logged in.
@@ -14,7 +12,7 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const idInt = Number.parseInt(id, 10);
     if (isNaN(idInt)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });

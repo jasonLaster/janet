@@ -3,16 +3,17 @@
 import { useState, useCallback } from "react";
 import { SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { searchQueryAtom, searchResultsAtom } from "@/lib/store";
 import debounce from "lodash/debounce";
 
 export function Search() {
-  const [_, setSearchQuery] = useAtom(searchQueryAtom);
-  const [, setSearchResults] = useAtom(searchResultsAtom);
+  const setSearchQuery = useSetAtom(searchQueryAtom);
+  const setSearchResults = useSetAtom(searchResultsAtom);
   const [inputValue, setInputValue] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
     debounce(async (query: string) => {
       if (!query.trim()) {

@@ -14,7 +14,7 @@ export interface PDF {
   description?: string;
   page_count?: number;
   uploaded_at: string;
-  metadata?: any; // Add metadata field to PDF interface
+  metadata?: EnhancedPdfMetadata | null; // Use imported type
   text?: string; // Add text field to PDF interface
   is_public?: boolean; // Add is_public field
   metadata_failed: boolean;
@@ -125,7 +125,7 @@ type InsertPdfResult = {
   organization_id: string | null;
 };
 export async function insertPdf(
-  pdfData: Omit<PDF, "id" | "uploaded_at">
+  pdfData: Omit<PDF, "id" | "uploaded_at" | "metadata_failed" | "ocr_failed">
 ): Promise<InsertPdfResult> {
   const result = await sql`
     INSERT INTO pdfs (

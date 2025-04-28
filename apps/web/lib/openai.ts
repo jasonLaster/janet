@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { CoreMessage } from "ai";
 
 /**
  * Sends a chat message to OpenAI, optionally with a PDF attachment
@@ -10,7 +11,7 @@ export async function sendChatWithPDF({
   systemPrompt = "You are a helpful AI assistant specialized in answering questions about PDF documents.",
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  messages: any[];
+  messages: CoreMessage[];
   pdfUrl: string;
   maxTokens?: number;
   systemPrompt?: string;
@@ -56,7 +57,7 @@ export async function sendChatWithPDF({
   // Add the text content
   inputContent.push({
     type: "input_text" as const,
-    text: userContent,
+    text: userContent as string,
   });
 
   // Create the response using OpenAI

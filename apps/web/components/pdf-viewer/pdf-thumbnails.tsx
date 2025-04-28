@@ -44,7 +44,7 @@ export function PdfThumbnails({
             onLoadSuccess={onLoadSuccess}
             loading={
               <div className="p-4 text-center text-sm text-gray-500">
-                <DocumentLoader mode="small" pulseWidth="w-10" />
+                <DocumentLoader mode="small" />
               </div>
             }
           >

@@ -38,14 +38,26 @@ export interface DocumentLoaderProps {
   className?: string;
 }
 
+// Define specific config types using a discriminated union based on usePulse
+type SpinnerConfig = { usePulse: false };
+type PulseConfig = {
+  usePulse: true;
+  pulseCount: number;
+  pulseHeight: string;
+  pulseWidth: string;
+  showHeader: boolean;
+  pulseGap: string;
+};
+type LoaderConfig = SpinnerConfig | PulseConfig;
+
 export function DocumentLoader({
   height = "full",
   width = "full",
   mode = "spinner",
   className,
 }: DocumentLoaderProps) {
-  // Predefined configs for each mode
-  const configs = {
+  // Predefined configs for each mode with explicit typing
+  const configs: Record<"spinner" | "small" | "large", LoaderConfig> = {
     spinner: {
       usePulse: false,
     },
@@ -81,6 +93,7 @@ export function DocumentLoader({
     >
       <div className="text-center">
         {config.usePulse ? (
+          // Now TypeScript knows these properties exist if usePulse is true
           <div
             className={cn(
               "flex flex-col items-center mb-4",
