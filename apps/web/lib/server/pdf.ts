@@ -6,7 +6,7 @@ import {
   // sql,
 } from "@/lib/db";
 import { sendChatWithPDF } from "@/lib/ai";
-import pdfParse from "pdf-parse";
+import { parsePDFText } from "@/lib/server/pdf-parse";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 import { MeiliSearch } from "meilisearch";
 
@@ -138,8 +138,8 @@ export async function getPdfText(
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const parsedPdf = await pdfParse(buffer);
-  const text = parsedPdf.text.trim();
+  const parsedPdf = await parsePDFText(buffer);
+  const text = parsedPdf.trim();
 
   return { text };
 }
