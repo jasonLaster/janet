@@ -49,11 +49,10 @@ if [[ -n "$PR_NUMBER" ]]; then
   echo "Targeting PR #$PR_NUMBER."
 
   # Define the marker separately using single quotes to prevent history expansion
-  COMMENT_MARKER=\'<!-- playwright-report -->\'
+  COMMENT_MARKER="Playwright Test Report"
 
   # Construct the comment body using command substitution with cat and a here document
   COMMENT_BODY=$(cat <<EOF
-${COMMENT_MARKER}
 📊 **Playwright Test Report**
 
 A new [report](${DEPLOY_URL}) for [commit](https://github.com/${REPO}/commit/${COMMIT_SHA}) is available.

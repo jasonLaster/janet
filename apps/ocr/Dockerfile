@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Install necessary dependencies for PDF processing and native Node modules
+# Install OS dependencies + curl/unzip for bun
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Required for compiling native Node.js modules (e.g., @napi-rs/canvas)
     build-essential \
@@ -26,30 +26,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# No need for separate install of poppler-utils, it's included above
-# RUN apt-get update && apt-get install -y \
-#     poppler-utils \
-#     && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install pnpm globally
+# Install pnpm (for installing dependencies)
 RUN npm install -g pnpm
 
-# Install dependencies
-RUN pnpm install
-
-# Copy application code
+# Copy application
 COPY . .
 
-# Build TypeScript
-RUN pnpm build
 
-# Expose port for the application
+# Install dependencies using pnpm and the root lockfile
+RUN pnpm install 
+
+# Expose port
 EXPOSE 8080
 
-# Start the application
+# Start the application using bun
 CMD ["pnpm", "start"] 

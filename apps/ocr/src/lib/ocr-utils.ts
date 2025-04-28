@@ -6,7 +6,7 @@ import util from "util";
 import PDFDocument from "pdfkit";
 import vision from "@google-cloud/vision";
 import { imageSize } from "image-size"; // Correct import
-import pdfParse from "pdf-parse";
+import { parsePDFText } from "./pdf-parse";
 import { getPdfById } from "./db";
 
 const execPromise = util.promisify(exec);
@@ -400,7 +400,7 @@ export async function getPdfText(
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const parsedPdf = await pdfParse(buffer);
+  const parsedPdf = await parsePDFText(buffer);
   const text = parsedPdf.text.trim();
 
   return { text };

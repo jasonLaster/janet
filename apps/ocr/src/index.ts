@@ -1,7 +1,12 @@
+/*
+NOTE: we use TSX instead of Bun because pdf-parse is not supported in Bun
+
+*/
+
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
-import { processPdf } from "./controllers/ocr-controller.js";
-import { debug } from "./lib/ocr-utils.js";
+import { processPdf } from "./controllers/ocr-controller";
+import { debug } from "./lib/ocr-utils";
 import "./lib/instrument";
 
 // Load environment variables
