@@ -23,6 +23,8 @@ const isPublicPageRoute = createRouteMatcher([
 // Define the PDF Content API route pattern separately
 const isPdfContentApiRoute = createRouteMatcher(["/api/pdfs/(.*)/content"]);
 
+const isFileUploadApiRoute = createRouteMatcher(["/api/pdfs/file-upload"]);
+
 export default clerkMiddleware(
   async (auth, req) => {
     // Get user ID and active Org ID early
@@ -111,6 +113,11 @@ export default clerkMiddleware(
         return NextResponse.redirect(new URL("/landing", url.origin));
       }
       // If user is logged in, allow access to the PDF list at root
+      return NextResponse.next();
+    }
+
+    /* ---------------- PDF file-upload (no auth) ------------ */
+    if (isFileUploadApiRoute(req)) {
       return NextResponse.next();
     }
 
