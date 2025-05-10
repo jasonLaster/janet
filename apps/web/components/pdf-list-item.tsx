@@ -29,9 +29,15 @@ interface PdfListItemProps {
   pdf: PDF;
   handleDelete: (id: number) => void;
   style?: React.CSSProperties; // For react-window
+  isDeleting?: boolean;
 }
 
-export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
+export function PdfListItem({
+  pdf,
+  handleDelete,
+  style,
+  isDeleting,
+}: PdfListItemProps) {
   const router = useRouter();
   const {
     metadata: currentMetadata,
@@ -101,14 +107,20 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   return (
     <Link
       data-testid="pdf-list-item"
-      href={`/pdfs/${pdf.id}`}
-      className="block w-full"
+      href={isDeleting ? "#" : `/pdfs/${pdf.id}`}
+      className={`block w-full ${
+        isDeleting ? "pointer-events-none opacity-60 grayscale" : ""
+      }`}
+      tabIndex={isDeleting ? -1 : 0}
     >
       <div
         ref={rowRef}
-        className="flex items-center px-3 py-1 border-b-slate-100 border-b hover:bg-muted/50 transition-colors relative"
+        className={`flex items-center px-3 py-1 border-b-slate-100 border-b hover:bg-muted/50 transition-colors relative ${
+          isDeleting ? "bg-muted/30" : ""
+        }`}
         style={style}
         data-id={pdf.id}
+        data-deleting={isDeleting ? "true" : undefined}
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => {
@@ -156,13 +168,17 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
+                disabled={isDeleting}
               >
                 <MoreHorizontalIcon className="h-4 w-4" />
                 <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/pdfs/${pdf.id}`)}>
+              <DropdownMenuItem
+                onClick={() => router.push(`/pdfs/${pdf.id}`)}
+                disabled={isDeleting}
+              >
                 <ExternalLinkIcon className="h-4 w-4 mr-2" />
                 View PDF
               </DropdownMenuItem>
@@ -173,6 +189,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                   e.stopPropagation();
                   handleDelete(pdf.id);
                 }}
+                disabled={isDeleting}
               >
                 <Trash2 className="h-4 w-4" />
                 <span className="">Delete PDF</span>

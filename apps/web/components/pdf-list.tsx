@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useOptimistic } from "react";
+import { useMemo, useState } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
@@ -18,6 +18,7 @@ import { PDF } from "@/lib/db";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { PdfListItem } from "./pdf-list-item";
+import { trpc } from "@/utils/trpcClient";
 
 interface PdfListProps {
   pdfs: PDF[];
@@ -31,24 +32,14 @@ export function PdfList({ pdfs }: PdfListProps) {
   const router = useRouter();
   useOrganization();
 
-  const [optimisticPdfs, removeOptimisticPdf] = useOptimistic(
-    pdfs,
-    (state: PDF[], pdfIdToRemove: number) =>
-      state.filter((pdf) => pdf.id !== pdfIdToRemove)
-  );
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+
+  const deleteMutation = trpc.pdf.delete.useMutation();
 
   const handleDelete = async (id: number) => {
-    removeOptimisticPdf(id);
-
+    setDeletingIds((prev) => new Set(prev).add(id));
     try {
-      const response = await fetch(`/api/pdfs/${id}/delete`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete PDF from server");
-      }
-
+      await deleteMutation.mutateAsync({ id });
       router.refresh();
     } catch (error) {
       console.error("Error deleting PDF:", error);
@@ -57,12 +48,18 @@ export function PdfList({ pdfs }: PdfListProps) {
         description: "Failed to delete the PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
   const filteredPdfs = useMemo(() => {
     const filtered = getFilteredPdfs(
-      optimisticPdfs,
+      pdfs,
       searchQuery,
       searchResults.map((result) => ({ id: result.id, title: "" })),
       metadataFilter
@@ -75,7 +72,7 @@ export function PdfList({ pdfs }: PdfListProps) {
       const dateObjB = new Date(dateB);
       return dateObjB.getTime() - dateObjA.getTime();
     });
-  }, [optimisticPdfs, searchQuery, searchResults, metadataFilter]);
+  }, [pdfs, searchQuery, searchResults, metadataFilter]);
 
   const Row = ({
     index,
@@ -91,6 +88,7 @@ export function PdfList({ pdfs }: PdfListProps) {
         pdf={pdf}
         handleDelete={handleDelete}
         style={style}
+        isDeleting={deletingIds.has(pdf.id)}
       />
     );
   };
