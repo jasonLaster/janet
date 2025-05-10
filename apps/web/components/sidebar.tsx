@@ -11,6 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { PDF } from "@/lib/db";
 
+import { useAccountSwitcher } from "@/lib/flags";
+
+import { AccountSwitcher } from "./account-switcher";
+
 interface SidebarProps {
   pdfs: PDF[];
 }
@@ -21,7 +25,11 @@ export function Sidebar({ pdfs }: SidebarProps) {
       <div className="px-4 h-[45px] border-b flex justify-between items-center w-full">
         <SignedIn>
           <div className="grow-1">
-            <OrganizationSwitcher />
+            {useAccountSwitcher() ? (
+              <AccountSwitcher />
+            ) : (
+              <OrganizationSwitcher />
+            )}
           </div>
           <FileUpload className="grow-0"></FileUpload>
         </SignedIn>
