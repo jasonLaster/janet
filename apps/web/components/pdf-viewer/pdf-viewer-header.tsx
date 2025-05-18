@@ -113,7 +113,10 @@ export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
           </Button>
           <h2 className="font-medium flex items-center gap-2">
             {pdfMetadata?.descriptiveTitle || title}
-            <DocumentMetadata metadata={pdfMetadata || undefined} />
+            <DocumentMetadata
+              metadata={pdfMetadata || undefined}
+              className="ml-2"
+            />
           </h2>
         </div>
 

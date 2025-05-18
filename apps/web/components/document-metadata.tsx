@@ -17,11 +17,17 @@ import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 interface DocumentMetadataProps {
   metadata?: EnhancedPdfMetadata;
   isListView?: boolean;
+  showOrganization?: boolean;
+  showLabels?: boolean;
+  className?: string;
 }
 
 export function DocumentMetadata({
   metadata,
   isListView = false,
+  showOrganization = true,
+  showLabels = true,
+  className,
 }: DocumentMetadataProps) {
   const setFilter = useSetAtom(metadataFilterAtom);
 
@@ -29,9 +35,15 @@ export function DocumentMetadata({
     return null;
   }
 
-  // Calculate visible labels dynamically, default is 3 but fewer if organization exists
-  const maxVisibleLabels = metadata.issuingOrganization ? 2 : 3;
-  const labels = metadata.labels || [];
+  // Calculate visible labels dynamically.
+  // Default is 3, but limit to 2 when both organization and labels are shown
+  // to keep the badges compact in list view.
+  const labels = showLabels ? metadata.labels || [] : [];
+  const maxVisibleLabels = showLabels
+    ? showOrganization && metadata.issuingOrganization
+      ? 2
+      : 3
+    : 0;
   const visibleLabels = labels.slice(0, maxVisibleLabels);
   const hiddenCount = Math.max(0, labels.length - maxVisibleLabels);
 
@@ -46,9 +58,12 @@ export function DocumentMetadata({
   return (
     <div
       data-testid="document-metadata"
-      className="flex flex-nowrap overflow-hidden ml-2 max-w-full"
+      className={cn(
+        "flex flex-nowrap overflow-hidden max-w-full",
+        className
+      )}
     >
-      {metadata.issuingOrganization && (
+      {showOrganization && metadata.issuingOrganization && (
         <Badge
           variant="secondary"
           className={cn(
@@ -63,49 +78,51 @@ export function DocumentMetadata({
           <span className="truncate">{metadata.issuingOrganization}</span>
         </Badge>
       )}
-      <TooltipProvider>
-        <div className="flex flex-nowrap overflow-hidden">
-          {visibleLabels.map((label) => (
-            <Tooltip key={label}>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "flex items-center gap-1 mr-1 whitespace-nowrap",
-                    isListView
-                      ? ""
-                      : "max-w-[100px] overflow-hidden text-ellipsis cursor-pointer"
-                  )}
-                  onClick={() => onLabelClick(label)}
-                >
-                  <Tag size={12} />
-                  <span className="truncate">{label}</span>
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{label}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
-          {hiddenCount > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="ml-1">
-                  +{hiddenCount}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  {labels
-                    .slice(maxVisibleLabels)
-                    .map((label) => label)
-                    .join(", ")}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </TooltipProvider>
+      {showLabels && (
+        <TooltipProvider>
+          <div className="flex flex-nowrap overflow-hidden">
+            {visibleLabels.map((label) => (
+              <Tooltip key={label}>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "flex items-center gap-1 mr-1 whitespace-nowrap",
+                      isListView
+                        ? ""
+                        : "max-w-[100px] overflow-hidden text-ellipsis cursor-pointer"
+                    )}
+                    onClick={() => onLabelClick(label)}
+                  >
+                    <Tag size={12} />
+                    <span className="truncate">{label}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{label}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+            {hiddenCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="ml-1">
+                    +{hiddenCount}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {labels
+                      .slice(maxVisibleLabels)
+                      .map((label) => label)
+                      .join(", ")}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
+      )}
     </div>
   );
 }

@@ -117,6 +117,12 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
           <div className="flex items-center w-full min-w-0">
             <div className="min-w-0 flex-1 pr-4 overflow-hidden flex flex-row justify-between">
               <div className="flex items-center overflow-hidden">
+                <DocumentMetadata
+                  metadata={effectiveMetadata}
+                  isListView={true}
+                  showLabels={false}
+                  className="mr-2"
+                />
                 <div className="font-medium text-sm mr-2 whitespace-nowrap">
                   {displayTitle}
                 </div>
@@ -125,6 +131,8 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                 <DocumentMetadata
                   metadata={effectiveMetadata}
                   isListView={true}
+                  showOrganization={false}
+                  className="ml-2"
                 />
                 {isMetadataLoading && !metadataError && (
                   <Loader2
