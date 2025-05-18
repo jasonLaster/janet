@@ -21,6 +21,7 @@ import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
+import { formatDate } from "@/lib/utils";
 const TOOLTIP_WIDTH = 384; // max-w-sm = 24rem = 384px
 
 interface PdfListItemProps {
@@ -77,6 +78,8 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
       return null;
     }
 
+    const formattedDate = formatDate(effectiveMetadata.primaryDate);
+
     return createPortal(
       <div
         className="fixed w-96 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md transition-opacity duration-200"
@@ -87,7 +90,14 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
           opacity: isHovering ? 1 : 0,
         }}
       >
-        <ReactMarkdown>{effectiveMetadata.summary}</ReactMarkdown>
+        {formattedDate && (
+          <div className="mb-1 text-xs font-medium text-muted-foreground">
+            {formattedDate}
+          </div>
+        )}
+        <div className="prose dark:prose-invert prose-sm max-w-none">
+          <ReactMarkdown>{effectiveMetadata.summary}</ReactMarkdown>
+        </div>
       </div>,
       document.body,
     );
