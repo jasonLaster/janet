@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Calendar,
   ExternalLinkIcon,
   MoreHorizontalIcon,
   Trash2,
@@ -22,7 +21,6 @@ import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
-import { formatDate } from "@/lib/utils";
 const TOOLTIP_WIDTH = 384; // max-w-sm = 24rem = 384px
 
 interface PdfListItemProps {
@@ -48,9 +46,6 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const effectiveMetadata = currentMetadata || {};
   const displayTitle =
     effectiveMetadata.descriptiveTitle || pdf.title || pdf.filename;
-
-  const displayDate = formatDate(pdf.uploaded_at) || "";
-
   const handleMouseMove = (e: React.MouseEvent) => {
     if (rowRef.current) {
       const rect = rowRef.current.getBoundingClientRect();
@@ -94,7 +89,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
       >
         <ReactMarkdown>{effectiveMetadata.summary}</ReactMarkdown>
       </div>,
-      document.body
+      document.body,
     );
   };
 
@@ -125,24 +120,18 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
                 <div className="font-medium text-sm mr-2 whitespace-nowrap">
                   {displayTitle}
                 </div>
-                <div className="overflow-hidden flex-shrink min-w-0">
-                  <DocumentMetadata
-                    metadata={effectiveMetadata}
-                    isListView={true}
-                  />
-                  {isMetadataLoading && !metadataError && (
-                    <Loader2
-                      data-testid="metadata-loader"
-                      className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block"
-                    />
-                  )}
-                </div>
               </div>
-              <div className="text-sm text-right whitespace-nowrap w-28">
-                <div className="flex items-center justify-end">
-                  <Calendar className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span>{displayDate}</span>
-                </div>
+              <div className="flex items-center justify-end min-w-0 overflow-hidden">
+                <DocumentMetadata
+                  metadata={effectiveMetadata}
+                  isListView={true}
+                />
+                {isMetadataLoading && !metadataError && (
+                  <Loader2
+                    data-testid="metadata-loader"
+                    className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block"
+                  />
+                )}
               </div>
             </div>
           </div>
