@@ -1,5 +1,6 @@
 import { PdfList } from "@/components/pdf-list";
 import { Sidebar } from "@/components/sidebar";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 import { getAllPdfs, PDF } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 
@@ -25,12 +26,18 @@ export default async function HomePage() {
 
   return (
     <>
-      <Sidebar pdfs={pdfs} />
+      <div className="hidden md:block">
+        <Sidebar pdfs={pdfs} />
+      </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden pb-12 md:pb-0">
         <main className="flex-1 overflow-auto">
           <PdfList pdfs={pdfs} />
         </main>
+      </div>
+
+      <div className="md:hidden">
+        <MobileSidebar pdfs={pdfs} />
       </div>
     </>
   );

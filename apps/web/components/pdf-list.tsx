@@ -95,7 +95,7 @@ export function PdfList({ pdfs }: PdfListProps) {
     );
   };
 
-  const ITEM_HEIGHT = 40;
+  const ITEM_HEIGHT = 48;
 
   if (pdfs.length === 0) {
     return (
@@ -154,8 +154,7 @@ export function PdfList({ pdfs }: PdfListProps) {
   return (
     <div
       data-testid="pdf-list"
-      className="w-full h-full flex flex-col"
-      style={{ height: "calc(100vh - 10px)" }}
+      className="w-full h-full flex flex-col h-[calc(100vh-58px)] md:h-[calc(100vh-10px)]"
     >
       <div className="flex-1 flex flex-col border-b overflow-hidden">
         <div className="flex items-center p-3 font-medium text-sm bg-background z-10 border-b">
