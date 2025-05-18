@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useOptimistic } from "react";
+import { useMemo, useOptimistic, useState } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
@@ -18,6 +18,7 @@ import { PDF } from "@/lib/db";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { PdfListItem } from "./pdf-list-item";
+import { PdfPreviewPanel } from "./pdf-preview-panel";
 
 interface PdfListProps {
   pdfs: PDF[];
@@ -36,6 +37,9 @@ export function PdfList({ pdfs }: PdfListProps) {
     (state: PDF[], pdfIdToRemove: number) =>
       state.filter((pdf) => pdf.id !== pdfIdToRemove)
   );
+
+  const [selectedPdf, setSelectedPdf] = useState<PDF | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const handleDelete = async (id: number) => {
     removeOptimisticPdf(id);
@@ -91,6 +95,10 @@ export function PdfList({ pdfs }: PdfListProps) {
         pdf={pdf}
         handleDelete={handleDelete}
         style={style}
+        onOpen={(p) => {
+          setSelectedPdf(p);
+          setViewerOpen(true);
+        }}
       />
     );
   };
@@ -152,12 +160,13 @@ export function PdfList({ pdfs }: PdfListProps) {
   }
 
   return (
-    <div
-      data-testid="pdf-list"
-      className="w-full h-full flex flex-col"
-      style={{ height: "calc(100vh - 10px)" }}
-    >
-      <div className="flex-1 flex flex-col border-b overflow-hidden">
+    <>
+      <div
+        data-testid="pdf-list"
+        className="w-full h-full flex flex-col"
+        style={{ height: "calc(100vh - 10px)" }}
+      >
+        <div className="flex-1 flex flex-col border-b overflow-hidden">
         <div className="flex items-center p-3 font-medium text-sm bg-background z-10 border-b">
           <div className="flex-1">
             <div className="flex items-center gap-1">Document</div>
@@ -185,6 +194,14 @@ export function PdfList({ pdfs }: PdfListProps) {
           </AutoSizer>
         </div>
       </div>
-    </div>
+      </div>
+      {selectedPdf && (
+        <PdfPreviewPanel
+          pdf={selectedPdf}
+          open={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
+    </>
   );
 }

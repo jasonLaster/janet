@@ -28,9 +28,10 @@ interface PdfListItemProps {
   pdf: PDF;
   handleDelete: (id: number) => void;
   style?: React.CSSProperties; // For react-window
+  onOpen?: (pdf: PDF) => void;
 }
 
-export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
+export function PdfListItem({ pdf, handleDelete, style, onOpen }: PdfListItemProps) {
   const router = useRouter();
   const {
     metadata: currentMetadata,
@@ -103,30 +104,30 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
     );
   };
 
-  return (
-    <Link
-      data-testid="pdf-list-item"
-      href={`/pdfs/${pdf.id}`}
-      className="block w-full"
+  const row = (
+    <div
+      ref={rowRef}
+      className="flex items-center px-3 py-1 border-b-slate-100 border-b hover:bg-muted/50 transition-colors relative"
+      style={style}
+      data-id={pdf.id}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setMouseX(null);
+        setRowBottom(null);
+        setTooltipPosition(null);
+      }}
+      onClick={() => {
+        if (onOpen) {
+          onOpen(pdf);
+        }
+      }}
     >
-      <div
-        ref={rowRef}
-        className="flex items-center px-3 py-1 border-b-slate-100 border-b hover:bg-muted/50 transition-colors relative"
-        style={style}
-        data-id={pdf.id}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => {
-          setIsHovering(false);
-          setMouseX(null);
-          setRowBottom(null);
-          setTooltipPosition(null);
-        }}
-      >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center w-full min-w-0">
-            <div className="min-w-0 flex-1 pr-4 overflow-hidden flex flex-row justify-between">
-              <div className="flex items-center overflow-hidden">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center w-full min-w-0">
+          <div className="min-w-0 flex-1 pr-4 overflow-hidden flex flex-row justify-between">
+            <div className="flex items-center overflow-hidden">
                 <div className="font-medium text-sm mr-2 whitespace-nowrap">
                   {displayTitle}
                 </div>
@@ -182,6 +183,19 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
 
         {renderTooltip()}
       </div>
+  );
+
+  if (onOpen) {
+    return (
+      <div data-testid="pdf-list-item" className="block w-full">
+        {row}
+      </div>
+    );
+  }
+
+  return (
+    <Link data-testid="pdf-list-item" href={`/pdfs/${pdf.id}`} className="block w-full">
+      {row}
     </Link>
   );
 }
