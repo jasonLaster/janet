@@ -16,16 +16,21 @@ export function MobileSidebar({ pdfs }: MobileSidebarProps) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <div className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-center h-12 border-t bg-background md:hidden">
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <MenuIcon className="h-5 w-5" />
-            <span className="sr-only">Open sidebar</span>
-          </Button>
-        </SheetTrigger>
-      </div>
-      <SheetContent side="bottom" className="p-0 md:hidden">
-        <Sidebar pdfs={pdfs} />
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          className="fixed bottom-0 inset-x-0 z-40 flex h-12 w-full items-center justify-center border-t bg-background md:hidden"
+        >
+          <MenuIcon className="h-5 w-5" />
+          <span className="sr-only">Open sidebar</span>
+        </Button>
+      </SheetTrigger>
+
+      <SheetContent
+        side="bottom"
+        className="p-0 w-full max-w-none left-0 right-0 md:hidden hide-default-sheet-close"
+      >
+        <Sidebar pdfs={pdfs} className="w-full md:w-64" isSheetContext={true} />
       </SheetContent>
     </Sheet>
   );
