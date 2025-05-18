@@ -22,6 +22,7 @@ import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { usePdfMetadata } from "@/hooks/use-pdf-metadata";
 import { formatDate } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 const TOOLTIP_WIDTH = 384; // max-w-sm = 24rem = 384px
 
 interface PdfListItemProps {
@@ -43,6 +44,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
   const [isHovering, setIsHovering] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState<number | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const effectiveMetadata = currentMetadata || {};
   const displayTitle =
@@ -99,7 +101,7 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
           <ReactMarkdown>{effectiveMetadata.summary}</ReactMarkdown>
         </div>
       </div>,
-      document.body,
+      document.body
     );
   };
 
@@ -124,27 +126,38 @@ export function PdfListItem({ pdf, handleDelete, style }: PdfListItemProps) {
         }}
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center w-full min-w-0">
-            <div className="min-w-0 flex-1 pr-4 overflow-hidden flex flex-row justify-between">
-              <div className="flex items-center overflow-hidden">
-                <div className="font-medium text-sm mr-2 whitespace-nowrap">
-                  {displayTitle}
+          {isMobile ? (
+            <div className="flex flex-col overflow-hidden">
+              <div className="font-medium text-sm truncate">{displayTitle}</div>
+              {effectiveMetadata.issuingOrganization && (
+                <div className="text-xs text-muted-foreground truncate">
+                  {effectiveMetadata.issuingOrganization}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center w-full min-w-0">
+              <div className="min-w-0 flex-1 pr-4 overflow-hidden flex flex-row justify-between">
+                <div className="flex items-center overflow-hidden">
+                  <div className="font-medium text-sm mr-2 whitespace-nowrap">
+                    {displayTitle}
+                  </div>
+                </div>
+                <div className="flex items-center justify-end min-w-0 overflow-hidden">
+                  <DocumentMetadata
+                    metadata={effectiveMetadata}
+                    isListView={true}
+                  />
+                  {isMetadataLoading && !metadataError && (
+                    <Loader2
+                      data-testid="metadata-loader"
+                      className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block"
+                    />
+                  )}
                 </div>
               </div>
-              <div className="flex items-center justify-end min-w-0 overflow-hidden">
-                <DocumentMetadata
-                  metadata={effectiveMetadata}
-                  isListView={true}
-                />
-                {isMetadataLoading && !metadataError && (
-                  <Loader2
-                    data-testid="metadata-loader"
-                    className="h-3 w-3 ml-1 animate-spin text-muted-foreground inline-block"
-                  />
-                )}
-              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="w-12 flex justify-center">
