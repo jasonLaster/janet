@@ -10,20 +10,39 @@ import {
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { PDF } from "@/lib/db";
+import { cn } from "@/lib/utils";
+import { SheetClose } from "@/components/ui/sheet";
+import { X } from "lucide-react";
 
 interface SidebarProps {
   pdfs: PDF[];
+  className?: string;
+  isSheetContext?: boolean;
 }
 
-export function Sidebar({ pdfs }: SidebarProps) {
+export function Sidebar({ pdfs, className, isSheetContext }: SidebarProps) {
   return (
-    <div className="w-64 border-r flex flex-col h-full bg-stone-50">
+    <div className={cn("border-r flex flex-col h-full bg-stone-50", className)}>
       <div className="px-4 h-[45px] border-b flex justify-between items-center w-full">
         <SignedIn>
-          <div className="grow-1">
+          <div className="flex-grow">
             <OrganizationSwitcher />
           </div>
-          <FileUpload className="grow-0"></FileUpload>
+          <div className="flex items-center gap-2">
+            <FileUpload />
+            {isSheetContext && (
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden bg-muted hover:bg-muted/90 rounded-lg h-6 w-6"
+                >
+                  <X className="h-3 w-3 stroke-[3]" />
+                  <span className="sr-only">Close sidebar</span>
+                </Button>
+              </SheetClose>
+            )}
+          </div>
         </SignedIn>
       </div>
 
