@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
     "@types/image-size": "^0.8.0",
     "@types/lodash": "^4.17.16",
     "@types/node-fetch": "^2.6.12",

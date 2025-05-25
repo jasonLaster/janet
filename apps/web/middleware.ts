@@ -23,7 +23,10 @@ const isPublicPageRoute = createRouteMatcher([
 // Define the PDF Content API route pattern separately
 const isPdfContentApiRoute = createRouteMatcher(["/api/pdfs/(.*)/content"]);
 
-const isFileUploadApiRoute = createRouteMatcher(["/api/pdfs/file-upload"]);
+const isFileUploadApiRoute = createRouteMatcher([
+  "/api/pdfs/file-upload",
+  "/api/pdfs/supabase-signed-upload-url",
+]);
 
 export default clerkMiddleware(
   async (auth, req) => {
