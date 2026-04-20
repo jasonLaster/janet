@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EnhancedPdfMetadata } from "@/lib/prompts/pdf-metadata";
 import { DocumentMetadata } from "../document-metadata";
+import { useRouter } from "next/navigation";
 
 export interface PdfViewerHeaderProps {
   title: string;
@@ -78,6 +79,8 @@ export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
     },
     ref
   ) => {
+    const router = useRouter();
+
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Enter" && searchText) {
         event.preventDefault();
@@ -105,7 +108,9 @@ export const PdfViewerHeader = forwardRef<HTMLDivElement, PdfViewerHeaderProps>(
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.history.back()}
+            onClick={() => {
+              router.push("/");
+            }}
             className="h-8 w-8"
           >
             <ArrowLeft className="h-4 w-4" />

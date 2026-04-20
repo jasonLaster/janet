@@ -55,9 +55,16 @@ export async function navigateToPdf(page: Page, name: string) {
   // wait for visible
   // await link.waitFor({ state: "visible" });
   // await link.scrollIntoViewIfNeeded(); // Scroll into view first
-  await link.dispatchEvent("click"); // Click using JS dispatchEvent
+  // await link.dispatchEvent("click"); // Click using JS dispatchEvent
+  // await link.click();
   // Wait for the navigation to complete and the URL to contain the href
-  await page.waitForURL(`**${href}`);
+  // await page.waitForURL(`**${href}`);
+
+  if (!href) {
+    throw new Error("No href found");
+  }
+
+  await page.goto(href);
 
   return href;
 }
